@@ -5,7 +5,13 @@
         "array": "c",
         "string_view": "c",
         "initializer_list": "c",
-        "utility": "c"
+        "utility": "c",
+        "protocolo.h": "c",
+        "unistd.h": "c",
+        "queue.h": "c",
+        "log.h": "c",
+        "list.h": "c",
+        "netdb.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }
