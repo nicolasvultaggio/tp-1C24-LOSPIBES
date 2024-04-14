@@ -17,4 +17,5 @@ int esperar_cliente(int socket_servidor);
 int crear_conexion(char *ip, char* puerto);
 void liberar_conexion(int socket_cliente);
 
+
 #endif 
