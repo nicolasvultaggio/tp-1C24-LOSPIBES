@@ -12,9 +12,10 @@ char* TAM_PAGINA;
 char* PATH_INSTRUCCIONES;
 char* RETARDO_RESPUESTA;
 
-t_log* logger;
-t_config* config;
+t_log* logger_memoria;
+t_config* config_memoria;
 
-bool iniciar_conexiones();
+int iniciar_conexiones();
+void iterator();
 void terminar_programa();
 void leer_configuraciones();
