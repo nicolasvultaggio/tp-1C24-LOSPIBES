@@ -1,6 +1,3 @@
-#ifndef SOCKETS_H_
-#define SOCKETS_H_
-
 #include<stdio.h>
 #include<stdlib.h>
 #include<unistd.h>
@@ -39,5 +36,3 @@ typedef struct
 	int size;
 	void* stream;
 } t_buffer;
-
-#endif
