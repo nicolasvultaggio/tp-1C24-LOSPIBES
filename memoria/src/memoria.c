@@ -1,8 +1,5 @@
 #include <../../memoria/include/memoria.h>
-<<<<<<< HEAD
-=======
 #include <../../utils/include/hello.h>
->>>>>>> ee0e01218d62f7b2dde90b8d356d165ecc3b93e3
 
 int main() {
     
