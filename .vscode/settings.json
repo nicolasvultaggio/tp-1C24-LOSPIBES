@@ -14,7 +14,10 @@
         "netdb.h": "c",
         "stdio.h": "c",
         "stdlib.h": "c",
-        "kernel.h": "c"
+        "kernel.h": "c",
+        "entradasalida.h": "c",
+        "hello.h": "c",
+        "config.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

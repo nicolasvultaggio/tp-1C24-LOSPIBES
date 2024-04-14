@@ -1,10 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <../../utils/include/hello.h>
 #include <../include/entradasalida.h>
 
 int main(int argc, char* argv[]) {
     
-    decir_hola("una Interfaz de Entrada/Salida"); // se conecta la entrada y salida
+    decir_hola("I/O");
 
     logger = log_create("entradasalida_logs.log","entradasalida",1,LOG_LEVEL_INFO); // crea el puntero al log
     config = config_create("./entradasalida.config"); // crea el puntero al archivo de config
@@ -20,6 +21,8 @@ int main(int argc, char* argv[]) {
         terminar_programa();
         exit(2);
     }
+
+    terminar_programa();
 
     return 0;
 }
@@ -50,4 +53,6 @@ void terminar_programa()
 	if(config != NULL){
 		config_destroy(config);
 	}
+    liberar_conexion(socket_cliente_a_kernel);
+    liberar_conexion(socket_cliente_a_memoria);
 }
