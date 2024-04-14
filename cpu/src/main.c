@@ -8,14 +8,14 @@ int main(int argc, char* argv[]) {
     return 0;
 
      t_log* logger= log_create("cpu.log","CPU",true, LOG_LEVEL_INFO);
-      int canalmemoria=0;
-      if (!crear_conexion(logger,&canalmemoria)){
+      int socket_server_MEMORIA=0;
+      if (!crear_conexion(logger,&socket_server_MEMORIA)){
     liberar_conexion(logger);
        }
     return EXIT_FAILURE;
     int x;
     scanf("&d",&x);
-    enviar_mensaje("SOY CPU PUDE CONECTAR", canalmemoria);
+    enviar_mensaje("SOY CPU PUDE CONECTAR", socket_server_MEMORIA);
       liberar crear_conexion(logger);
       return EXIT_SUCCESS;
 
