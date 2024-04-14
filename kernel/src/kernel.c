@@ -1,16 +1,44 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <kernel/include/kernel.h>
+#include <../../kernel/include/kernel.h>
 
 int main(int argc, char* argv[]) {
     
-    //Despues el los ips y puertos los leeriamos de un config, HAY QUE IMPLEMENTARLO. 
-    //Podria implementarse un IF que diga si estan bien hechas las conexion, charlarlo en grupo.
-    socket_cliente_a_CPU = crear_conexion(ipCPU,puertoCPU);
-    socket_cliente_a_MEMORIA = crear_conexion(ipMEMORIA,puertoMEMORIA);
+    decir_hola("Kernel la puta madre");
 
-    server_socket = iniciar_servidor(ip , puerto)
+    logger = log_create("kernel_logs.log","kernel",1,LOG_LEVEL_INFO);
+    config = config_create("./kernel.config");
 
-    decir_hola("Kernel");
+    leer_configuraciones();
+
+    if(!iniciar_conexiones()){
+        log_error(logger,"Alguna conexion esta tirando error");
+        terminar_programa();
+        exit(2);
+    }
+
+    server_socket = iniciar_servidor(IP_PROPIO , PUERTO_PROPIO);
+    int cliente_socket = esperar_cliente(server_socket);
+
+    
     return 0;
+}
+
+void leer_configuraciones(){
+    IP_PROPIO = config_get_string_value(config,"IP_ESCUCHA");
+    PUERTO_PROPIO = config_get_string_value(config,"PUERTO_ESCUCHA");
+    IP_MEMORIA = config_get_string_value(config,"IP_MEMORIA");
+    PUERTO_MEMORIA = config_get_string_value(config,"PUERTO_MEMORIA");
+    IP_CPU = config_get_string_value(config,"IP_CPU");
+
+}
+
+bool iniciar_conexiones(){
+    socket_cliente_a_CPU = crear_conexion(IP_CPU,PUERTO_CPU);
+    socket_cliente_a_MEMORIA = crear_conexion(IP_MEMORIA,PUERTO_MEMORIA); 
+
+    return socket_cliente_a_CPU != -1 && socket_cliente_a_MEMORIA != -1; 
+}
+
+void terminar_programa(){
+    config_destroy(config);
+    log_destroy(logger);
 }
