@@ -7,7 +7,7 @@
 #include<string.h>
 #include<assert.h>
 #include <commons/collections/queue.h>
-
+#include <commons/config.h>
 typedef enum{
 	MENSAJE,
     PAQUETE
