@@ -1,3 +1,5 @@
+#ifndef MEMORIA_H_
+#define MEMORIA_H_
 #include <../../utils/include/hello.h>
 #include <../../utils/include/socket.h>
 #include <../../utils/include/protocolo.h>
@@ -28,3 +30,5 @@ int iniciar_conexiones();
 void iterator(char* value);
 void terminar_programa();
 void leer_configuraciones();
+
+#endif

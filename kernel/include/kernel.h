@@ -1,3 +1,5 @@
+#ifndef KERNEL_H_
+#define KERNEL_H_
 #include <stdlib.h>
 #include <stdio.h>
 #include <../../utils/include/hello.h>
@@ -26,3 +28,5 @@ t_config* config;
 bool iniciar_conexiones();
 void terminar_programa();
 void leer_configuraciones();
+
+#endif
