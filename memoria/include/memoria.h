@@ -5,6 +5,7 @@
 
 int socket_server_MEMORIA;
 int socket_cliente_MODULO;
+int handshake;
 
 char* PUERTO_ESCUCHA;
 char* TAM_MEMORIA;
@@ -16,6 +17,6 @@ t_log* logger_memoria;
 t_config* config_memoria;
 
 int iniciar_conexiones();
-void iterator();
+void iterator(char* value);
 void terminar_programa();
 void leer_configuraciones();

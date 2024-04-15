@@ -134,3 +134,28 @@ void recibir_mensaje(int socket_cliente)
 	log_info(logger, "Me llego el mensaje %s", buffer);
 	free(buffer);
 }
+// se implmenta despues de hacer accept
+//			socket de la conexion ya creada / lo sabe el modulo   /   lo sabe el modulo  / lo sabe el modulo
+void handshakeSERVIDOR(int socketConexion , int handshakeExitoso , int * conexionExitosa , int * noCoincideHandshake ){
+	int handshake;
+	size_t bytes;
+    if(recv(socketConexion,&handshake,sizeof(int), MSG_WAITALL)==-1){
+        printf("No se pudo recibir handshake");
+    };
+    if(handshake == handshakeExitoso){
+        bytes = send(socketConexion, conexionExitosa, sizeof(int), 0);
+    }else{
+        bytes = send(socketConexion, noCoincideHandshake, sizeof(int), 0); 
+    }
+	return;
+}
+// declaro la variable bytes porque send y recv deben devolver algo
+
+// se implementa despues de hacer connect
+void handshakeCLIENTE( int socketConexion , int * handshakeAEnviar , int * resultado){
+	size_t bytes;
+	bytes = send(socketConexion, handshakeAEnviar , sizeof(int),0 );
+	bytes = recv(socketConexion, resultado, sizeof(int), MSG_WAITALL);
+	// Que hace con los valores recibidos queda por fuera del alcance de esta funcion
+}
+ 	

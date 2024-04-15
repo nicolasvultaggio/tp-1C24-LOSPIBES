@@ -1,5 +1,4 @@
 #include <../../memoria/include/memoria.h>
-#include <../../utils/include/hello.h>
 
 int main() {
     
@@ -8,18 +7,33 @@ int main() {
     logger_memoria = log_create("memoria_logs.log","memoria",1,LOG_LEVEL_INFO);
     config_memoria = config_create("./configs/memoria.config");
     leer_configuraciones();
+    
+    socket_server_MEMORIA = iniciar_servidor(NULL, PUERTO_ESCUCHA);
+    
+    log_info(logger_memoria, "Puerto de memoria habilitado para sus clientes");
+    
+    socket_cliente_MODULO = accept(socket_server_MEMORIA,NULL,NULL);
 
-    if((socket_cliente_MODULO = iniciar_conexiones()) == 1){
+    // hace handshakeSERVIDOR();
+    //despues vuelve a hacer accept
+    
+    close(socket_server_MEMORIA);
+
+    /*
+    if((socket_cliente_MODULO = iniciar_conexiones()) == 1){ // socket_cliente_modulo representa la conexion que esta esperando un cliente
         log_error(logger_memoria,"Alguna conexion esta tirando error");
         terminar_programa();
         exit(2);
     }
     
-    t_list* lista;
-	while (1) {
+    // t_list* lista;
+   
+    while (1) {
 		int cod_op = recibir_operacion(socket_cliente_MODULO);
 		switch (cod_op) {
-		case MENSAJE:
+        // case HANDSHAKE:
+        //    if(cod_op)
+        case MENSAJE:
 			recibir_mensaje(socket_cliente_MODULO);
 			break;
 		case PAQUETE:
@@ -34,7 +48,11 @@ int main() {
 			log_warning(logger_memoria,"Operacion desconocida. No quieras meter la pata");
 			break;
 		}
-	}
+    */
+	
+        
+        
+	
 	return EXIT_SUCCESS;
     return 0;
     
@@ -53,7 +71,7 @@ int iniciar_conexiones(){
 
     socket_server_MEMORIA = iniciar_servidor(NULL, PUERTO_ESCUCHA);
     
-    log_info(logger_memoria, "Memoria espera contacto");
+    log_info(logger_memoria, "Puerto de memoria habilitado para sus clientes");
 
     socket_cliente_MODULO = esperar_cliente(socket_server_MEMORIA);
 

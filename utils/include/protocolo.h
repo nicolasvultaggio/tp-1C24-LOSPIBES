@@ -10,7 +10,8 @@
 #include <commons/config.h>
 typedef enum{
 	MENSAJE,
-    PAQUETE
+    PAQUETE,
+	HANDSHAKE
 }op_code;
 
 typedef struct
@@ -36,3 +37,5 @@ t_list* recibir_paquete(int socket_cliente);
 void* recibir_buffer(int* size, int socket_cliente);
 int recibir_operacion(int socket_cliente);
 void recibir_mensaje(int socket_cliente);
+void handshakeSERVIDOR(int socketConexion , int handshakeExitoso , int * conexionExitosa , int * noCoincideHandshake );
+void handshakeCLIENTE( int socketConexion , int * handshakeAEnviar , int * resultado);
