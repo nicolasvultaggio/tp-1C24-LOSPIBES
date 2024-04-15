@@ -36,6 +36,7 @@ void eliminar_paquete(t_paquete* paquete);
 t_list* recibir_paquete(int socket_cliente);
 void* recibir_buffer(int* size, int socket_cliente);
 int recibir_operacion(int socket_cliente);
-void recibir_mensaje(int socket_cliente);
+void recibir_mensaje(t_log* loggerServidor, int socket_cliente);
 void handshakeSERVIDOR(int socketConexion , int handshakeExitoso , int * conexionExitosa , int * noCoincideHandshake );
 void handshakeCLIENTE( int socketConexion , int * handshakeAEnviar , int * resultado);
+void enviar_operacion(int socket_conexion, int* valor);

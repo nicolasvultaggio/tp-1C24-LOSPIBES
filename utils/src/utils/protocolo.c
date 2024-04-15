@@ -127,13 +127,22 @@ int recibir_operacion(int socket_cliente)
 	}
 }
 
-void recibir_mensaje(int socket_cliente)
+
+void enviar_operacion(int socket_conexion, int* valor)
+{
+	send(socket_conexion, valor, sizeof(int) ,0);
+	
+}
+
+void recibir_mensaje(t_log* loggerServidor ,int socket_cliente)
 {
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
-	log_info(logger, "Me llego el mensaje %s", buffer);
+	log_info(loggerServidor, "Me llego el mensaje %s", buffer);
 	free(buffer);
 }
+
+/*
 // se implmenta despues de hacer accept
 //			socket de la conexion ya creada / lo sabe el modulo   /   lo sabe el modulo  / lo sabe el modulo
 void handshakeSERVIDOR(int socketConexion , int32_t handshakeExitoso , int32_t * conexionExitosa , int32_t * noCoincideHandshake ){
@@ -159,8 +168,8 @@ void handshakeCLIENTE( int socketConexion , int32_t * handshakeAEnviar, int32_t 
 	bytes = recv(socketConexion, &resultado, sizeof(int), MSG_WAITALL);
 	if( resultado != valorDeConfirmacion){
 		printf("El cliente recibio la respuesta del servidor pero no fue la correcta");
-		exit(-1)
+		exit(-1);
 	}
 	return;
 }
-
+*/
