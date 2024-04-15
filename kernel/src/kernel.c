@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
     }
 
     
-    enviar_operacion(socket_cliente_a_MEMORIA, handshakeDeMemoria);
+    enviar_operacion(socket_cliente_a_MEMORIA, &handshakeDeMemoria);
     
     close(socket_cliente_a_MEMORIA);
 
