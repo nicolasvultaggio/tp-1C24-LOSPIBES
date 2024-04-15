@@ -22,15 +22,15 @@ int main() {
         {
         case 0:
             enviar_mensaje("Te conectaste a MEMORIA",socket_cliente_MODULO);
-            log_info(logger_memoria,"Ya te mande el valor");
+            log_info(logger_memoria,"Ya te mande el valor y el OP esta bien");
             break;
         case 1:
             enviar_mensaje("Te conectaste a MEMORIA",socket_cliente_MODULO);
-            log_info(logger_memoria,"Ya te mande el valor");
+            log_info(logger_memoria,"Ya te mande el valor y el OP esta bien");
             break;
         case 2:
             enviar_mensaje("Te conectaste a MEMORIA",socket_cliente_MODULO);
-            log_info(logger_memoria,"Ya te mande el valor");
+            log_info(logger_memoria,"Ya te mande el valor y el OP esta bien");
             break;
         default:
             log_info(logger_memoria, "Codigo de operacion no reconocido en el server");
