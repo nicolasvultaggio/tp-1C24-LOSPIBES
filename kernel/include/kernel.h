@@ -17,6 +17,9 @@ char* PUERTO_CPU;
 char* IP_MEMORIA;
 char* PUERTO_MEMORIA;
 
+int* handshakeDeMemoria;
+(*handshakeDeMemoria) = 1;
+
 t_log* logger;
 t_config* config;
 

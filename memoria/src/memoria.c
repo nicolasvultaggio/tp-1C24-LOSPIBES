@@ -3,6 +3,7 @@
 int main() {
     
     decir_hola("Memoria, verdad y justicia");
+    
 
     logger_memoria = log_create("memoria_logs.log","memoria",1,LOG_LEVEL_INFO);
     config_memoria = config_create("./configs/memoria.config");
@@ -11,13 +12,51 @@ int main() {
     socket_server_MEMORIA = iniciar_servidor(NULL, PUERTO_ESCUCHA);
     
     log_info(logger_memoria, "Puerto de memoria habilitado para sus clientes");
+
     
-    socket_cliente_MODULO = accept(socket_server_MEMORIA,NULL,NULL);
+    while (socket_cliente_MODULO = esperar_cliente(socket_server_MEMORIA))
+    {
+        log_info(logger_memoria,"Se conecto un cliente");
+        int cod_op = recibir_operacion(socket_cliente_MODULO);
+        switch (cod_op)
+        {
+        case 0:
+            enviar_mensaje("Te conectaste a MEMORIA",socket_cliente_MODULO);
+            log_info(logger_memoria,"Ya te mande el valor");
+            break;
+        case 1:
+            enviar_mensaje("Te conectaste a MEMORIA",socket_cliente_MODULO);
+            log_info(logger_memoria,"Ya te mande el valor");
+            break;
+        case 2:
+            enviar_mensaje("Te conectaste a MEMORIA",socket_cliente_MODULO);
+            log_info(logger_memoria,"Ya te mande el valor");
+            break;
+        default:
+            log_info(logger_memoria, "Codigo de operacion no reconocido en el server");
+            log_info(logger_memoria,"Ya te mande el valor");
+            break;
+        }
+    }
+    
+
+    
+    /*
+    while(1){
+        socket_cliente_MODULO = accept(socket_server_MEMORIA,NULL,NULL);
+        log_info(logger_memoria, "Cliente conectado");
+
+        while(!socket_cliente_MODULO){
+            handshakeSERVIDOR(socket_cliente_MODULO,handshakeDeCPU, conexionExitosaCPU, noCoincideHandshakeCPU);
+        }
+
+    }
+    //socket_cliente_MODULO = accept(socket_server_MEMORIA,NULL,NULL);
 
     // hace handshakeSERVIDOR();
     //despues vuelve a hacer accept
     
-    close(socket_server_MEMORIA);
+    
 
     /*
     if((socket_cliente_MODULO = iniciar_conexiones()) == 1){ // socket_cliente_modulo representa la conexion que esta esperando un cliente

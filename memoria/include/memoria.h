@@ -6,6 +6,14 @@
 int socket_server_MEMORIA;
 int socket_cliente_MODULO;
 int handshake;
+//No va a quedar para siempre
+int handshakeDeCPU = 0;
+int handshakeDeKERNEL = 1;
+int handshakeDeIO = 2;
+//int32_t  * conexionExitosaCPU;
+//int32_t  * noCoincideHandshakeCPU;
+//(* conexionExitosaCPU) = 0;
+//(* noCoincideHandshakeCPU) = -1;
 
 char* PUERTO_ESCUCHA;
 char* TAM_MEMORIA;

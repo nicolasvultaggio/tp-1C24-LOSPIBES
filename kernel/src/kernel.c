@@ -8,17 +8,24 @@ int main(int argc, char* argv[]) {
     config = config_create("./kernel.config");
 
     leer_configuraciones();
+    socket_cliente_a_MEMORIA = crear_conexion(IP_MEMORIA,PUERTO_MEMORIA);
 
-    if(!iniciar_conexiones()){
+    if(!socket_cliente_a_MEMORIA){
         log_error(logger,"Alguna conexion esta tirando error");
         terminar_programa();
         exit(2);
     }
 
-    server_socket = iniciar_servidor(IP_PROPIO , PUERTO_PROPIO);
-    int cliente_socket = esperar_cliente(server_socket);
+    
+    enviar_operacion(socket_cliente_a_MEMORIA, handshakeDeMemoria);
+    
+    close(socket_cliente_a_MEMORIA);
 
     
+    server_socket = iniciar_servidor(NULL , PUERTO_PROPIO);
+    int cliente_socket = esperar_cliente(server_socket);
+    
+    terminar_programa();
     return 0;
 }
 
@@ -32,13 +39,14 @@ void leer_configuraciones(){
 }
 
 bool iniciar_conexiones(){
-    socket_cliente_a_CPU = crear_conexion(IP_CPU,PUERTO_CPU);
+    //socket_cliente_a_CPU = crear_conexion(IP_CPU,PUERTO_CPU);
     socket_cliente_a_MEMORIA = crear_conexion(IP_MEMORIA,PUERTO_MEMORIA); 
 
-    return socket_cliente_a_CPU != -1 && socket_cliente_a_MEMORIA != -1; 
+    return socket_cliente_a_MEMORIA != -1;//socket_cliente_a_CPU != -1 && socket_cliente_a_MEMORIA != -1; 
 }
 
 void terminar_programa(){
     config_destroy(config);
     log_destroy(logger);
+    
 }
