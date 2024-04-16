@@ -44,6 +44,10 @@ void enviar_mensaje(char* mensaje, int socket_cliente)
 	
 }
 
+void enviar_mensaje_de_exito(int socket, char* mensaje) {
+    send(socket, mensaje, strlen(mensaje), 0);
+}
+
 t_paquete* crear_paquete(void)
 {
 	t_paquete* paquete = malloc(sizeof(t_paquete));
