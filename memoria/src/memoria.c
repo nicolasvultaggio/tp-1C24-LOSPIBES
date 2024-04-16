@@ -13,7 +13,7 @@ int main() {
     log_info(logger_memoria, "Puerto de memoria habilitado para sus clientes");
 
     
-    while (socket_cliente_MODULO = esperar_cliente(socket_server_MEMORIA))
+    while ((socket_cliente_MODULO = esperar_cliente(socket_server_MEMORIA)) != (-1))
     {
         log_info(logger_memoria,"Se conecto un cliente");
         int cod_op = recibir_operacion(socket_cliente_MODULO);

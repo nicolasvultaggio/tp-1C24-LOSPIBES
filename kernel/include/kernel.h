@@ -20,7 +20,7 @@ char* PUERTO_CPU;
 char* IP_MEMORIA;
 char* PUERTO_MEMORIA;
 
-char mensaje[1024] = {0};
+
 int* handshakeDeMemoria;
 (*handshakeDeMemoria) = 1;
 
