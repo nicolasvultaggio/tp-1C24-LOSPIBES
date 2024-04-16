@@ -4,7 +4,6 @@
 #include <../../utils/include/socket.h>
 #include <../../utils/include/protocolo.h>
 
-
 int socket_server_MEMORIA;
 int socket_cliente_MODULO;
 int handshake;

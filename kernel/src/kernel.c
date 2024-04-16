@@ -18,10 +18,15 @@ int main(int argc, char* argv[]) {
 
     
     enviar_operacion(socket_cliente_a_MEMORIA, &handshakeDeMemoria);
-    
+
+    char mensaje[1024] = {0};
+    recv(socket_cliente_a_MEMORIA, mensaje, 1024, 0);
+    printf("Respuesta del servidor: %s\n", mensaje);    
+
     close(socket_cliente_a_MEMORIA);
 
     
+
     server_socket = iniciar_servidor(NULL , PUERTO_PROPIO);
     int cliente_socket = esperar_cliente(server_socket);
     

@@ -12,6 +12,7 @@ int server_socket;
 int socket_cliente_a_CPU;
 int socket_cliente_a_MEMORIA;
 
+char* mensaje;
 char* IP_PROPIO;
 char* PUERTO_PROPIO;
 char* IP_CPU;

@@ -43,5 +43,5 @@ void recibir_mensaje(t_log* loggerServidor, int socket_cliente);
 //void handshakeSERVIDOR(int socketConexion , int handshakeExitoso , int * conexionExitosa , int * noCoincideHandshake );
 //void handshakeCLIENTE( int socketConexion , int * handshakeAEnviar , int * resultado);
 void enviar_operacion(int socket_conexion, int* valor);
-void enviar_mensaje_de_exito(int socket, const char* mensaje);
+void enviar_mensaje_de_exito(int socket, char* mensaje);
 #endif

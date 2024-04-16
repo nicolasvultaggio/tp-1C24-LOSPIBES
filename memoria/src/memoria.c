@@ -1,5 +1,4 @@
 #include <../../memoria/include/memoria.h>
-
 int main() {
     
     decir_hola("Memoria, verdad y justicia");
@@ -21,16 +20,16 @@ int main() {
         switch (cod_op)
         {
         case 0:
-            enviar_mensaje("Te conectaste a MEMORIA",socket_cliente_MODULO);
-            log_info(logger_memoria,"Ya te mande el valor y el OP esta bien");
+            enviar_mensaje_de_exito(socket_cliente_MODULO, "Mensaje desde memoria a CPU");
+            log_info(logger_memoria,"Ya te mande el valor y el OP esta bien, cpu");
             break;
         case 1:
-            enviar_mensaje("Te conectaste a MEMORIA",socket_cliente_MODULO);
-            log_info(logger_memoria,"Ya te mande el valor y el OP esta bien");
+            enviar_mensaje_de_exito(socket_cliente_MODULO, "Mensaje desde memoria a Kernel");
+            log_info(logger_memoria,"Ya te mande el valor y el OP esta bien, kernel");
             break;
         case 2:
-            enviar_mensaje("Te conectaste a MEMORIA",socket_cliente_MODULO);
-            log_info(logger_memoria,"Ya te mande el valor y el OP esta bien");
+            enviar_mensaje_de_exito(socket_cliente_MODULO, "Mensaje desde memoria a Interfaz IO");   
+            log_info(logger_memoria,"Ya te mande el valor y el OP esta bien, Interfaz IO");
             break;
         default:
             log_info(logger_memoria, "Codigo de operacion no reconocido en el server");
