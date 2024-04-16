@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
     
     enviar_operacion(socket_cliente_a_MEMORIA, &handshakeDeMemoria);
 
-    char mensaje[1024] = {0};
+    
     recv(socket_cliente_a_MEMORIA, mensaje, 1024, 0);
     printf("Respuesta del servidor: %s\n", mensaje);    
 
