@@ -25,11 +25,26 @@ int main(int argc, char* argv[]) {
 
     close(socket_cliente_a_MEMORIA);
 
-    
+
 
     server_socket = iniciar_servidor(NULL , PUERTO_PROPIO);
-    int cliente_socket = esperar_cliente(server_socket);
+    int cliente_socket;
     
+    while ((cliente_socket = esperar_cliente(server_socket)) != (-1))
+    {
+        log_info(logger,"Se conecto la interfaz de I/O");
+        int cod_op = recibir_operacion(cliente_socket);
+        if(cod_op == 1){
+            enviar_mensaje_de_exito(cliente_socket, "Mensaje desde Kernel a Interfaz IO");   
+            log_info(logger,"Ya te mande el valor y el OP esta bien, Interfaz IO");
+            break;
+        }else{
+            log_info(logger, "Codigo de operacion no reconocido en el server");
+            break;
+        }
+    }
+    
+    close(server_socket);
     terminar_programa();
     return 0;
 }
@@ -52,6 +67,5 @@ bool iniciar_conexiones(){
 
 void terminar_programa(){
     config_destroy(config);
-    log_destroy(logger);
-    
+    log_destroy(logger);   
 }
