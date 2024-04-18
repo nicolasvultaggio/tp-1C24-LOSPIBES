@@ -49,13 +49,11 @@ int main(int argc, char* argv[]) {
 }
 
 void leer_configuraciones(){
-    //IP_PROPIO = config_get_string_value(config_kernel,"IP_ESCUCHA");
-    PUERTO_PROPIO = config_get_string_value(config_kernel,"PUERTO_PROPIO");
-    IP_MEMORIA = config_get_string_value(config_kernel,"IP_MEMORIA");
-    PUERTO_MEMORIA = config_get_string_value(config_kernel,"PUERTO_MEMORIA");
-    IP_CPU = config_get_string_value(config_kernel,"IP_CPU");
-    PUERTO_CPU = config_get_string_value(config_kernel,"PUERTO_CPU");
-
+    puerto_propio = config_get_string_value(config_kernel,"PUERTO_PROPIO");
+    ip_memoria = config_get_string_value(config_kernel,"IP_MEMORIA");
+    puerto_memoria = config_get_string_value(config_kernel,"PUERTO_MEMORIA");
+    ip_cpu= config_get_string_value(config_kernel,"IP_CPU");
+    puerto_cpu = config_get_string_value(config_kernel,"PUERTO_CPU");
 }
 
 bool iniciar_conexiones(){
@@ -69,5 +67,5 @@ void terminar_programa(){
 
     config_destroy(config_kernel);
     log_destroy(logger_kernel);   
-    close(fd_escucha_kernel);
+    liberar_conexion(fd_escucha_kernel);
 }

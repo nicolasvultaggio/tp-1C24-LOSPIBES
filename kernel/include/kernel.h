@@ -14,14 +14,11 @@ int fd_conexion_client_cpu;
 int fd_conexion_client_memoria;
 int fd_conexion_server_io;
 
-char* mensaje;
-char* IP_PROPIO;
-char* PUERTO_PROPIO;
-char* IP_CPU;
-char* PUERTO_CPU;
-char* IP_MEMORIA;
-char* PUERTO_MEMORIA;
-
+char * puerto_propio; 
+char * puerto_memoria;
+char * ip_cpu; 
+char * ip_memoria;
+char * puerto_cpu ;
 
 int* handshakeDeMemoria;
 (*handshakeDeMemoria) = 1;

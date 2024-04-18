@@ -8,33 +8,33 @@ int main(int argc, char* argv[]) {
     config_cpu = config_create("./configs/cpu.config");
 
     leer__configuraciones();
-    socket_cliente= crear_conexion(ip__memoria,puerto__memoria);
+    fd_conexion_client_memoria= crear_conexion(ip_memoria,puerto_memoria);
 
-    if(!socket_cliente){
+    if(!fd_conexion_client_memoria){
         log_error(logger_cpu,"CPU no se puedo conectar a memoria");
         terminar_programa();
         exit(2);
     }
 
-    enviar_operacion(socket_cliente, &handshakeDeCPU);
+    enviar_operacion(fd_conexion_client_memoria, &handshakeDeCPU);
 
-    char mensaje1[1024] = {0};
-    recv(socket_cliente, mensaje1, 1024, 0);
-    printf("Respuesta del servidor: %s\n", mensaje1);    
+    char mensaje[1024] = {0};
+    recv(fd_conexion_client_memoria, mensaje, 1024, 0);
+    printf("Respuesta del servidor: %s\n", mensaje);    
 
     
 
     //ABRIR CPU COMO SERVIDOR DE KERNEL(unico cliente)//
-    int socket_server_CPU = iniciar_servidor(NULL,puerto__propio);
+    fd_escucha_cpu = iniciar_servidor(NULL,puerto_propio);
     
     log_info(logger_cpu, "Puerto de CPU habilitado para su UNICO cliente");
 
-    socket_cliente_delKERNEL = esperar_cliente(socket_server_CPU);
+    fd_conexion_server_kernel = esperar_cliente(fd_escucha_cpu);
 
-    int cod_op = recibir_operacion(socket_cliente_delKERNEL);
+    int cod_op = recibir_operacion(fd_conexion_server_kernel);
     if(cod_op == 5){
         log_info(logger_cpu,"Se conecto KERNEL(unico cliente)");
-        enviar_mensaje_de_exito(socket_cliente_delKERNEL, "HOLA KERNEL!! SOY CPU");
+        enviar_mensaje_de_exito(fd_conexion_server_kernel, "HOLA KERNEL!! SOY CPU");
         }else{
             log_info(logger_cpu,"Codigo de operacion no reconocido en el server");
         }
@@ -44,10 +44,10 @@ int main(int argc, char* argv[]) {
 }
 
 void leer__configuraciones(){
-    puerto__propio = config_get_string_value(config_cpu,"PUERTO__ESCUCHA");
-    ip__memoria = config_get_string_value(config_cpu,"IP_MEMORIA");
-    puerto__memoria = config_get_string_value(config_cpu,"PUERTO_MEMORIA");
-   }
+    puerto_propio = config_get_string_value(config_cpu,"PUERTO_PROPIO");
+    ip_memoria = config_get_string_value(config_cpu,"IP_MEMORIA");
+    puerto_memoria = config_get_string_value(config_cpu,"PUERTO_MEMORIA");
+}
 
 
 void terminar_programa(){
@@ -57,5 +57,5 @@ void terminar_programa(){
 	if(config_cpu != NULL){
 		config_destroy(config_cpu);
 	}
-    close(socket_cliente);
+    liberar_conexion(fd_conexion_client_memoria);
 }

@@ -8,15 +8,15 @@
 #include <../../utils/include/protocolo.h>
 #include <commons/config.h>
 #include <commons/log.h>
-int server_socket;
-int socket_cliente_a_CPU;
-int socket_cliente_delKERNEL;
 
-char* mensaje1;
-char* ip__propio;
-char* puerto__propio; 
-char* ip__memoria;
-char* puerto__memoria;
+int fd_conexion_server_kernel;
+int fd_conexion_client_memoria;
+int fd_escucha_cpu;
+
+char* ip_propio;
+char* puerto_propio; 
+char* ip_memoria;
+char* puerto_memoria;
 
 int socket_cliente;//filedescriptorCPU
 
