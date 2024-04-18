@@ -15,13 +15,13 @@ int main(int argc, char* argv[]) {
     }
 
     //IO - MEMORIA
-    enviar_operacion(fd_conexion_client_memoria, &handshake_de_memoria);
+    enviar_hanshake(fd_conexion_client_memoria, handshakeIO);
     char mensaje_ok_memoria[1024] = {0};
     recv(fd_conexion_client_memoria, mensaje_ok_memoria, 1024, 0);
     printf("Respuesta del servidor: %s\n", mensaje_ok_memoria);
 
     //IO-KERNEL
-    enviar_operacion(fd_conexion_client_kernel,&handshake_de_kernel);
+    enviar_handshake(fd_conexion_client_kernel,handshakeIO);
     char mensaje_ok_kernel[1024] = {0};
     recv(fd_conexion_client_kernel, mensaje_ok_kernel, 1024, 0);
     printf("Respuesta del servidor: %s\n", mensaje_ok_kernel);
@@ -43,7 +43,7 @@ bool iniciar_conexiones(){
     fd_conexion_client_kernel = crear_conexion(ip_kernel,puerto_kernel);
     fd_conexion_client_memoria = crear_conexion(ip_memoria,puerto_memoria);
 
-    return fd_conexion_client_kernel != -1 && fd_conexion_client_memoria != -1; 
+    return fd_conexion_client_kernel != (-1) && fd_conexion_client_memoria != (-1); 
 }
 
 void terminar_programa()

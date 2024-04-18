@@ -18,11 +18,6 @@ char* puerto_propio;
 char* ip_memoria;
 char* puerto_memoria;
 
-int socket_cliente;//filedescriptorCPU
-
-int* handshakeDeCPU;
-(*handshakeDeCPU) = 0;
-
 
 t_log* logger_cpu;
 t_config* config_cpu;

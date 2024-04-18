@@ -16,14 +16,13 @@ int main(int argc, char* argv[]) {
         exit(2);
     }
 
-    enviar_operacion(fd_conexion_client_memoria, &handshakeDeCPU);
+    enviar_handshake(fd_conexion_client_memoria, handshakeCPU);
 
     char mensaje[1024] = {0};
     recv(fd_conexion_client_memoria, mensaje, 1024, 0);
     printf("Respuesta del servidor: %s\n", mensaje);    
 
     
-
     //ABRIR CPU COMO SERVIDOR DE KERNEL(unico cliente)//
     fd_escucha_cpu = iniciar_servidor(NULL,puerto_propio);
     
@@ -31,8 +30,8 @@ int main(int argc, char* argv[]) {
 
     fd_conexion_server_kernel = esperar_cliente(fd_escucha_cpu);
 
-    int cod_op = recibir_operacion(fd_conexion_server_kernel);
-    if(cod_op == 5){
+    handshake cod_op = recibir_operacion(fd_conexion_server_kernel);
+    if(cod_op == handshakeKERNEL){
         log_info(logger_cpu,"Se conecto KERNEL(unico cliente)");
         enviar_mensaje_de_exito(fd_conexion_server_kernel, "HOLA KERNEL!! SOY CPU");
         }else{

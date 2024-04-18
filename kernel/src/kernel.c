@@ -16,34 +16,30 @@ int main(int argc, char* argv[]) {
 
 
     //KERNEL A MEMORIA//
-    enviar_operacion(fd_conexion_client_memoria, &handshakeDeMemoria);
+    enviar_handshake(fd_conexion_client_memoria, handshakeKERNEL);
     char mensaje_ok_memoria[1024] = {0};
     recv(fd_conexion_client_memoria, mensaje_ok_memoria, 1024, 0);
     printf("Respuesta de memoria: %s\n", mensaje_ok_memoria);    
 
     //KERNEL A CPU//
-    enviar_operacion(fd_conexion_client_cpu, &handshakeDeCpu);
+    enviar_handshake(fd_conexion_client_cpu, handshakeKERNEL);
     char mensaje_ok_cpu[1024] = {0};
     recv(fd_conexion_client_cpu, mensaje_ok_cpu, 1024, 0);
     printf("Respuesta de cpu: %s\n", mensaje_ok_cpu);  
-
-     
-
 
 
     fd_escucha_kernel = iniciar_servidor(NULL , puerto_propio);
     fd_conexion_server_io = esperar_cliente(fd_escucha_kernel);
     log_info(logger_kernel,"Se conecto la interfaz de I/O");
 
-    int cod_op = recibir_operacion(fd_conexion_server_io);
+    handshake cod_op = recibir_operacion(fd_conexion_server_io);
     
-    if(cod_op == 1){
+    if(cod_op == handshakeIO){
         enviar_mensaje_de_exito(fd_conexion_server_io, "Mensaje desde Kernel a Interfaz IO");   
         log_info(logger_kernel,"Ya te mande el valor y el OP esta bien, Interfaz IO");
-        }else{
+    }else{
             log_info(logger_kernel, "Codigo de operacion no reconocido en el server");    
-        }
-    
+    }
     terminar_programa();
     return 0;
 }

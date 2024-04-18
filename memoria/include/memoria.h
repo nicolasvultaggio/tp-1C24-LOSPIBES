@@ -6,11 +6,6 @@
 
 int fd_escucha_memoria;
 int fd_conexion_server;
-int handshake;
-//No va a quedar para siempre
-int handshakeDeCPU = 0;
-int handshakeDeKERNEL = 1;
-int handshakeDeIO = 2;
 
 char* puerto_propio;
 

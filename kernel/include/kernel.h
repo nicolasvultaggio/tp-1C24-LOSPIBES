@@ -20,12 +20,6 @@ char * ip_cpu;
 char * ip_memoria;
 char * puerto_cpu ;
 
-int* handshakeDeMemoria;
-(*handshakeDeMemoria) = 1;
-
-int* handshakeDeCpu;
-(*handshakeDeCpu) = 5;
-
 t_log* logger_kernel;
 t_config* config_kernel;
 

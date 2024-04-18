@@ -127,6 +127,7 @@ int recibir_operacion(int socket_cliente)
 	else
 	{
 		close(socket_cliente);
+		printf("No pudo recibir operacion");
 		return -1;
 	}
 }
@@ -138,6 +139,10 @@ void enviar_operacion(int socket_conexion, int* valor)
 	
 }
 
+void enviar_handshake(int unSocket, handshake numero){
+	int buffer = numero;
+	send(unSocket, &buffer ,sizeof(int),0);
+}
 void recibir_mensaje(t_log* loggerServidor ,int socket_cliente)
 {
 	int size;

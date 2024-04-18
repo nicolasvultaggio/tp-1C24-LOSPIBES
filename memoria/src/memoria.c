@@ -15,18 +15,18 @@ int main() {
     while ((fd_conexion_server = esperar_cliente(fd_escucha_memoria)) != (-1))
     {
         log_info(logger_memoria,"Se conecto un cliente");
-        int cod_op = recibir_operacion(fd_conexion_server);
+        handshake cod_op = recibir_operacion(fd_conexion_server);
         switch (cod_op)
         {
-        case 0:
+        case handshakeCPU:
             enviar_mensaje_de_exito(fd_conexion_server, "Mensaje desde memoria a CPU");
             log_info(logger_memoria,"Ya te mande el valor y el OP esta bien, cpu");
             break;
-        case 1:
+        case handshakeKERNEL:
             enviar_mensaje_de_exito(fd_conexion_server, "Mensaje desde memoria a Kernel");
             log_info(logger_memoria,"Ya te mande el valor y el OP esta bien, kernel");
             break;
-        case 2:
+        case handshakeIO:
             enviar_mensaje_de_exito(fd_conexion_server, "Mensaje desde memoria a Interfaz IO");   
             log_info(logger_memoria,"Ya te mande el valor y el OP esta bien, Interfaz IO");
             break;

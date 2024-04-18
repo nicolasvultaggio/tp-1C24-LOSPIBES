@@ -12,12 +12,6 @@
 int fd_conexion_client_kernel;//socket para enviar a kernel
 int fd_conexion_client_memoria;//socket para enviar a memoria
 
-int* handshake_de_memoria;
-(*handshake_de_memoria) = 2;
-
-int* handshake_de_kernel;
-(*handshake_de_kernel) = 1;
-
 char* ip_kernel;
 char* puerto_kernel;
 char* ip_memoria;
