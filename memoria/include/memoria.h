@@ -25,8 +25,6 @@ char* RETARDO_RESPUESTA;
 t_log* logger_memoria;
 t_config* config_memoria;
 
-int iniciar_conexiones();
-void iterator(char* value);
 void terminar_programa();
 void leer_configuraciones();
 

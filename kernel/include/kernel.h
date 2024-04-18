@@ -12,7 +12,7 @@
 int server_socket;
 int socket_cliente_a_CPU;
 int socket_cliente_a_MEMORIA;
-int socket_cliente_a_CPUU;
+int socket_cliente_a_interfaz;
 
 char* mensaje;
 char* IP_PROPIO;
@@ -26,11 +26,12 @@ char* PUERTO_ESCUCHA_CPU;
 
 int* handshakeDeMemoria;
 (*handshakeDeMemoria) = 1;
- int* handshakeDeCpu;
- (*handshakeDeCpu)=5;
 
-t_log* logger;
-t_config* config;
+int* handshakeDeCpu;
+(*handshakeDeCpu) = 5;
+
+t_log* logger_kernel;
+t_config* config_kernel;
 
 bool iniciar_conexiones();
 void terminar_programa();

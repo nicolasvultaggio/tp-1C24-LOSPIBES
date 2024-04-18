@@ -25,11 +25,12 @@ char* puerto_memoria;
 char* mensaje_ok_memoria;
 char* mensaje_ok_kernel;
 
-t_log* logger;
-t_config* config;
+t_log* logger_io;
+t_config* config_io;
 
 int conectar_modulo(int un_socket, char *un_ip, char* un_puerto);
 void leer_las_configs();
 void terminar_programa();
+bool iniciar_conexiones();
 
 #endif
