@@ -9,8 +9,8 @@
 #include <commons/config.h>
 #include <commons/log.h>
 
-int socket_cliente_a_kernel;//socket para enviar a kernel
-int socket_cliente_a_memoria;//socket para enviar a memoria
+int fd_conexion_client_kernel;//socket para enviar a kernel
+int fd_conexion_client_memoria;//socket para enviar a memoria
 
 int* handshake_de_memoria;
 (*handshake_de_memoria) = 2;

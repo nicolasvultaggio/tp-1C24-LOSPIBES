@@ -15,15 +15,15 @@ int main(int argc, char* argv[]) {
     }
 
     //IO - MEMORIA
-    enviar_operacion(socket_cliente_a_memoria, &handshake_de_memoria);
+    enviar_operacion(fd_conexion_client_memoria, &handshake_de_memoria);
     char mensaje_ok_memoria[1024] = {0};
-    recv(socket_cliente_a_memoria, mensaje_ok_memoria, 1024, 0);
+    recv(fd_conexion_client_memoria, mensaje_ok_memoria, 1024, 0);
     printf("Respuesta del servidor: %s\n", mensaje_ok_memoria);
 
     //IO-KERNEL
-    enviar_operacion(socket_cliente_a_kernel,&handshake_de_kernel);
+    enviar_operacion(fd_conexion_client_kernel,&handshake_de_kernel);
     char mensaje_ok_kernel[1024] = {0};
-    recv(socket_cliente_a_kernel, mensaje_ok_kernel, 1024, 0);
+    recv(fd_conexion_client_kernel, mensaje_ok_kernel, 1024, 0);
     printf("Respuesta del servidor: %s\n", mensaje_ok_kernel);
 
 
@@ -40,10 +40,10 @@ void leer_configuraciones(){
 }
 
 bool iniciar_conexiones(){
-    socket_cliente_a_kernel = crear_conexion(ip_kernel,puerto_kernel);
-    socket_cliente_a_memoria = crear_conexion(ip_memoria,puerto_memoria);
+    fd_conexion_client_kernel = crear_conexion(ip_kernel,puerto_kernel);
+    fd_conexion_client_memoria = crear_conexion(ip_memoria,puerto_memoria);
 
-    return socket_cliente_a_kernel != -1 && socket_cliente_a_memoria != -1; 
+    return fd_conexion_client_kernel != -1 && fd_conexion_client_memoria != -1; 
 }
 
 void terminar_programa()
@@ -54,6 +54,6 @@ void terminar_programa()
 	if(config_io != NULL){
 		config_destroy(config_io);
 	}
-    liberar_conexion(socket_cliente_a_kernel);
-    liberar_conexion(socket_cliente_a_memoria);
+    liberar_conexion(fd_conexion_client_kernel);
+    liberar_conexion(fd_conexion_client_memoria);
 }
