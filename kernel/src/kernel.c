@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
 
 
 
-    fd_escucha_kernel = iniciar_servidor(NULL , PUERTO_PROPIO);
+    fd_escucha_kernel = iniciar_servidor(NULL , puerto_propio);
     fd_conexion_server_io = esperar_cliente(fd_escucha_kernel);
     log_info(logger_kernel,"Se conecto la interfaz de I/O");
 
@@ -57,8 +57,8 @@ void leer_configuraciones(){
 }
 
 bool iniciar_conexiones(){
-    fd_conexion_client_cpu = crear_conexion(IP_CPU,PUERTO_CPU);
-    fd_conexion_client_memoria = crear_conexion(IP_MEMORIA,PUERTO_MEMORIA); 
+    fd_conexion_client_cpu = crear_conexion(ip_cpu,puerto_cpu);
+    fd_conexion_client_memoria = crear_conexion(ip_memoria,puerto_memoria); 
 
     return fd_conexion_client_cpu != -1 && fd_conexion_client_memoria != -1; 
 }

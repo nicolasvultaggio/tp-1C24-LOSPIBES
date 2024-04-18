@@ -12,22 +12,22 @@ int main() {
     log_info(logger_memoria, "Puerto de memoria habilitado para sus clientes");
 
     
-    while ((fd_conexion_server/*Por ahora el cliente puede ser cualquiera por eso la nomenclatua es distinta */ = esperar_cliente(fd_escucha_memoria)) != (-1))
+    while ((fd_conexion_server = esperar_cliente(fd_escucha_memoria)) != (-1))
     {
         log_info(logger_memoria,"Se conecto un cliente");
         int cod_op = recibir_operacion(fd_conexion_server);
         switch (cod_op)
         {
-        case handshakeDeCPU:
+        case 0:
             enviar_mensaje_de_exito(fd_conexion_server, "Mensaje desde memoria a CPU");
             log_info(logger_memoria,"Ya te mande el valor y el OP esta bien, cpu");
             break;
-        case handshakeDeKERNEL:
+        case 1:
             enviar_mensaje_de_exito(fd_conexion_server, "Mensaje desde memoria a Kernel");
             log_info(logger_memoria,"Ya te mande el valor y el OP esta bien, kernel");
             break;
-        case handshakeDeIO:
-            enviar_mensaje_de_exito(fd_conexion_server "Mensaje desde memoria a Interfaz IO");   
+        case 2:
+            enviar_mensaje_de_exito(fd_conexion_server, "Mensaje desde memoria a Interfaz IO");   
             log_info(logger_memoria,"Ya te mande el valor y el OP esta bien, Interfaz IO");
             break;
         default:
