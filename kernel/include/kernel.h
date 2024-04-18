@@ -9,10 +9,10 @@
 #include <commons/config.h>
 #include <commons/log.h>
 
-int server_socket;
-int socket_cliente_a_CPU;
-int socket_cliente_a_MEMORIA;
-int socket_cliente_a_interfaz;
+int fd_escucha_kernel;
+int fd_conexion_client_cpu;
+int fd_conexion_client_memoria;
+int fd_conexion_server_io;
 
 char* mensaje;
 char* IP_PROPIO;
@@ -21,7 +21,6 @@ char* IP_CPU;
 char* PUERTO_CPU;
 char* IP_MEMORIA;
 char* PUERTO_MEMORIA;
-char* PUERTO_ESCUCHA_CPU;
 
 
 int* handshakeDeMemoria;
