@@ -27,9 +27,26 @@ int main(int argc, char* argv[]) {
 
     
 
-    /*server_socket = iniciar_servidor(NULL ,puerto__propio);
-    int cliente_socket = esperar_cliente(server_socket);*/
+    //ABRIR CPU COMO SERVIDOR DE KERNEL(unico cliente)//
+    logger__memoria = log_create("cpu_logs.log","LOG",1,LOG_LEVEL_INFO);
+    config__memoria = config_create("./configs/cpu.config");
+    leer__configuraciones();
     
+    int socket_server_CPU = iniciar_servidor(NULL,puerto__propio);
+    
+    log_info(logger__memoria, "Puerto de CPU habilitado para su UNICO cliente");
+
+    
+    while ((socket_cliente_delKERNEL = esperar_cliente(socket_server_CPU)) != (-1))
+    {
+        int cod_oop = recibir_operacion(socket_cliente_delKERNEL);
+        if(cod_oop==5){
+        log_info(logger__memoria,"Se conecto KERNEL(unico cliente)");
+        enviar_mensaje_de_exito(socket_cliente_delKERNEL, "HOLA KERNEL!! SOY CPU");
+        }
+        
+        
+    }
     terminar_programa();
     return 0;
   

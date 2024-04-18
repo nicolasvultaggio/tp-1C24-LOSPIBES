@@ -6,9 +6,11 @@ int main(int argc, char* argv[]) {
 
     logger = log_create("kernel_logs.log","kernel",1,LOG_LEVEL_INFO);
     config = config_create("./kernel.config");
-
+    //conexion KERNEL A MEMORIA//
     leer_configuraciones();
     socket_cliente_a_MEMORIA = crear_conexion(IP_MEMORIA,PUERTO_MEMORIA);
+    //conexion KERNEL A CPU//
+    socket_cliente_a_CPUU = crear_conexion(IP_MEMORIA,PUERTO_ESCUCHA_CPU);
 
     if(!socket_cliente_a_MEMORIA){
         log_error(logger,"Alguna conexion esta tirando error");
@@ -16,7 +18,7 @@ int main(int argc, char* argv[]) {
         exit(2);
     }
 
-    
+    //KERNEL A MEMORIA//
     enviar_operacion(socket_cliente_a_MEMORIA, &handshakeDeMemoria);
 
     char mensaje[1024] = {0};
@@ -24,6 +26,14 @@ int main(int argc, char* argv[]) {
     printf("Respuesta del servidor: %s\n", mensaje);    
 
     close(socket_cliente_a_MEMORIA);
+     //KERNEL A CPU//
+    enviar_operacion(socket_cliente_a_CPUU, &handshakeDeCpu);
+
+    char mensaje3[1024] = {0};
+    recv(socket_cliente_a_CPUU, mensaje3, 1024, 0);
+    printf("Respuesta del servidor: %s\n", mensaje3);    
+
+    close(socket_cliente_a_CPUU);
 
 
 
@@ -55,6 +65,7 @@ void leer_configuraciones(){
     IP_MEMORIA = config_get_string_value(config,"IP_MEMORIA");
     PUERTO_MEMORIA = config_get_string_value(config,"PUERTO_MEMORIA");
     IP_CPU = config_get_string_value(config,"IP_CPU");
+    PUERTO_ESCUCHA_CPU = config_get_string_value(config,"PUERTO_ESCUCHA_CPU");
 
 }
 
