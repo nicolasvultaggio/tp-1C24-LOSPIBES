@@ -15,7 +15,7 @@ int main() {
     while ((fd_conexion_server = esperar_cliente(fd_escucha_memoria)) != (-1))
     {
         log_info(logger_memoria,"Se conecto un cliente");
-        handshake cod_op = recibir_operacion(fd_conexion_server);
+        op_code cod_op = recibir_operacion(fd_conexion_server);
         switch (cod_op)
         {
         case handshakeCPU:

@@ -15,13 +15,13 @@ int main(int argc, char* argv[]) {
     }
 
     //IO - MEMORIA
-    enviar_handshake(fd_conexion_client_memoria, handshakeIO);
+    enviar_operacion(fd_conexion_client_memoria, handshakeIO);
     char mensaje_ok_memoria[1024] = {0};
     recv(fd_conexion_client_memoria, mensaje_ok_memoria, 1024, 0);
     printf("Respuesta del servidor: %s\n", mensaje_ok_memoria);
 
     //IO-KERNEL
-    enviar_handshake(fd_conexion_client_kernel,handshakeIO);
+    enviar_operacion(fd_conexion_client_kernel,handshakeIO);
     char mensaje_ok_kernel[1024] = {0};
     recv(fd_conexion_client_kernel, mensaje_ok_kernel, 1024, 0);
     printf("Respuesta del servidor: %s\n", mensaje_ok_kernel);

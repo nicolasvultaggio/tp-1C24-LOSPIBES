@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
         exit(2);
     }
 
-    enviar_handshake(fd_conexion_client_memoria, handshakeCPU);
+    enviar_operacion(fd_conexion_client_memoria, handshakeCPU);
 
     char mensaje[1024] = {0};
     recv(fd_conexion_client_memoria, mensaje, 1024, 0);
@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 
     fd_conexion_server_kernel = esperar_cliente(fd_escucha_cpu);
 
-    handshake cod_op = recibir_operacion(fd_conexion_server_kernel);
+    op_code cod_op = recibir_operacion(fd_conexion_server_kernel);
     if(cod_op == handshakeKERNEL){
         log_info(logger_cpu,"Se conecto KERNEL(unico cliente)");
         enviar_mensaje_de_exito(fd_conexion_server_kernel, "HOLA KERNEL!! SOY CPU");

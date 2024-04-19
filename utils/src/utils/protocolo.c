@@ -133,16 +133,14 @@ int recibir_operacion(int socket_cliente)
 }
 
 
-void enviar_operacion(int socket_conexion, int* valor)
+void enviar_operacion(int socket_conexion, op_code numero)
 {
-	send(socket_conexion, valor, sizeof(int) ,0);
+	int buffer = numero;
+	send(socket_conexion, &buffer, sizeof(int) ,0);
 	
 }
 
-void enviar_handshake(int unSocket, handshake numero){
-	int buffer = numero;
-	send(unSocket, &buffer ,sizeof(int),0);
-}
+
 void recibir_mensaje(t_log* loggerServidor ,int socket_cliente)
 {
 	int size;

@@ -7,14 +7,12 @@
 #include<string.h>
 #include<commons/config.h>
 
+
 typedef enum{
 	handshakeCPU,
 	handshakeKERNEL,
 	handshakeIO,
-	handshakeMEMORIA
-}handshake;
-
-typedef enum{
+	handshakeMEMORIA,
 	MENSAJE,
 	PAQUETE
 }op_code;
@@ -42,7 +40,7 @@ t_list* recibir_paquete(int socket_cliente);
 void* recibir_buffer(int* size, int socket_cliente);
 int recibir_operacion(int socket_cliente);
 void recibir_mensaje(t_log* loggerServidor, int socket_cliente);
-void enviar_operacion(int socket_conexion, int* valor);
+void enviar_operacion(int socket_conexion, op_code numero);
 void enviar_mensaje_de_exito(int socket, char* mensaje);
-void enviar_handshake(int unSocket, handshake numero);
+
 #endif

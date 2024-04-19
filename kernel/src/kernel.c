@@ -16,13 +16,13 @@ int main(int argc, char* argv[]) {
 
 
     //KERNEL A MEMORIA//
-    enviar_handshake(fd_conexion_client_memoria, handshakeKERNEL);
+    enviar_operacion(fd_conexion_client_memoria, handshakeKERNEL);
     char mensaje_ok_memoria[1024] = {0};
     recv(fd_conexion_client_memoria, mensaje_ok_memoria, 1024, 0);
     printf("Respuesta de memoria: %s\n", mensaje_ok_memoria);    
 
     //KERNEL A CPU//
-    enviar_handshake(fd_conexion_client_cpu, handshakeKERNEL);
+    enviar_operacion(fd_conexion_client_cpu, handshakeKERNEL);
     char mensaje_ok_cpu[1024] = {0};
     recv(fd_conexion_client_cpu, mensaje_ok_cpu, 1024, 0);
     printf("Respuesta de cpu: %s\n", mensaje_ok_cpu);  
@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
     fd_conexion_server_io = esperar_cliente(fd_escucha_kernel);
     log_info(logger_kernel,"Se conecto la interfaz de I/O");
 
-    handshake cod_op = recibir_operacion(fd_conexion_server_io);
+    op_code cod_op = recibir_operacion(fd_conexion_server_io);
     
     if(cod_op == handshakeIO){
         enviar_mensaje_de_exito(fd_conexion_server_io, "Mensaje desde Kernel a Interfaz IO");   
