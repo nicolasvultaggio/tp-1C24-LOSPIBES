@@ -9,12 +9,15 @@
 #include <commons/config.h>
 #include <commons/log.h>
 
-int fd_conexion_server_kernel;
-int fd_conexion_client_memoria;
-int fd_escucha_cpu;
+int fd_conexion_interrupt;
+int fd_conexion_dispatch;
+int fd_conexion_memoria;
+int fd_escucha_dispatch;
+int fd_escucha_interrupt;
 
 char* ip_propio;
-char* puerto_propio; 
+char* puerto_cpu_dispatch; 
+char* puerto_cpu_interrupt; 
 char* ip_memoria;
 char* puerto_memoria;
 
@@ -25,4 +28,5 @@ t_config* config_cpu;
 bool iniciar_conexiones();
 void terminar_programa();
 void leer__configuraciones();
+
 #endif

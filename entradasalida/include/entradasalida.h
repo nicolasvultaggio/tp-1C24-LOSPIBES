@@ -9,8 +9,8 @@
 #include <commons/config.h>
 #include <commons/log.h>
 
-int fd_conexion_client_kernel;//socket para enviar a kernel
-int fd_conexion_client_memoria;//socket para enviar a memoria
+int fd_conexion_kernel;//socket para enviar a kernel
+int fd_conexion_memoria;//socket para enviar a memoria
 
 char* ip_kernel;
 char* puerto_kernel;

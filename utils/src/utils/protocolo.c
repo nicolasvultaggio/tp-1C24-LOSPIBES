@@ -119,7 +119,7 @@ void* recibir_buffer(int* size, int socket_cliente)
 	return buffer;
 }
 
-int recibir_operacion(int socket_cliente)
+int recibir_operacion(int socket_cliente, t_log * unLogger , char * elQueManda)
 {
 	int cod_op;
 	if(recv(socket_cliente, &cod_op, sizeof(int), MSG_WAITALL) > 0)
@@ -127,7 +127,7 @@ int recibir_operacion(int socket_cliente)
 	else
 	{
 		close(socket_cliente);
-		printf("No pudo recibir operacion");
+		log_info(unLogger,"No se pudo recibir operación de : %s",elQueManda);
 		return -1;
 	}
 }
@@ -147,5 +147,42 @@ void recibir_mensaje(t_log* loggerServidor ,int socket_cliente)
 	char* buffer = recibir_buffer(&size, socket_cliente);
 	log_info(loggerServidor, "Me llego el mensaje %s", buffer);
 	free(buffer);
+}
+
+void atender_conexion(void * args){
+	int clave = 1 ;
+	args_atendedor *atender_args = (args_atendedor *)args;
+    int fd_conexion = atender_args->fd_conexion;
+    t_log *logger_atendedor = atender_args->logger_atendedor;
+    char *cliente = atender_args->cliente;
+
+	while (clave) {
+		int cod_op = recibir_operacion(fd_conexion,logger_atendedor,cliente);
+		switch (cod_op) {
+		case MENSAJE:
+			//
+			break;
+		case PAQUETE:
+			//
+			break;
+		case -1:
+			log_error(logger_atendedor, "Desconexión de %s",cliente);
+			clave = 0;
+            break;
+		default:
+			log_info(logger_atendedor,"Operacion desconocida de %s",cliente);
+			break;
+	}
+    }
+	free(atender_args);
+	pthread_exit(NULL);
+}
+
+args_atendedor* crear_args(int un_fd, t_log * un_logger, char * un_cliente){
+	args_atendedor * args ;
+	args -> fd_conexion = un_fd;
+	args -> logger_atendedor = un_logger;
+	args -> cliente = un_cliente;
+	return args;
 }
 

@@ -1,7 +1,7 @@
 #include <../../utils/include/socket.h>
 
 //Cliente
-int crear_conexion(char *ip, char* puerto)
+int crear_conexion(char *ip,char *puerto, t_log * unLogger, char * conectado)
 {
 	struct addrinfo hints;
 	struct addrinfo *server_info;
@@ -18,14 +18,14 @@ int crear_conexion(char *ip, char* puerto)
 
 	// Ahora que tenemos el socket, vamos a conectarlo
 	connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
-
+	log_info(unLogger,"Conectado a %s ", conectado);
 	freeaddrinfo(server_info);
 
 	return socket_cliente;
 }
 
 //Servidor
-int iniciar_servidor(char *ip,char *puerto)
+int iniciar_servidor(char *ip,char *puerto, t_log * unLogger, char * escucha)
 {
 	struct addrinfo hints, *servinfo;
 
@@ -46,16 +46,18 @@ int iniciar_servidor(char *ip,char *puerto)
 	// Escuchamos las conexiones entrantes
 	listen(socket_servidor, SOMAXCONN);
 
+	log_info(unLogger,"Iniciado el puerto de escucha %s ", escucha);
+	
 	freeaddrinfo(servinfo);
 
 	return socket_servidor;
 }
 
-int esperar_cliente(int socket_servidor)
+int esperar_cliente(int socket_servidor, t_log * un_log, char * cliente)
 {
 	// Aceptamos un nuevo cliente
 	int socket_cliente = accept(socket_servidor,NULL,NULL);
-
+	log_info(un_log, "Se conectó el cliente %s ", cliente);
 	return socket_cliente;
 }
 

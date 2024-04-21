@@ -10,15 +10,17 @@
 #include <commons/log.h>
 
 int fd_escucha_kernel;
-int fd_conexion_client_cpu;
-int fd_conexion_client_memoria;
-int fd_conexion_server_io;
+int fd_conexion_dispatch;
+int fd_conexion_interrupt;
+int fd_conexion_io;
+int fd_conexion_memoria;
 
 char * puerto_propio; 
 char * puerto_memoria;
 char * ip_cpu; 
 char * ip_memoria;
-char * puerto_cpu ;
+char * puerto_cpu_dispatch ;
+char * puerto_cpu_interrupt ;
 
 t_log* logger_kernel;
 t_config* config_kernel;
@@ -26,5 +28,6 @@ t_config* config_kernel;
 bool iniciar_conexiones();
 void terminar_programa();
 void leer_configuraciones();
+
 
 #endif
