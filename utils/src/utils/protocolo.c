@@ -174,12 +174,13 @@ void atender_conexion(void * args){
 			break;
 	}
     }
+	free(args);
 	free(atender_args);
 	pthread_exit(NULL);
 }
 
 args_atendedor* crear_args(int un_fd, t_log * un_logger, char * un_cliente){
-	args_atendedor * args ;
+	args_atendedor* args = (args_atendedor*) malloc(sizeof(args_atendedor));
 	args -> fd_conexion = un_fd;
 	args -> logger_atendedor = un_logger;
 	args -> cliente = un_cliente;
