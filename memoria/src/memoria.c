@@ -37,7 +37,23 @@ int main() {
     pthread_create(&hilo_io,NULL,(void*)atender_conexion,(void *)args_io);
     // pthread_detach(hilo_memoria); no hago detach porque me terminaría el programa, terminando mis otros hilos
     pthread_join(hilo_io,NULL); // así, la cpu se ejecuta hasta que terminen todos los hilos
+    //***************************CHECKPOINT 2*************************+
+    //2. recibo path de kernel usando serializacion y creo por fuera del malloc de memoria la lista de procesos
+      
+    //3. abro hilo de espera y espero a que CPU me envie PID Y PC, dejar abierto hilo porque se enviara una a una cada instruccion
+          while ((fd_conexion_cpu  = esperar_cliente(fd_escucha_memoria)) != (-1))
+    {
+        log_info(logger_memoria,"CPU PIDE INSTRUCCION");
+        op_code cod_op= recibir_operacion(fd_conexion_server);
+    
+    }
+    //4. armar funcion que busque en el archivo la instruccion que pidio CPU y devuelve un STRUCT la instruccion pedida
+    leer_pseudocodigo(path_instrucciones,logger_memoria);
+    
+    //5. guardo en alguna variable local la instruccion y la envio serializada a CPU.
+    //6. libero memoria de lista, y los hilos.
 
+    
     /*
     while ((fd_conexion_server = esperar_cliente(fd_escucha_memoria)) != (-1))
     {
@@ -72,11 +88,77 @@ int main() {
 //Esta pensado para que en un futuro lea mas de una configuracion. 
 void leer_configuraciones(){
     puerto_propio = config_get_string_value(config_memoria,"PUERTO_PROPIO");
+     tam_memoria=config_get_int_value(config_memoria, "TAM_MEMORIA");
+    tam_pagina= config_get_int_value(config_memoria,"TAM_PAGINA");
+    path_instrucciones=config_get_string_value(config_memoria,"PATH_INSTRUCCIONES");
+    retardo_respuesta= config_get_int_value(config_memoria,"RETARDO_RESPUESTA");
 }
 
 void terminar_programa(){
     config_destroy(config_memoria);
     log_destroy(logger_memoria);
 }
+t_instruccion leer_pseudocodigo(t_instruccion pid , char* ruta, t_log* logger){
+    //t_list* listadeinstrucciones= list_create();//
+   
+    FILE* f;
+    char buffer[256];
+    char* palabra;
+    char* instruccion_leida= NULL;
+    char* parametros[5];
+    int contadordeparametros=0;
 
+    f=fopen(ruta;"r");
+    while(fgets(buffer,256,f)!=NULL){           // la funcion gets lee en buffer la primera linea hasta que encuantra \n
+          buffer[strcspn(buffer, "\n")]= '\0';
+        instruccion_leida = strtok(buffer, " "); //guarda el valor de la primera palabra del buffer (sera el la instruccion).
+        if (!strcmp(instruccion_leida,pid->instruccion1)){ // ver si la primera palabra leida es igual a la pasada por parametro en la funcion ppal.
+
+        while ((palabra = strtok(NULL, " ") !=NULL && contadordeparametros<5){    // while para cargar el vectore parametros y contar la cantidad de parametros. Va contando por cada  " "
+            parametros[contadordeparametros+]= palabra;
+        }
+
+         t_instruccion instruccion  = malloc(sizeof(t_instruccion));
+         instruccion->parametro1=malloc(256);
+         instruccion->parametro2=malloc(256);
+         instruccion->parametro3=malloc(256);
+         instruccion->parametro4=malloc(256);
+         instruccion->parametro5=malloc(256);
+
+        
+        }
+        instruccion->parametro1= instruccion_leida; //FALTA implementar convertir el string a tipo instruccion;
+       if(contadordeparametros>0){
+        strcpy(instruccion->parametro1,parametros[0]);
+       }
+       else{
+        strcpy(instruccion->parametro1," ");
+       }
+         if(contadordeparametros>1){
+        strcpy(instruccion->parametro1,parametros[1]);
+       }
+       else{
+        strcpy(instruccion->parametro1," ");
+       }
+         if(contadordeparametros>2){
+        strcpy(instruccion->parametro1,parametros[2]);
+       }
+       else{
+        strcpy(instruccion->parametro1," ");
+       }
+         if(contadordeparametros>3){
+        strcpy(instruccion->parametro1,parametros[3]);
+       }
+       else{
+        strcpy(instruccion->parametro1," ");
+       }
+        if(contadordeparametros>4){
+        strcpy(instruccion->parametro1,parametros[4]);
+       }
+       else{
+        strcpy(instruccion->parametro1," ");
+       }
+    }
+    return instruccion;
+}
 
