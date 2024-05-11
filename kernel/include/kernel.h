@@ -83,6 +83,7 @@ void iniciar_proceso(char* arg1);
 void finalizar_proceso(char* arg1);
 pcb* buscar_proceso_para_finalizar(int pid_a_buscar);
 pcb *crear_pcb();
+void despachar_pcb(pcb * un_pcb);
 void iniciar_colas_de_estados();
 void proceso_a_ready();
 int asignar_pid();
