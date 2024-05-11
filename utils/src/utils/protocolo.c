@@ -1,6 +1,6 @@
 #include <../../utils/include/protocolo.h>
 
-/* ATENDDER */
+/* ATENDDER (NO SE USAN MAS)*/
 void atender_conexion(void * args){
 	int clave = 1 ;
 	args_atendedor *atender_args = (args_atendedor *)args;
@@ -38,6 +38,8 @@ args_atendedor* crear_args(int un_fd, t_log * un_logger, char * un_cliente){
 	args -> cliente = un_cliente;
 	return args;
 }
+
+/*--------------------------*/
 
 void * pop_con_mutex(t_list* lista, pthread_mutex_t* mutex){
 	pthread_mutex_lock(mutex);
@@ -152,7 +154,7 @@ void snd_handshake(int fd_socket_cliente){
 	eliminar_paquete(paquete);
 }
 
-void send_solicitar_instruccion(int fd, int pid, int program_counter){
+void enviar_solicitar_instruccion(int fd, int pid, int program_counter){
 	
 	t_paquete* paquete = crear_paquete(SOLICITAR_INSTRUCCION);
 	agregar_a_paquete(paquete, &pid, sizeof(int));
