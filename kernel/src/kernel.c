@@ -381,7 +381,31 @@ int es_path(char* path){
     return cantidadDeSlash || cantidadDePuntos;
 }
 
+void despachar_pcb(pcb * un_pcb){
+    t_paquete * paquete_pcb = crear_paquete(CODE_PCB);
 
+    agregar_a_paquete(paquete_pcb, &(un_pcb->PID), sizeof(int));
+	agregar_a_paquete(paquete_pcb, &(un_pcb->PC), sizeof(int));
+    agregar_a_paquete(paquete_pcb, &(un_pcb->QUANTUM), sizeof(int));
+	agregar_a_paquete(paquete_pcb, &(un_pcb->estado), sizeof(estadosDeLosProcesos));
+
+    agregar_a_paquete(paquete_pcb, &(un_pcb->registros.AX), sizeof(uint8_t));
+	agregar_a_paquete(paquete_pcb, &(un_pcb->registros.BX), sizeof(uint8_t));
+	agregar_a_paquete(paquete_pcb, &(un_pcb->registros.CX), sizeof(uint8_t));
+	agregar_a_paquete(paquete_pcb, &(un_pcb->registros.DX), sizeof(uint8_t));
+    agregar_a_paquete(paquete_pcb, &(un_pcb->registros.EAX), sizeof(uint32_t ));
+	agregar_a_paquete(paquete_pcb, &(un_pcb->registros.EBX), sizeof(uint32_t ));
+	agregar_a_paquete(paquete_pcb, &(un_pcb->registros.ECX), sizeof(uint32_t ));
+	agregar_a_paquete(paquete_pcb, &(un_pcb->registros.EDX), sizeof(uint32_t ));
+    agregar_a_paquete(paquete_pcb, &(un_pcb->registros.SI), sizeof(uint32_t ));
+	agregar_a_paquete(paquete_pcb, &(un_pcb->registros.DI), sizeof(uint32_t ));
+    
+    enviar_paquete(paquete_pcb, fd_conexion_dispatch);
+
+    eliminar_paquete(paquete_pcb);
+    //DESPUES CPU VA A TENER QUE TENER UNA FUNCION QUE RECIBA UN PCB, ESTABLECIENDO TODAS LAS ESTRUCTURAS
+
+}
 
 void terminar_programa(){
 
