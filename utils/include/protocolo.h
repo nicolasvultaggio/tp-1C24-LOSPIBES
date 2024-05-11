@@ -1,4 +1,4 @@
-#ifndef PROT#ifndef PROTOCOLO_H_
+#ifndef PROTOCOLO_H_
 #define PROTOCOLO_H_
 
 #include<stdio.h>
