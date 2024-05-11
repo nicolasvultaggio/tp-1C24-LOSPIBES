@@ -21,6 +21,7 @@ typedef enum {
 	EXIT_CONSOLA, //Finalizacion por Error o por Consola
 	INTERRUPCION, //Finalizacaion forzada por parte del Kernel
 	FIN_QUANTUM, //Finalizacion por parte del Algoritmo
+	PROCESO_ACTIVO
 } motivo_desalojo;
 
 /* INSTRUCCIONES */
@@ -129,6 +130,8 @@ typedef struct {
 
 void atender_conexion(void * args);
 args_atendedor* crear_args(int un_fd, t_log * un_logger, char * un_cliente);
+
+/*Operaciones de colas*/
 void* pop_con_mutex(t_list* lista, pthread_mutex_t* mutex);
 void push_con_mutex(t_list* lista, void * elemento,pthread_mutex_t* mutex);
 
@@ -143,7 +146,27 @@ typedef struct{
 	t_buffer* buffer;
 } t_paquete;
 
-t_paquete* crear_paquete(void);
+/*ESTRUCTURAS INTERFACES */
+typedef enum{
+    GENERICA,
+    STDIN,
+    STDOUT,
+    DIALFS
+}io_type;
+
+typedef enum{
+    INFORMAR_NOMBRE,
+    INFORMAR_TIPO,
+    INSTRUCCION
+}op_kernel_a_io;
+
+typedef enum{
+    NOMBRE_INFORMADO,
+    TIPO_INFORMADO,
+    INSTRUCCION_REALIZADA
+}op_io_a_kernel;
+
+t_paquete* crear_paquete(op_code OPERACION);
 void crear_buffer(t_paquete* paquete);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void* serializar_paquete(t_paquete* paquete, int bytes);
@@ -175,6 +198,8 @@ t_linea_instruccion* recibir_proxima_instruccion(int fd_conexion);
 t_datos_proceso* recibir_datos_del_proceso(int fd_kernel);
 pcb* recibir_pcb(int socket);
 motivo_desalojo recibir_motiv_desalojo(int fd_escucha_dispatch);
+
+
 
 
 #endif
