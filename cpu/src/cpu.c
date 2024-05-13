@@ -147,7 +147,7 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			ejecutar_signal(PCB, instruccion->parametro1);
 			break;
 		case IO_GEN_SLEEP:
-			ejecutar_io_gen_sleep(PCB, instruccion->instruccion, instruccion->parametro1, instruccion->parametro2);
+			ejecutar_io_gen_sleep(PCB, "IO_GEN_SLEEP", instruccion->parametro1, instruccion->parametro2);
 			break;
 		case IO_STDIN_READ:
 			ejecutar_io_stdin_read();
@@ -193,28 +193,49 @@ void ejecutar_set(pcb* PCB, char* registro, char* valor){
 }
 
 void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
-	if(medir_registro(origenregistro)){
+
+	if(medir_registro(destinoregistro)){
 		uint8_t destino = capturar_registro8(PCB, destinoregistro);
-		uint8_t origen = capturar_registro8(PCB, origenregistro);
-		setear_registro8(PCB, destinoregistro, destino + origen);
 	}else{
 		uint32_t destino = capturar_registro32(PCB, destinoregistro);
-		uint32_t origen = capturar_registro32(PCB, destinoregistro);
-		setear_registro32(PCB, destinoregistro, destino + origen);
 	}
+
+	if(medir_registro(origenregistro)){
+		uint8_t origen = capturar_registro8(PCB, origenregistro);
+	}else{
+		uint32_t origen = capturar_registro32(PCB, origenregistro);
+	}
+
+	if(medir_registro(destinoregistro)){
+		setear_registro8(PCB, destinoregistro, destino + (uint8_t) origen);
+	}else{
+		setear_registro32(PCB, destinoregistro, destino + (uint32_t) origen);
+	}
+		
 	return;
 }
 
 void ejecutar_sub(pcb* PCB, char* destinoregistro, char* origenregistro){
+
+	uint8_t origen;
+	uint32_t origen;
+
 	if(medir_registro(origenregistro)){
+		origen = capturar_registro8(PCB, origenregistro);
+	}else{
+		origen = capturar_registro32(PCB, origenregistro);
+	}
+
+	if(medir_registro(destinoregistro)){
 		uint8_t destino = capturar_registro8(PCB, destinoregistro);
-		uint8_t origen = capturar_registro8(PCB, origenregistro);
-		setear_registro8(PCB, destinoregistro, destino - origen);
+		uint8_t origen8 = (uint8_t) origen;
+		setear_registro8(PCB, destinoregistro, destino + origen8);
 	}else{
 		uint32_t destino = capturar_registro32(PCB, destinoregistro);
-		uint32_t origen = capturar_registro32(PCB, destinoregistro);
-		setear_registro32(PCB, destinoregistro, destino - origen);
+		uint32_t origen8 = (uint32_t) origen;
+		setear_registro32(PCB, destinoregistro, destino + origen32);
 	}
+		
 	return;
 }
 

@@ -55,7 +55,7 @@ void push_con_mutex(t_list* lista, void * elemento ,pthread_mutex_t* mutex){
     return;
 }
 
-void empaquetar_pcb(t_paquete paquete, pcb* PCB){
+void empaquetar_pcb(t_paquete* paquete, pcb* PCB){
 
 	agregar_a_paquete(paquete, &(PCB->PID), sizeof(int));
 	agregar_a_paquete(paquete, &(PCB->PC), sizeof(uint32_t));
@@ -193,59 +193,29 @@ void enviar_datos_proceso(char* path, int pid, int fd_conexion){
 	eliminar_paquete(paquete_de_datos_proceso);
 }
 
-void enviar_solicitud_de_dormir_interfaz_generica(int fd_cpu_dispatch, char* interfaz, char* unidad_de_tiempo){
-	t_paquete* paquete = crear_paquete(SOLICITAR_IO_GEN_SLEEP);
-	agregar_a_paquete(paquete, &interfaz, sizeof(char));
-	agregar_a_paquete(paquete, &unidad_de_tiempo, sizeof(char));
-	enviar_paquete(paquete,fd_cpu_dispatch);
-	eliminar_paquete(paquete);
-}
-
 void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, char* parametro1, char* parametro2, char* parametro3, char* parametro4, char* parametro5){
 
 	t_paquete* paquete = crear_paquete(OPERACION);
-
 	empaquetar_pcb(paquete, PCB);
-
 	switch (OPERACION){
-	
-	case ESPERA:
-		agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
-		break;
-
-	case WAIT:
-		agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
-		break;
-
-	case SOLICITAR_IO_GEN_SLEEP:
-		agregar_a_paquete(paquete, &parametro1, sizeof(char));
-		agregar_a_paquete(paquete, &parametro2, sizeof(char));
-		agregar_a_paquete(paquete, &parametro3, sizeof(char));
-		break;
-
-	default:
-		break;
+		case ESPERA:
+			agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
+			break;
+		case WAIT:
+			agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
+			break;
+		case SOLICITAR_IO_GEN_SLEEP:
+			agregar_a_paquete(paquete, &parametro1, sizeof(char));
+			agregar_a_paquete(paquete, &parametro2, sizeof(char));
+			agregar_a_paquete(paquete, &parametro3, sizeof(char));
+			break;
+		default:
+			break;
 	}
-
 	enviar_paquete(paquete, fd_escucha_dispatch);
 	eliminar_paquete(paquete);
 
 }
-
-void enviar_cambio_de_estado(motivo_desalojo motivo, int fd_escucha_dispatch){
-	t_paquete* paquete = crear_paquete(motivo);
-	agregar_a_paquete(paquete, &motivo, sizeof(motivo_desalojo));
-	enviar_paquete(paquete, fd_escucha_dispatch);
-	eliminar_paquete(paquete);
-}
-
-void enviar_recurso(char * recurso, int fd_escucha_dispatch, op_code OPERACION){
-	t_paquete* paquete = crear_paquete(OPERACION);
-	agregar_a_paquete(paquete, recurso, strlen(recurso) + 1);
-	enviar_paquete(paquete, fd_escucha_dispatch);
-	eliminar_paquete(paquete);
-}
-
 
 /* FUNNCIONES DE RECIBO (RECV) */
 void recibir_mensaje(t_log* loggerServidor ,int socket_cliente)
