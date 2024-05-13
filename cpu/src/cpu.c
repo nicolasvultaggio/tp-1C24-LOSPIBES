@@ -147,7 +147,7 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			ejecutar_signal(PCB, instruccion->parametro1);
 			break;
 		case IO_GEN_SLEEP:
-			ejecutar_io_gen_sleep(PCB, instruccion->parametro1, instruccion->parametro2);
+			ejecutar_io_gen_sleep(PCB, instruccion->instruccion, instruccion->parametro1, instruccion->parametro2);
 			break;
 		case IO_STDIN_READ:
 			ejecutar_io_stdin_read();
@@ -306,8 +306,7 @@ void ejecutar_wait(pcb* PCB, char* registro){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "WAIT", registro);
 	char* recurso = malloc(strlen(registro) + 1);
 	strcpy(recurso, registro);
-	enviar_pcb(PCB, fd_escucha_dispatch);
-	enviar_recurso_por_wait(recurso, fd_escucha_dispatch, ESPERA);
+	enviar_pcb(PCB, fd_escucha_dispatch, ESPERA, recurso);
 	free(recurso);
 	sem_post(&sem_recibir_pcb);
 }
@@ -316,30 +315,26 @@ void ejecutar_signal(pcb* PCB, char* registro){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "SIGNAL", registro);
 	char* recurso = malloc(strlen(registro) + 1);
 	strcpy(recurso, registro);
-	enviar_pcb(PCB, fd_escucha_dispatch);
-	enviar_recurso_por_signal(recurso, fd_escucha_dispatch, SIGNAL);
+	enviar_pcb(PCB, fd_escucha_dispatch, SIGNAL, recurso);
 	free(recurso);
 	sem_post(&sem_execute);
 }
 
-void ejecutar_io_gen_sleep(pcb* PCB, char* interfaz, char* unidad_de_tiempo){
-	enviar_solicitud_de_dormir_interfaz_generica(fd_cpu_dispatch, interfaz, unidad_de_tiempo);
-	enviar_pcb(pcb* PCB, int fd_escucha_dispatch);
+void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* unidad_de_tiempo){
+	enviar_pcb(PCB, fd_escucha_dispatch, SOLICITAR_IO_GEN_SLEEP, instruccion, interfaz, unidad_de_tiempo);
 	sem_post(&sem_execute);
 	return;
 }
 
 void ejecutar_exit(pcb* PCB){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
-	enviar_pcb(PCB, fd_escucha_dispatch);
-	enviar_cambio_de_estado(EXITO, fd_escucha_dispatch);
+	enviar_pcb(PCB, fd_escucha_dispatch, EXITO);
 	sem_post(&sem_execute);
 }
 
 void ejecutar_error(pcb* PCB){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
-	enviar_pcb(PCB, fd_escucha_dispatch);
-	enviar_cambio_de_estado(EXIT_CONSOLA, fd_escucha_dispatch);
+	enviar_pcb(PCB, fd_escucha_dispatch,EXIT_CONSOLA);
 	sem_post(&sem_execute);
 }
 

@@ -47,6 +47,7 @@ void * pop_con_mutex(t_list* lista, pthread_mutex_t* mutex){
 	pthread_mutex_unlock(mutex);
 	return elemento;
 }
+
 void push_con_mutex(t_list* lista, void * elemento ,pthread_mutex_t* mutex){
   	pthread_mutex_lock(mutex);
     list_add(lista, elemento);
@@ -54,9 +55,28 @@ void push_con_mutex(t_list* lista, void * elemento ,pthread_mutex_t* mutex){
     return;
 }
 
+void empaquetar_pcb(t_paquete paquete, pcb* PCB){
+
+	agregar_a_paquete(paquete, &(PCB->PID), sizeof(int));
+	agregar_a_paquete(paquete, &(PCB->PC), sizeof(uint32_t));
+	agregar_a_paquete(paquete, &(PCB->QUANTUM), sizeof(int));
+	agregar_a_paquete(paquete, &(PCB->estado), sizeof(estadosDeLosProcesos));
+	agregar_a_paquete(paquete, &(PCB->registros.AX), sizeof(uint8_t));
+	agregar_a_paquete(paquete, &(PCB->registros.BX), sizeof(uint8_t));
+	agregar_a_paquete(paquete, &(PCB->registros.CX), sizeof(uint8_t));
+	agregar_a_paquete(paquete, &(PCB->registros.DX), sizeof(uint8_t));
+	agregar_a_paquete(paquete, &(PCB->registros.EAX), sizeof(uint32_t));
+	agregar_a_paquete(paquete, &(PCB->registros.EBX), sizeof(uint32_t));
+	agregar_a_paquete(paquete, &(PCB->registros.ECX), sizeof(uint32_t));
+	agregar_a_paquete(paquete, &(PCB->registros.EDX), sizeof(uint32_t));
+	agregar_a_paquete(paquete, &(PCB->registros.SI), sizeof(uint32_t));
+	agregar_a_paquete(paquete, &(PCB->registros.DI), sizeof(uint32_t));
+
+}
+
+
+
 /* FUNCIONES DE PAQUETE */
-
-
 t_paquete* crear_paquete(op_code OPERACION)
 {
 	t_paquete* paquete = malloc(sizeof(t_paquete));
@@ -181,25 +201,31 @@ void enviar_solicitud_de_dormir_interfaz_generica(int fd_cpu_dispatch, char* int
 	eliminar_paquete(paquete);
 }
 
-void enviar_pcb(pcb* PCB, int fd_escucha_dispatch){
+void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, char* parametro1, char* parametro2, char* parametro3, char* parametro4, char* parametro5){
 
-	t_paquete* paquete = crear_paquete(PCBBITO);
+	t_paquete* paquete = crear_paquete(OPERACION);
 
-	agregar_a_paquete(paquete, &(PCB->PID), sizeof(int));
-	agregar_a_paquete(paquete, &(PCB->PC), sizeof(uint32_t));
-	agregar_a_paquete(paquete, &(PCB->QUANTUM), sizeof(int));
-	agregar_a_paquete(paquete, &(PCB->estado), sizeof(estadosDeLosProcesos));
+	empaquetar_pcb(paquete, PCB);
 
-	agregar_a_paquete(paquete, &(PCB->registros.AX), sizeof(uint8_t));
-	agregar_a_paquete(paquete, &(PCB->registros.BX), sizeof(uint8_t));
-	agregar_a_paquete(paquete, &(PCB->registros.CX), sizeof(uint8_t));
-	agregar_a_paquete(paquete, &(PCB->registros.DX), sizeof(uint8_t));
-	agregar_a_paquete(paquete, &(PCB->registros.EAX), sizeof(uint32_t));
-	agregar_a_paquete(paquete, &(PCB->registros.EBX), sizeof(uint32_t));
-	agregar_a_paquete(paquete, &(PCB->registros.ECX), sizeof(uint32_t));
-	agregar_a_paquete(paquete, &(PCB->registros.EDX), sizeof(uint32_t));
-	agregar_a_paquete(paquete, &(PCB->registros.SI), sizeof(uint32_t));
-	agregar_a_paquete(paquete, &(PCB->registros.DI), sizeof(uint32_t));
+	switch (OPERACION){
+	
+	case ESPERA:
+		agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
+		break;
+
+	case WAIT:
+		agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
+		break;
+
+	case SOLICITAR_IO_GEN_SLEEP:
+		agregar_a_paquete(paquete, &parametro1, sizeof(char));
+		agregar_a_paquete(paquete, &parametro2, sizeof(char));
+		agregar_a_paquete(paquete, &parametro3, sizeof(char));
+		break;
+
+	default:
+		break;
+	}
 
 	enviar_paquete(paquete, fd_escucha_dispatch);
 	eliminar_paquete(paquete);

@@ -166,6 +166,7 @@ typedef enum{
     INSTRUCCION_REALIZADA
 }op_io_a_kernel;
 
+void empaquetar_pcb(t_paquete paquete, pcb* PCB);
 t_paquete* crear_paquete(op_code OPERACION);
 void crear_buffer(t_paquete* paquete);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
