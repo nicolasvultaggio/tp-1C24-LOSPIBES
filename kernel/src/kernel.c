@@ -45,6 +45,7 @@ void inicializar_semaforos(){
     pthread_mutex_init(&mutex_lista_exit, NULL);
     pthread_mutex_init(&mutex_lista_ready, NULL);
     pthread_mutex_init(&mutex_lista_interfaces, NULL);
+    pthread_mutex_init(&mutex_debe_planificar, NULL);
     
 
     sem_init(&sem_procesos_new, 0, 0); // en principio nohay procesos en new, logicamente
@@ -252,7 +253,9 @@ void atender_instruccion_valida(char* leido){
 
 void iniciar_planificacion(){
     log_info(logger_kernel,"Planificaciones iniciadas");
-    debe_planificar = true;
+    pthread_mutex_lock(debe_planificar);
+    debe_planificar = true; // algunos hilos solo leen la variable, pero hay dos o tres que la escriben, entonces, tiene que haber un mutex, para leerla como para escribirla, mira leer_debe_planificar_con_mutex()
+    pthread_mutex_unlock(debe_planificar);
     if(!esta_planificando){
         //planificar_largo_plazo();
         iniciar_planificacion_corto_plazo();
@@ -260,9 +263,19 @@ void iniciar_planificacion(){
     }
 }
 
+bool leer_debe_planificar_con_mutex(){
+    bool buffer;
+    pthread_mutex_lock(mutex_debe_planificar);
+    buffer = debe_planificar;
+    pthread_mutex_unlock(mutex_debe_planificar);
+    return buffer
+}
+
 void detener_planificacion() {
 	log_info(logger_kernel, "Pausar planificaciones");
-	debe_planificar = false;
+    pthread_mutex_lock(mutex_debe_planificar);
+	debe_planificar = false; // ponerle un mutex, porque muchos hilos deben leer esta variable
+    pthread_mutex_unlock(mutex_debe_planificar);
 }
 
 //void planificar_largo_plazo(){
@@ -277,7 +290,7 @@ void iniciar_planificacion_corto_plazo(){
 
 void planificar_corto_plazo(){
     char * algoritmo_de_planificacion = config_get_string_value(config_kernel,"ALGORITMO_PLANIFICACION");
-    while(debe_planificar){
+    while(leer_debe_planificar_con_mutex()){
         sem_wait(&sem_procesos_ready);
 		sem_wait(&sem_proceso_exec); //espera a que haya un proceso ejecutandose : la cola exec siempre tiene un solo proceso
         pcb * pcb_a_enviar = obtener_pcb_segun_algoritmo(algoritmo_de_planificacion); // obtiene un pcb de la cola de ready
@@ -420,7 +433,7 @@ hay un hilo de kernel que esta escuchando en un while, conexiones, que se encarg
 [NO] una vez recibido el nombre, ese hilo detacheado, de alguna forma, debe guardar, el nombre de la interfaz y el FD de su conexion (usar estructura de rta foro), para saber solicitarle cosas segun una instruccion, probablemente (no se) sea una lista de interfaces, que tiene que modificarse con un mutex, y ademas crear un hilo (while con semaforos) que se encargue de procesar las peticiones a esa interfaz paralelamente,(while PLANIFICACION ACTIVA) y semaforo es igual a la cantidad de procesos en la cola blocked (o sea, inicializado en 0)
 [SI] una vez recibido el nombre, ese hilo detacheado, de alguna forma, debe guardar, el nombre de la interfaz y el FD de su conexion (usar estructura de rta foro), para saber solicitarle cosas segun una instruccion, probablemente (no se) sea una lista de interfaces, que tiene que modificarse con un mutex, despues quedarse en un while que espere que haya al menos uno en blocked para poder enviar instruccion a interfaz, esperar la respuesta y posteriormente, devolver a ready o cola que sea segun algoritmo
 cuando el kernel, en planificacion a corto plazo (en el hilo que atiende respuesta de dispatch), recibe una peticion a una io, debe verificar si existe y si acepta la instruccion (si no cumple alguna lo manda a exit) (todo esto en el corto plazo de rta dispatch) si la cumple, manda el proceso a blocked de esa interfaz y aumenta el semaforo de cant de procesos en blocked
-el segundo hilo mencionado en el segundo renglon, por cada entrada por habilitacion de semaforo, agarra el primer pcb de la lista blocked, solicita  su instruccion a io, espera notificacion de esta y según el algorimo lo envía a su cola correspondiente
+el while mencionado en el segundo renglon, por cada entrada por habilitacion de semaforo, agarra el primer pcb de la lista blocked, solicita  su instruccion a io, espera notificacion de esta y según el algorimo lo envía a su cola correspondiente
 el hilo tiene que entender cuando se desconecte la interfaz para liberar sus estructuras de la lista
 */
 
@@ -436,7 +449,7 @@ void iniciar_escucha_io(){
 void escuchar_interfaces(){
     int check=0;
     do{
-        int * fd_conexion_io = malloc(sizeof(int)); //falta liberar, posiblemente cuando se desconecte interfaz, es dinamico porque los socket no son simples enteros a guardar en stack
+        int * fd_conexion_io = malloc(sizeof(int)); //falta liberar, posiblemente cuando se desconecte interfaz, esta en memoria dinamica para que sea manipulable por varios hilos
         (*fd_conexion_io) = esperar_cliente(fd_escucha_kernel,logger_kernel,"IO");
         check = (*fd_conexion_io);
         //procesa conexion
@@ -458,32 +471,22 @@ void procesar_conexion_interfaz(void * arg){
     datos_interfaz->tipo = (io_type) preguntar_tipo_interfaz((*fd_conexion_io));
     datos_interfaz->cola_bloqueados=list_create();  //pcbs_bloqueados es una lista de pcb_block
     sem_init((datos_interfaz->sem_procesos_blocked),0,0); 
+    pthread_mutex_init((datos_interfaz->mutex_procesos_blocked),NULL);
         
     push_con_mutex(interfaces_conectadas,datos_interfaz,mutex_lista_interfaces); //agrega al final de la lista de interfaces
 
     while(1){ //este es para que se pueda pausar y reanudar planificacion 
-        while(debe_planificar){ 
+        while(leer_debe_planificar_con_mutex()){ // genera algo de espera activa cuando debe_planificar = 0;
             sem_wait(datos_interfaz->sem_procesos_blocked);
+            //agarra el primero de la cola de blocked 
+            //solicita la instruccion
+            //espera la respuesta de la interfaz
+            //segun algoritmo de planificacion, lo pone en la cola correspondiente
             //------------------------------------------------------------------------------------------------------------------------------- SEGUIR ACA
         }
     }
     
 }
-/* esto se iba a usar para procesar paralelamente las instrucciones a interfaces, pero me di cuenta que no hacia falta hacerlo en un hilo
-
-//pthread_t hilo_proceso_interfaz;
-//pthread_create(&hilo_proceso_interfaz,NULL,(void*)atender_interfaz,(void*)datos_interfaz); //POR QUE SE DELEGA ESTE HILO?, NO PUEDE HACERSE ABAJO? ,además se detache pero inmediatamente termina o sea muere el padre
-//pthread_detach(hilo_proceso_interfaz);
-
-void atender_interfaz(void * arg){
-    element_interfaz * datos_interfaz = (element_interfaz*) datos_interfaz;
-    int * fd_conexion_io = (datos_interfaz -> fd_conexion_con_interfaz); //usar esta referencia para hacer free
-    sem_t * other_ref_sem_procesos_blocked= (datos_interfaz -> sem_procesos_blocked);//usar esta referencia par hacer sem destroy
-    t_list * pcbs_bloqueados = (datos_interfaz ->cola_bloqueados); // usar esta referencia para liberar la sublistalista, 
-}
-
-*/
-
 
 
 //PRIMERO RECIBIR CODIGO DE OPERACION, SE PUEDE ENVIAR UN CODIGO DE OPERACION SIN ENVIAR UN PAQUETE

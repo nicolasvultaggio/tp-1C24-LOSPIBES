@@ -165,7 +165,7 @@ void atender_kernel(){
 }
 
 void informar_nombre(){ // similar a enviar_mensaje tp0, hay que informar el nombre de la interfaz, el cual es un string de tamaño variable, por eso hay que informar tambien su tamaño
-    //send(fd_conexion_kernel,nombre_de_interfaz,strlen(nombre_de_interfaz),0); //es una solucion muy simple, hay que serializarlo un poco para que kernel reciba además el tamaño, si lo dejo asi, el kernel no sabe con cuantos bytes guardar el mensaje
+    //send(fd_conexion_kernel,nombre_de_interfaz,strlen(nombre_de_interfaz),0); es una solucion muy simple, hay que serializarlo un poco para que kernel reciba además el tamaño, si lo dejo asi, el kernel no sabe con cuantos bytes guardar el mensaje
     t_paquete* paquete = malloc(sizeof(t_paquete));
 
 	paquete->codigo_operacion = NOMBRE_INFORMADO;

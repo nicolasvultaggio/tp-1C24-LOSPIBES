@@ -12,11 +12,12 @@
 #include <readline/readline.h>
 
 typedef struct {
-    int * fd_conexion_con_interfaz;
+    int * fd_conexion_con_interfaz; // puntero a ese fd (otra referencia a ese fd)
     char * nombre;
     io_type tipo;
     t_list * cola_bloqueados;
     sem_t  * sem_procesos_blocked; //es mas facil su manejo si su valor lo manejamos desde distintas referencias
+    pthread_mutex_t * mutex_procesos_blocked; // para mutua exclusion de la cola bloqueados
 } element_interfaz;
 
 typedef struct {
@@ -58,6 +59,7 @@ pthread_mutex_t mutex_lista_new;
 pthread_mutex_t mutex_lista_exec; 
 pthread_mutex_t mutex_lista_interfaces; 
 pthread_mutex_t mutex_lista_exit;
+pthread_mutex_t mutex_debe_planificar;
 
 //no sabemos cuales haran falta todavía, pero por las dudas los declaro
 t_log* logger_kernel;
@@ -95,6 +97,8 @@ void reducir_quantum(void *args);
 void enviar_interrupcion(motivo_desalojo motivo);
 
 bool crear_conexiones();
+
+bool leer_debe_planificar_con_mutex();
 
 bool debe_planificar;
 bool esta_planificando;
