@@ -253,9 +253,9 @@ void atender_instruccion_valida(char* leido){
 
 void iniciar_planificacion(){
     log_info(logger_kernel,"Planificaciones iniciadas");
-    pthread_mutex_lock(debe_planificar);
+    pthread_mutex_lock(mutex_debe_planificar);
     debe_planificar = true; // algunos hilos solo leen la variable, pero hay dos o tres que la escriben, entonces, tiene que haber un mutex, para leerla como para escribirla, mira leer_debe_planificar_con_mutex()
-    pthread_mutex_unlock(debe_planificar);
+    pthread_mutex_unlock(mutex_debe_planificar;
     if(!esta_planificando){
         //planificar_largo_plazo();
         iniciar_planificacion_corto_plazo();
@@ -284,15 +284,35 @@ void detener_planificacion() {
 
 void iniciar_planificacion_corto_plazo(){
     pthread_t hilo_exec;
-	pthread_create(&hilo_exec, NULL, (void*) planificar_corto_plazo, NULL);
+	pthread_create(&hilo_exec, NULL, (void*) despachador, NULL);
 	pthread_detach(hilo_exec);
+
+    pthread_t hilo_vuelta_dispatch;
+    pthread_create(&hilo_vuelta_dispatch,NULL,(void*) atender_vuelta_dispatch,NULL);
+    pthread_detach(hilo_vuelta_dispatch);
 }
 
-void planificar_corto_plazo(){
+void atender_vuelta_dispatch(){
+    while(1){
+        while(leer_debe_planificar_con_mutex()){
+            //esperar a que se haya despachado un pcb
+            //ponerse a escuchar el fd_dispatch
+            //recibir el codigo de operacion y manejar el motivo de desalojo
+            //una vez hecho todo, decirle a despachador() que puede planificar otro pcb
+        }
+    }
+}
+
+// ¿Como es esta coordinacion?
+// Suponete que A sea "despachar" y B sea "recibir respuesta"
+// queremos que la ejecucion sea A-B-A-B-A-B-A-B 
+// esto, en los ejercicios de sincronizacion, era con dos semaforos, una pavada
+
+void despachador(){
     char * algoritmo_de_planificacion = config_get_string_value(config_kernel,"ALGORITMO_PLANIFICACION");
     while(leer_debe_planificar_con_mutex()){
-        sem_wait(&sem_procesos_ready);
-		sem_wait(&sem_proceso_exec); //espera a que haya un proceso ejecutandose : la cola exec siempre tiene un solo proceso
+        sem_wait(&sem_procesos_ready); //espera a que haya al menos un proceso en ready para ponerse a planificar
+		sem_wait(&sem_proceso_exec); //espera a que NO haya un proceso ejecutandose : la cola exec siempre tiene un solo proceso
         pcb * pcb_a_enviar = obtener_pcb_segun_algoritmo(algoritmo_de_planificacion); // obtiene un pcb de la cola de ready
         cambiar_estado(pcb_a_enviar,EXECUTE);
         push_con_mutex(cola_exec,pcb_a_enviar,&mutex_lista_exec); // uso con mutex porque posiblemente varios hilos agregen a exec
