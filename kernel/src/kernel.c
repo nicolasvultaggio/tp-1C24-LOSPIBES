@@ -50,9 +50,9 @@ void inicializar_semaforos(){
 
     sem_init(&sem_procesos_new, 0, 0); // en principio nohay procesos en new, logicamente
 	sem_init(&sem_procesos_ready, 0, 0); // en principio, no hay procesos en ready, logicamente
-    sem_init(&sem_proceso_exec, 0, 1); //en principio, si, hay que ejecutar, porque es el primero proceso
+    sem_init(&sem_despachar, 0, 1); // en 1 porque primero se despacha
+    sem_init(&sem_atender_rta, 0, 0); // en 0 porque segundo se atiende la rta
 }
-
 void leer_configuraciones(){
     puerto_propio = config_get_string_value(config_kernel,"PUERTO_PROPIO");
     ip_memoria = config_get_string_value(config_kernel,"IP_MEMORIA");
@@ -295,10 +295,24 @@ void iniciar_planificacion_corto_plazo(){
 void atender_vuelta_dispatch(){
     while(1){
         while(leer_debe_planificar_con_mutex()){
-            //esperar a que se haya despachado un pcb
-            //ponerse a escuchar el fd_dispatch
-            //recibir el codigo de operacion y manejar el motivo de desalojo
-            //una vez hecho todo, decirle a despachador() que puede planificar otro pcb
+            sem_wait(&sem_atender_rta);//esperar a que se haya despachado un pcb
+            op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");//ponerse a escuchar el fd_dispatch
+            switch(codop){
+                case EXITO:
+                break;
+                case INTERRUPCION:
+                break;
+                case FIN_QUANTUM:
+                break;
+                case ESPERA:
+                break;
+                case SIGNAL:
+                break;
+                case SOLICITAR_IO_GEN_SLEEP:
+                break;
+                
+            }//recibir el codigo de operacion y manejar el motivo de desalojo
+            sem_post(&sem_despachar);//una vez hecho todo, decirle a despachador() que puede planificar otro pcb
         }
     }
 }
@@ -310,16 +324,18 @@ void atender_vuelta_dispatch(){
 
 void despachador(){
     char * algoritmo_de_planificacion = config_get_string_value(config_kernel,"ALGORITMO_PLANIFICACION");
-    while(leer_debe_planificar_con_mutex()){
-        sem_wait(&sem_procesos_ready); //espera a que haya al menos un proceso en ready para ponerse a planificar
-		sem_wait(&sem_proceso_exec); //espera a que NO haya un proceso ejecutandose : la cola exec siempre tiene un solo proceso
-        pcb * pcb_a_enviar = obtener_pcb_segun_algoritmo(algoritmo_de_planificacion); // obtiene un pcb de la cola de ready
-        cambiar_estado(pcb_a_enviar,EXECUTE);
-        push_con_mutex(cola_exec,pcb_a_enviar,&mutex_lista_exec); // uso con mutex porque posiblemente varios hilos agregen a exec
-        despachar_pcb(pcb_a_enviar);
-        //signal para indicar que se despacho? no se si hace falta
-        if(!strcmp(algoritmo_de_planificacion,"RR")){
-            manejar_quantum(pcb_a_enviar->PID);
+    while(1){
+        while(leer_debe_planificar_con_mutex()){
+            sem_wait(&sem_despachar); //espera a que NO haya un proceso ejecutandose : la cola exec siempre tiene un solo proceso
+            sem_wait(&sem_procesos_ready); //espera a que haya al menos un proceso en ready para ponerse a planificar
+            pcb * pcb_a_enviar = obtener_pcb_segun_algoritmo(algoritmo_de_planificacion); // obtiene un pcb de la cola de ready
+            cambiar_estado(pcb_a_enviar,EXECUTE);
+            push_con_mutex(cola_exec,pcb_a_enviar,&mutex_lista_exec); // uso con mutex porque posiblemente varios hilos agregen a exec
+            despachar_pcb(pcb_a_enviar);
+            sem_post(&sem_atender_rta);//signal para indicar que se despacho? no se si hace falta
+            if(!strcmp(algoritmo_de_planificacion,"RR")){
+                manejar_quantum(pcb_a_enviar->PID);
+            }
         }
     }
 }

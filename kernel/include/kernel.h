@@ -50,8 +50,9 @@ int generador_pid = 0;
 
 sem_t sem_procesos_new; // semaforo que marca procesos disponibles en new
 sem_t sem_procesos_ready; // semaforo que marca procesos disponibles en ready
-sem_t sem_proceso_exec;
+sem_t sem_despachar;
 sem_t sem_procesos_exit;
+sem_t sem_atender_rta;
 
 pthread_mutex_t mutex_pid; 
 pthread_mutex_t mutex_lista_ready; 

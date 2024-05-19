@@ -387,20 +387,20 @@ void* interrupcion(void *arg) {
 
 void detectar_motivo_desalojo(){
 	motivo_desalojo motivo = recibir_motiv_desalojo(fd_escucha_interrupt);
-	hay_interrupcion = true;
+	hay_interrupcion = true;//OJO, variable que leen y escriben muchos hilos, posible mutex
 	sem_wait(&sem_interrupcion);
 	switch (motivo)	{
 		case INTERRUPCION:
 			log_info(logger_cpu, "Interrupcion: Finalizar proceso.");
 			PCB->motivo = INTERRUPCION;
-			enviar_pcb(PCB, fd_escucha_dispatch);
-			//enviar_solicitud_de_cambio_de_estado(EXITT, fd_escucha_interrupt);
+			enviar_pcb(PCB, fd_escucha_dispatch); // sin codigo de operacion?? esta raro esto
+			//enviar_solicitud_de_cambio_de_estado(EXITT, fd_escucha_interrupt);   OJO, no se envia nada por interrupt, solo se escucha
 			break;
 		case FIN_QUANTUM:
 			log_info(logger_cpu, "Interrupcion: Fin de Quantum.");
 			PCB->motivo = FIN_QUANTUM;
-			enviar_pcb(PCB, fd_escucha_interrupt);
-			//enviar_solicitud_de_cambio_de_estado(READY, fd_escucha_interrupt);
+			enviar_pcb(PCB, fd_escucha_dispatch); // sin codigo de operacion?? esta raro esto 
+			//enviar_solicitud_de_cambio_de_estado(READY, fd_escucha_interrupt);  OJO, no se envia nada por interrupt, solo se escucha
 			break;
 	}
 	return;
