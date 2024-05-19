@@ -298,20 +298,17 @@ void atender_vuelta_dispatch(){
             sem_wait(&sem_atender_rta);//esperar a que se haya despachado un pcb
             op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");//ponerse a escuchar el fd_dispatch
             switch(codop){
-                case EXITO:
+                case PCB_ACTUALIZADO:
+                //manejar motivo de desalojo
                 break;
-                case INTERRUPCION:
+                case RECURSO:
+                //manejar motivo de desalojo
                 break;
-                case FIN_QUANTUM:
-                break;
-                case ESPERA:
-                break;
-                case SIGNAL:
-                break;
-                case SOLICITAR_IO_GEN_SLEEP:
+                case INTERFAZ:
+                //manejar motivo de desalojo
                 break;
                 
-            }//recibir el codigo de operacion y manejar el motivo de desalojo
+            }
             sem_post(&sem_despachar);//una vez hecho todo, decirle a despachador() que puede planificar otro pcb
         }
     }
