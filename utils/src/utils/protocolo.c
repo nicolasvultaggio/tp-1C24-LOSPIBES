@@ -197,7 +197,7 @@ void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, char* para
 
 	t_paquete* paquete = crear_paquete(OPERACION);
 	empaquetar_pcb(paquete, PCB);
-	switch (OPERACION){
+	switch (OPERACION){ //ahora debería ser segun el motivo de desalojo (del pcb) (switch(PCB->MOTIVO)) que empaquetas el resto, el codigo de operacion solo era para indicar QUE VA además del pcb
 		case ESPERA:
 			agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
 			break;
@@ -205,9 +205,9 @@ void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, char* para
 			agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
 			break;
 		case SOLICITAR_IO_GEN_SLEEP:
-			agregar_a_paquete(paquete, &parametro1, sizeof(char));
-			agregar_a_paquete(paquete, &parametro2, sizeof(char));
-			agregar_a_paquete(paquete, &parametro3, sizeof(char));
+			agregar_a_paquete(paquete, &parametro1, sizeof(char)); // no debería ser : agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1; ?
+			agregar_a_paquete(paquete, &parametro2, sizeof(char)); // idem arriba
+			agregar_a_paquete(paquete, &parametro3, sizeof(char)); // idem arriba
 			break;
 		default:
 			break;
@@ -401,4 +401,67 @@ motivo_desalojo recibir_motiv_desalojo(int fd_escucha_interrupt){
 	free(motivo);
 	list_destroy(paquete);
 	return ret;
+}
+
+pcb* guardar_datos_del_pcb(t_list* paquete){ 
+
+	pcb* PCB = malloc(sizeof(PCB));
+
+	uint32_t* pid = list_get(paquete, 0);
+	PCB->PID = *pid;
+	free(pid);
+
+	int* program_counter = list_get(paquete, 1);
+	PCB->PC = *program_counter;
+	free(program_counter);
+
+	int* quantum = list_get(paquete, 2);
+	PCB->QUANTUM = *quantum;
+	free(quantum);
+
+	estadosDeLosProcesos* estado = list_get(paquete, 3);
+	PCB->estado = *estado;
+	free(estado);
+
+	uint8_t* ax = list_get(paquete, 4);
+	PCB->registros.AX = *ax;
+	free(ax);
+
+	uint8_t* bx = list_get(paquete, 5);
+	PCB->registros.BX = *bx; 
+	free(bx);
+
+	uint8_t* cx = list_get(paquete, 6);
+	PCB->registros.CX = *cx;
+	free(cx);
+
+	uint8_t* dx = list_get(paquete, 7);
+	PCB->registros.DX = *dx;
+	free(dx);
+
+	uint32_t* eax = list_get(paquete, 8);
+	PCB->registros.EAX = *eax;
+	free(eax);
+
+	uint32_t* ebx = list_get(paquete, 9);
+	PCB->registros.EBX = *ebx;
+	free(ebx);
+
+	uint32_t* ecx = list_get(paquete, 10);
+	PCB->registros.ECX = *ecx;
+	free(ecx);
+
+	uint32_t* edx = list_get(paquete, 11);
+	PCB->registros.EDX = *edx;
+	free(edx);
+
+	uint32_t* si = list_get(paquete, 12);
+	PCB->registros.SI = *si;
+	free(si);
+
+	uint32_t* di = list_get(paquete, 13);
+	PCB->registros.DI = *di;
+	free(di);
+
+	return PCB;
 }

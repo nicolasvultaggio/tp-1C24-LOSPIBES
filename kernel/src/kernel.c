@@ -305,7 +305,17 @@ void atender_vuelta_dispatch(){
                 //recibir pcb y manejar motivo de desalojo
                 break;
                 case INTERFAZ:
-                //recibir pcb y manejar motivo de desalojo
+                t_list * lista = recibir_paquete(fd_conexion_dispatch);//recibir pcb y manejar motivo de desalojo
+                pcb* pcb_actualizado = guardar_datos_del_pcb(lista);
+                switch(pcb_actualizado->motivo){
+                    case IO_GEN_SLEEP: // OJO, no va a ser IO_GEN_SLEEP, va a ser el motivo de desalojo que elija sergio para estos casos, pongo esto para ir haciendo por ahora
+                    char * instruccion = list_get(lista,15); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
+                    char * interfaz=list_get(lista,16); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
+                    char * unidad_de_tiempo=list_get(lista,17); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
+
+                }
+                
+                
                 break;
             }
             sem_post(&sem_despachar);//una vez hecho todo, decirle a despachador() que puede planificar otro pcb

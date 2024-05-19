@@ -193,6 +193,8 @@ t_datos_proceso* recibir_datos_del_proceso(int fd_kernel);
 pcb* recibir_pcb(int socket);
 motivo_desalojo recibir_motiv_desalojo(int fd_escucha_dispatch);
 
+pcb* guardar_datos_del_pcb(t_list* paquete); //usar para cuando en un paquete, vienen los datos de un pcb y otras cosas mas
+
 
 
 
