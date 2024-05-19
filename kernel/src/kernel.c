@@ -299,15 +299,14 @@ void atender_vuelta_dispatch(){
             op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");//ponerse a escuchar el fd_dispatch
             switch(codop){
                 case PCB_ACTUALIZADO:
-                //manejar motivo de desalojo
+                //recibir pcb y manejar motivo de desalojo
                 break;
                 case RECURSO:
-                //manejar motivo de desalojo
+                //recibir pcb y manejar motivo de desalojo
                 break;
                 case INTERFAZ:
-                //manejar motivo de desalojo
+                //recibir pcb y manejar motivo de desalojo
                 break;
-                
             }
             sem_post(&sem_despachar);//una vez hecho todo, decirle a despachador() que puede planificar otro pcb
         }
