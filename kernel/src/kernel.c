@@ -253,9 +253,9 @@ void atender_instruccion_valida(char* leido){
 
 void iniciar_planificacion(){
     log_info(logger_kernel,"Planificaciones iniciadas");
-    pthread_mutex_lock(mutex_debe_planificar);
+    pthread_mutex_lock(&mutex_debe_planificar);
     debe_planificar = true; // algunos hilos solo leen la variable, pero hay dos o tres que la escriben, entonces, tiene que haber un mutex, para leerla como para escribirla, mira leer_debe_planificar_con_mutex()
-    pthread_mutex_unlock(mutex_debe_planificar;
+    pthread_mutex_unlock(&mutex_debe_planificar);
     if(!esta_planificando){
         //planificar_largo_plazo();
         iniciar_planificacion_corto_plazo();
@@ -265,17 +265,17 @@ void iniciar_planificacion(){
 
 bool leer_debe_planificar_con_mutex(){
     bool buffer;
-    pthread_mutex_lock(mutex_debe_planificar);
+    pthread_mutex_lock(&mutex_debe_planificar);
     buffer = debe_planificar;
-    pthread_mutex_unlock(mutex_debe_planificar);
-    return buffer
+    pthread_mutex_unlock(&mutex_debe_planificar);
+    return buffer;
 }
 
 void detener_planificacion() {
 	log_info(logger_kernel, "Pausar planificaciones");
-    pthread_mutex_lock(mutex_debe_planificar);
+    pthread_mutex_lock(&mutex_debe_planificar);
 	debe_planificar = false; // ponerle un mutex, porque muchos hilos deben leer esta variable
-    pthread_mutex_unlock(mutex_debe_planificar);
+    pthread_mutex_unlock(&mutex_debe_planificar);
 }
 
 //void planificar_largo_plazo(){
