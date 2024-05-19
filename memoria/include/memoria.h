@@ -25,8 +25,10 @@ int tam_memoria;
 int tam_pagina;
 char* path_instrucciones;
 int retardo_respuesta;
-*************
+/**********/
 char* memoria;
+t_list* proceso_instrucciones;// esta sera una lista de procesos, entonces cada nodo es un proceso(con un pid y una sublista de instrucciones)
+    char* server_name = "SOY UN CLIENTE";
 typedef enum{
     SET,
     MOV_IN,
@@ -59,12 +61,19 @@ typedef struct {
     char* parametro5;
 
 }t_instruccion;
+
 typedef struct{
-    char* path;
     int pid;
-}t_datos_proceso;
+	char* path;
+}t_datos_proceso;///lo que recibo de kernel
 typedef struct {
 	int pid;
 	t_list* instrucciones;
-} t_proceso_instrucciones;
+} t_listaprincipal;//para armar mi lista de procesos en memoria
+typedef struct
+{
+	int pid;
+	int program_counter;
+} t_solicitud_instruccion;//lo que uso para recibir los datos que me envia CPU
+
 #endif
