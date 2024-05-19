@@ -41,7 +41,6 @@ typedef enum{
     WAIT,
     SIGNAL,
     IO_STDIN_READ,
-    IO_STDIN_READ,
     IO_STDOUT_WRITE,
     IO_FS_CREATE,
     IO_FS_DELETE,
