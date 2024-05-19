@@ -201,7 +201,7 @@ void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, char* para
 		case ESPERA:
 			agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
 			break;
-		case WAIT:
+		case SIGNAL:
 			agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
 			break;
 		case SOLICITAR_IO_GEN_SLEEP:
