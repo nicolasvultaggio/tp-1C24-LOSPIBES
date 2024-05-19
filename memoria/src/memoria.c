@@ -48,7 +48,7 @@ t_list leer_pseudocodigo(char* ruta){
     char* parametros[5];
     int contadordeparametros;
 
-    f=fopen(ruta;"r");
+    f=fopen(ruta,"r");
 	while (fgets(buffer, 256, f) != NULL) {
 		t_instruccion* instruccion = malloc(sizeof(t_instruccion));
 		instruccion->parametro1 = malloc(256);
@@ -70,7 +70,7 @@ t_list leer_pseudocodigo(char* ruta){
         if(instruccion_leida != NULL){
             codigo_instrucciones cod_inst = instruccion_to_enum(instruccion_leida);
 
-            instruccion->instruccion = cod_inst;
+            instruccion->instruccion1 = cod_inst;
             if(contadordeparametros > 0){
             	strcpy(instruccion->parametro1, parametros[0]);
             }else{
