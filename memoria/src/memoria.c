@@ -12,35 +12,6 @@ int main() {
     
     log_info(logger_memoria, "Puerto de memoria habilitado para sus clientes");
 
-    log_info(logger_memoria, "Esperando CPU");
-    fd_conexion_cpu = esperar_cliente(fd_escucha_memoria, logger_memoria, "CPU");
-  
-    log_info(logger_memoria, "Esperando KERNEL");
-    fd_conexion_kernel = esperar_cliente(fd_escucha_memoria, logger_memoria, "KERNEL");
-    
-    log_info(logger_memoria, "Esperando IO");
-    fd_conexion_io = esperar_cliente(fd_escucha_memoria, logger_memoria, "IO");
-    
-    args_atendedor * args_cpu = crear_args(fd_conexion_cpu,logger_memoria,"CPU");
-    pthread_t hilo_cpu;
-    pthread_create(&hilo_cpu,NULL,(void*) atender_conexion,(void *)args_cpu);
-    pthread_detach(hilo_cpu);
-
-    //atender a Kernel-Interrupt
-    args_atendedor * args_kernel = crear_args(fd_conexion_kernel,logger_memoria,"Kernel");
-    pthread_t hilo_kernel;
-    pthread_create(&hilo_kernel,NULL,(void*) atender_conexion,(void *)args_kernel);
-    pthread_detach(hilo_kernel);
-
-    //atender a Memoria
-    args_atendedor * args_io = crear_args(fd_conexion_io,logger_memoria,"IO");
-    pthread_t hilo_io;
-    pthread_create(&hilo_io,NULL,(void*)atender_conexion,(void *)args_io);
-    // pthread_detach(hilo_memoria); no hago detach porque me terminaría el programa, terminando mis otros hilos
-    pthread_join(hilo_io,NULL); // así, la cpu se ejecuta hasta que terminen todos los hilos
-    
-
-
 
     //***************************CHECKPOINT 2*************************+
     
@@ -100,17 +71,17 @@ t_list leer_pseudocodigo(char* ruta){
             codigo_instrucciones cod_inst = instruccion_to_enum(instruccion_leida);
 
             instruccion->instruccion = cod_inst;
-            if(param_count > 0){
+            if(contadordeparametros > 0){
             	strcpy(instruccion->parametro1, parametros[0]);
             }else{
             	strcpy(instruccion->parametro1, "");
             }
-            if(param_count > 1){
+            if(contadordeparametros > 1){
             	strcpy(instruccion->parametro2, parametros[1]);
             }else{
             	strcpy(instruccion->parametro2, "");
             }
-            if(param_count > 2){
+            if(contadordeparametros > 2){
             	strcpy(instruccion->parametro3, parametros[2]);
             }else{
             	strcpy(instruccion->parametro3, "");
@@ -141,9 +112,8 @@ t_list leer_pseudocodigo(char* ruta){
 	
 
 int server_escuchar() {
-	char* server_name = "SOY UN CLIENTE";
 	 
-	int cliente_socket = esperar_cliente(fd_escucha_memoria, logger_memoria, server_name);
+	int cliente_socket = esperar_cliente(fd_escucha_memoria, logger_memoria, "SOY UN CLIENTE");
 
 	if (cliente_socket != -1) {
 		pthread_t hilo;
@@ -163,7 +133,7 @@ static void procesar_clientes(void* void_args){
 	op_code cop;
 	while (cliente_socket != -1) {
 		if (recv(cliente_socket, &cop, sizeof(op_code), 0) != sizeof(op_code)) {
-			log_info(logger_memoria, "El cliente se desconecto de %s server", server_name);
+			log_info(logger_memoria, "El cliente se desconecto de memoria server");
 			return;
 		}
 		switch (cop) {
@@ -172,7 +142,7 @@ static void procesar_clientes(void* void_args){
 			break;
 		case PAQUETE:
 			t_list *paquete_recibido = recibir_paquete(cliente_socket);
-			log_info(logger, "Recibí un paquete con los siguientes valores: ");
+			log_info(logger_memoria, "Recibí un paquete con los siguientes valores: ");
 			list_iterate(paquete_recibido, (void*) iterator);
 			break;	
 		case DATOS_PROCESO: //se arregla cuando unamos ramas,  en protocolo.h, SINO agregar a struct op_code de protocolo.h
@@ -201,12 +171,12 @@ static void procesar_clientes(void* void_args){
 				break;
 		
 		default:
-				log_error(logger_memoria, "Codigo de operacion no reconocido en el server de %s", server_name);
+				log_error(logger_memoria, "Codigo de operacion no reconocido en memoria");
 				return;
 			}
 
 		}
-	log_warning(logger, "El cliente se desconecto de %s server", "memoria");
+	log_warning(logger_memoria, "El cliente se desconecto de %s server", "memoria");
 	return;
 }
 codigo_instrucciones instruccion_to_enum(char* instruccion){
@@ -258,7 +228,7 @@ codigo_instrucciones instruccion_to_enum(char* instruccion){
 }
 void iniciar_memoria_apedidodeKernel(char* path, int size, int pid, int socket_kernel) {
     // Construir la ruta completa del archivo
-    char* rutaCompleta = string_from_format("/home/utnso/tp-2023-2c-Sisop-Five/mappa-pruebas/%s.txt", path);//CAMBIAR RUTAAA
+    char* rutaCompleta = string_from_format("/home/utnso/Desktop/trabajoramamemoria/tp-2024-1c-Grupo-5/memoria%s.txt", path);//CAMBIAR RUTAAA
 
     // Generar instrucciones y cargarlas a la variable global PROCESO_INSTRUCCIONES
     t_list* instrucciones = leer_pseudocodigo(rutaCompleta);
@@ -291,27 +261,9 @@ void iniciar_memoria_apedidodeKernel(char* path, int size, int pid, int socket_k
     tdp->paginas = paginas;//FUTURA IMPLEMENTACION PAGINACION SIMPLE!!!
 
     list_add(tablas_de_paginas, tdp);
-    log_info(logger, "Tabla de paginas creada. PID: %d - Tamaño: %d\n", pid, cant_paginas);*/
+    log_info(logger_memoria, "Tabla de paginas creada. PID: %d - Tamaño: %d\n", pid, cant_paginas);*/
 }
-/*t_datos_proceso* recv_proceso_dekernel(int socket_1){
-	t_list* paquetes = recibir_paquete(fd);
-	t_datos_proceso* datos = malloc(sizeof(t_datos_proceso));
-	char* path = list_get(paquetes, 0);
-	datos->path = malloc(strlen(path));
-	strcpy(datos->path, path);
-	free(path);
 
-	int* size = list_get(paquetes, 1);
-	datos->size = *size;
-	free(size);
-
-	int* pid = list_get(paquetes, 2);
-	datos->pid = *pid;
-	free(pid);
-
-	list_destroy(paquetes);
-	return datos;
-}*/ //LO COMENTO PORQUE TOMI YA lo hizo en protrocolo
 t_solicitud_instruccion* recv_solicitar_instruccion(int fd){
 	t_list* paquete = recibir_paquete(fd);
 	t_solicitud_instruccion* solicitud_instruccion_recibida = malloc(sizeof(t_solicitud_instruccion));
