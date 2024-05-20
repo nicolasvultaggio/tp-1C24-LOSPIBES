@@ -22,8 +22,8 @@ typedef struct {
 
 typedef struct {
     pcb * el_pcb;
-    char ** elementos_de_instruccion; //char doble porque voy a recibir los elementos de la instruccion separados
-} pcb_block ; // son elementos de las colas de pcb bloqueados
+    char * unidad_de_tiempo; 
+} pcb_block_gen ; // son elementos de las colas de pcb bloqueados
 
 t_list * interfaces_conectadas;
 int fd_escucha_kernel;
@@ -67,6 +67,7 @@ t_log* logger_kernel;
 t_config* config_kernel;
 t_log * logger_obligatorio;
 
+void iniciar_escucha_io();
 bool iniciar_conexiones();
 void terminar_programa();
 void leer_configuraciones();
@@ -82,6 +83,8 @@ void atender_vuelta_dispatch();
 pcb * obtener_pcb_segun_algoritmo(char * algoritmo);
 void cambiar_estado(pcb * un_pcb , estadosDeLosProcesos estado);
 char* string_de_estado(estadosDeLosProcesos estado);
+void escuchar_interfaces();
+void procesar_conexion_interfaz(void * arg);
 
 void iniciar_proceso(char* arg1);
 void finalizar_proceso(char* arg1);
@@ -103,8 +106,11 @@ bool crear_conexiones();
 bool leer_debe_planificar_con_mutex();
 
 element_interfaz * interfaz_existe_y_esta_conectada(char * un_nombre);
-bool generica_acepta_instruccion(char * interfaz,char * instruccion,char * unidad_de_tiempo);
-bool interfaz_con_nombre(element_interfaz * una_interfaz,char* un_nombre);
+
+bool generica_acepta_instruccion(char * instruccion);
+bool interfaz_con_nombre(void * una_interfaz);
+char * preguntar_nombre_interfaz(int un_fd);
+void atender_interfaz_generica(element_interfaz * datos_interfaz);
 
 bool debe_planificar;
 bool esta_planificando;

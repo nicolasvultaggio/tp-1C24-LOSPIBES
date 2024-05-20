@@ -202,43 +202,42 @@ void atender_instruccion(){
     }
 }
 //no va a funcionar asi
-char * recibir_instruccion_de_kernel(){ // similar a recibir mensaje
+char * recibir_unidades_de_tiempo(){ // similar a recibir mensaje del tp0
     int size;
-    char * buffer = recibir_buffer(&size,fd_conexion_kernel); //cuando se envie una peticion desde kernel: primero codop, despues tamaño del string (o sea, la instruccion), despues el puntero al string
-    log_info(logger_io, "Me llego la instruccion << %s >> desde Kernel", buffer);
-    // OJO HAY QUE LIBERAR EL BUFFER, o sea, habra que liberar la instruccion luego, SI NO --> MEMORY LEAK, ------ listo, resuelto con el free(instruccion)
+    char * buffer = recibir_buffer(&size,fd_conexion_kernel); //cuando se envie una peticion desde kernel: primero codop, despues unidad de tiempo
+    log_info(logger_io, "Kernel me dijo que tengo que esperar << %s >> unidades de tiempo", buffer);
+    // OJO HAY QUE LIBERAR EL BUFFER, o sea, habra que liberar la instruccion luego, SI NO --> MEMORY LEAK, ------ listo, resuelto con el free(unidades_de_tiempo)
     return buffer;
 }
 
 void atender_GENERICA(){// IO_GEN_SLEEP (Interfaz, Unidades de trabajo), no hace falta validar instruccion, ya se supone que la valido el kernel, y ademas para esta interfaz 
-    char * instruccion = recibir_instruccion_de_kernel(); // instruccion queda en memoria dinamica
-    char ** elementos_de_instruccion = string_split(instruccion , " ");
-    int tiempo_a_esperar = tiempo_unidad_trabajo * atoi(elementos_de_instruccion[2]);
+    char * unidades_de_tiempo = recibir_unidades_de_tiempo(); // instruccion queda en memoria dinamica
+    int tiempo_a_esperar = tiempo_unidad_trabajo * atoi(unidades_de_tiempo);
     usleep((__useconds_t) tiempo_a_esperar);
     avisar_operacion_realizada_kernel(); //esto va a servir para que el kernel procese vuelta a blocked y pase además, otro proceso pueda usar la interfaz
-    free(instruccion); // hay que liberarla, ya que como se menciono anteriormente, la instruccion estaba en memoria dinamica
+    free(unidades_de_tiempo); // hay que liberarla, ya que como se menciono anteriormente, la instruccion estaba en memoria dinamica
 }
 
 void atender_STDIN(){
-    char * instruccion = recibir_instruccion_de_kernel(); // instruccion queda en memoria dinamica
+   // char * instruccion = recibir_instruccion_de_kernel(); // instruccion queda en memoria dinamica
     // hace falta validar la instruccion? creo que eso es trabajo del kernel
     // se supone que la instruccion es valida, y para este tipo unica
-    free(instruccion);
+   // free(instruccion);
 }
 void atender_STDOUT(){
-    char * instruccion = recibir_instruccion_de_kernel();
+    //char * instruccion = recibir_instruccion_de_kernel();
     // hace falta validar la instruccion? creo que eso es trabajo del kernel
     // se supone que la instruccion es valida, y para este tipo unica
-    free(instruccion);
+    //free(instruccion);
 }
 void atender_DIALFS(){ // hoy, 2/5/2024, a las 20:07, esuchando JIMMY FALLON de Luchito, empiezo la funcion mas dificil de las interfaces, suerte loko
-    char * instruccion = recibir_instruccion_de_kernel();
-    free(instruccion);
+   // char * instruccion = recibir_instruccion_de_kernel();
+    //free(instruccion);
 }
 
 void avisar_operacion_realizada_kernel(){
     int a=1;
-    send(fd_conexion_kernel, &a,sizeof(int),0); //ponele que esa notificacion es simplemente recibir el numero 1
+    send(fd_conexion_kernel, &a,sizeof(int),0); //ponele que esa notificacion es simplemente recibir el numero 1, al menos para las genericas, por ahora
 }
 
 void terminar_programa()

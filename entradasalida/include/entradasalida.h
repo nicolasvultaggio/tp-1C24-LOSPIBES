@@ -36,7 +36,7 @@ bool iniciar_conexiones();
 void atender_kernel();
 void informar_nombre();
 void atender_instruccion();
-char * recibir_instruccion_de_kernel();
+char * recibir_unidades_de_tiempo();
 
 void atender_GENERICA();
 void atender_STDIN();

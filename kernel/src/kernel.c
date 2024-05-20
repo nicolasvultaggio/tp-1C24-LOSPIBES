@@ -309,17 +309,31 @@ void atender_vuelta_dispatch(){
                 pcb* pcb_actualizado = guardar_datos_del_pcb(lista);//si acepta instruccion, cargar con datos en un pcb_blocked, y si no es valida, mandar a exit el pcb
                 switch(pcb_actualizado->motivo){
                     case IO_GEN_SLEEP: // OJO, no va a ser IO_GEN_SLEEP, va a ser el motivo de desalojo que elija sergio para estos casos, pongo esto para ir haciendo por ahora
-                        char * instruccion = list_get(lista,14); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
-                        char * nombre_interfaz=list_get(lista,15); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
-                        char * unidad_de_tiempo=list_get(lista,16); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
-                        element_interfaz * interfaz = interfaz_existe_y_esta_conectada(nombre_interfaz);
+                        char * instruccion = list_get(lista,14); //devuelve el puntero al dato del elemento de la lista original
+                        char * nombre_interfaz=list_get(lista,15); //devuelve el puntero al dato del elemento de la lista original
+                        char * tiempo_a_esperar=list_get(lista,16); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
+                        element_interfaz * interfaz = interfaz_existe_y_esta_conectada(nombre_interfaz); //puntero al elemento original de la lista, ojo
                         if(interfaz){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
-                            if(generica_acepta_instruccion(instruccion,unidad_de_tiempo)){
-                                
+                            if(generica_acepta_instruccion(instruccion)){
+                                free(instruccion); //ya no me importa la instruccion, (ya se cual es)
+                                free(nombre_interfaz); //ya no me importa el nombre
+                                //debemos mantener la referencia a tiempo_a_esperar
+                                list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
+                                pcb_block_gen * info_de_bloqueo = malloc(sizeof(pcb_block_gen));
+                                info_de_bloqueo->el_pcb = pcb_actualizado ; //simplemente otra referencia 
+                                info_de_bloqueo->unidad_de_tiempo= tiempo_a_esperar; //simplemente otra referencia
+                                push_con_mutex(interfaz->cola_bloqueados,info_de_bloqueo,interfaz->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                sem_post(interfaz->sem_procesos_blocked);
+                                break;
                             }
-                            //que pasa si no acepta instruccion
                         }
-                        //que pasa si no esta conectada la interfaz
+                        //finalizar proceso
+                        free(instruccion); //ya no me importa la instruccion, no se pudo hacer la instruccion
+                        free(nombre_interfaz); //ya no me importa el nombre , no se pudo hacer la instruccion
+                        free(tiempo_a_esperar); //ya no me importa el tiempo a esperar
+                        list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
+                        //tiene que hacer algo con la memoria tambien? preguntarle a tomi y a tincho
+                        push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
                         break;
                 }
                 
@@ -333,14 +347,17 @@ void atender_vuelta_dispatch(){
 
 element_interfaz * interfaz_existe_y_esta_conectada(char * un_nombre){
     bool interfaz_con_nombre(void * una_interfaz){
-        return (strcmp(una_interfaz->nombre,un_nombre) == 0);
+        return (!strcmp(una_interfaz->nombre,un_nombre)); //no importa que este en blanco, es solo por un tema del editor de texto, en teoría debería compilarlo bien
     };
-    pthread_mutex_lock(mutex_lista_interfaces); 
-    element_interfaz * interfaz  = list_find(interfaces_conectadas,(void*)interfaz_con_nombre); //por ahora asumo que anda
-    pthread_mutex_unlock(mutex_lista_interfaces);
+    pthread_mutex_lock(&mutex_lista_interfaces); 
+    element_interfaz * interfaz  = list_find(interfaces_conectadas,(void*)interfaz_con_nombre); 
+    pthread_mutex_unlock(&mutex_lista_interfaces);
     return interfaz;
 }
 
+bool generica_acepta_instruccion(char * instruccion){
+    return !strcmp("IO_GEN_SLEEP",instruccion);
+}
 
 
 // ¿Como es esta coordinacion?
@@ -535,20 +552,40 @@ void procesar_conexion_interfaz(void * arg){
     sem_init((datos_interfaz->sem_procesos_blocked),0,0); 
     pthread_mutex_init((datos_interfaz->mutex_procesos_blocked),NULL);
         
-    push_con_mutex(interfaces_conectadas,datos_interfaz,mutex_lista_interfaces); //agrega al final de la lista de interfaces
+    push_con_mutex(interfaces_conectadas,datos_interfaz,&mutex_lista_interfaces); //agrega al final de la lista de interfaces
 
-    while(1){ //este es para que se pueda pausar y reanudar planificacion 
-        while(leer_debe_planificar_con_mutex()){ // genera algo de espera activa cuando debe_planificar = 0;
-            sem_wait(datos_interfaz->sem_procesos_blocked);
-            //agarra el primero de la cola de blocked 
-            //solicita la instruccion
-            //espera la respuesta de la interfaz
-            //segun algoritmo de planificacion, lo pone en la cola correspondiente
-            //------------------------------------------------------------------------------------------------------------------------------- SEGUIR ACA
-        }
+    switch (datos_interfaz->tipo){
+    case GENERICA:
+        atender_interfaz_generica(datos_interfaz);
+        break;
+    default:
+        break;
     }
     
 }
+
+void atender_interfaz_generica(element_interfaz * datos_interfaz){
+    while(1){ //este es para que se pueda pausar y reanudar planificacion 
+        while(leer_debe_planificar_con_mutex()){ // genera algo de espera activa cuando debe_planificar = 0;
+            sem_wait(datos_interfaz->sem_procesos_blocked);
+            pcb_block_gen * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,datos_interfaz->mutex_procesos_blocked);//agarra el primero de la cola de blocked 
+            //contenido del paquete de instruccion
+            t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
+            agregar_a_paquete(paquete,proceso_a_atender->unidad_de_tiempo,strlen(proceso_a_atender->unidad_de_tiempo)+1);//unidad de tiempo
+            enviar_paquete(paquete,*(datos_interfaz->fd_conexion_con_interfaz));
+            int notificacion;
+            notificacion = recibir_operacion(*(datos_interfaz->fd_conexion_con_interfaz),logger_kernel,datos_interfaz->nombre);
+            if(notificacion){ // la interfaz devolvio el numero 1, entonces la operacion salio bien papa
+                //segun algoritmo de planificacion, lo pone en la cola correspondiente
+            }else{
+                //que pasa si la operacion malio sal
+            }
+            
+            //------------------------------------------------------------------------------------------------------------------------------- SEGUIR ACA
+        }
+    }
+}
+
 
 
 //PRIMERO RECIBIR CODIGO DE OPERACION, SE PUEDE ENVIAR UN CODIGO DE OPERACION SIN ENVIAR UN PAQUETE
