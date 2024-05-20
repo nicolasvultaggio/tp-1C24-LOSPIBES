@@ -102,6 +102,10 @@ bool crear_conexiones();
 
 bool leer_debe_planificar_con_mutex();
 
+element_interfaz * interfaz_existe_y_esta_conectada(char * un_nombre);
+bool generica_acepta_instruccion(char * interfaz,char * instruccion,char * unidad_de_tiempo);
+bool interfaz_con_nombre(element_interfaz * una_interfaz,char* un_nombre);
+
 bool debe_planificar;
 bool esta_planificando;
 

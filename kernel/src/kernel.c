@@ -306,13 +306,21 @@ void atender_vuelta_dispatch(){
                 break;
                 case INTERFAZ:
                 t_list * lista = recibir_paquete(fd_conexion_dispatch);//recibir pcb y manejar motivo de desalojo
-                pcb* pcb_actualizado = guardar_datos_del_pcb(lista);
+                pcb* pcb_actualizado = guardar_datos_del_pcb(lista);//si acepta instruccion, cargar con datos en un pcb_blocked, y si no es valida, mandar a exit el pcb
                 switch(pcb_actualizado->motivo){
                     case IO_GEN_SLEEP: // OJO, no va a ser IO_GEN_SLEEP, va a ser el motivo de desalojo que elija sergio para estos casos, pongo esto para ir haciendo por ahora
-                    char * instruccion = list_get(lista,15); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
-                    char * interfaz=list_get(lista,16); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
-                    char * unidad_de_tiempo=list_get(lista,17); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
-
+                        char * instruccion = list_get(lista,14); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
+                        char * nombre_interfaz=list_get(lista,15); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
+                        char * unidad_de_tiempo=list_get(lista,16); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
+                        element_interfaz * interfaz = interfaz_existe_y_esta_conectada(nombre_interfaz);
+                        if(interfaz){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
+                            if(generica_acepta_instruccion(instruccion,unidad_de_tiempo)){
+                                
+                            }
+                            //que pasa si no acepta instruccion
+                        }
+                        //que pasa si no esta conectada la interfaz
+                        break;
                 }
                 
                 
@@ -322,6 +330,18 @@ void atender_vuelta_dispatch(){
         }
     }
 }
+
+element_interfaz * interfaz_existe_y_esta_conectada(char * un_nombre){
+    bool interfaz_con_nombre(void * una_interfaz){
+        return (strcmp(una_interfaz->nombre,un_nombre) == 0);
+    };
+    pthread_mutex_lock(mutex_lista_interfaces); 
+    element_interfaz * interfaz  = list_find(interfaces_conectadas,(void*)interfaz_con_nombre); //por ahora asumo que anda
+    pthread_mutex_unlock(mutex_lista_interfaces);
+    return interfaz;
+}
+
+
 
 // ¿Como es esta coordinacion?
 // Suponete que A sea "despachar" y B sea "recibir respuesta"
