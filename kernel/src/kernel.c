@@ -79,15 +79,19 @@ void iniciar_proceso(char *arg1){
     pcb* proceso_nuevo = crear_pcb();
     
     enviar_datos_proceso(path, proceso_nuevo->PID, fd_conexion_memoria); // ENVIO PATH Y PID PARA QUE CUANDO CPU PIDA MANDE PID Y PC, Y AHI MEMORIA TENGA EL PID PARA IDENTIFICAR
+<<<<<<< HEAD
     list_add(cola_new, proceso_nuevo);//ojo, capaz necesite mutex
+=======
+    push_con_mutex(cola_new,proceso_nuevo,&mutex_lista_new);
+>>>>>>> a881b005391f4498154c4c20023708fa23e36b68
     log_info(logger_obligatorio, "Se creo el proceso %d en NEW", proceso_nuevo -> PID);
     
     
     
 }
 
-pcb* buscar_proceso_para_finalizar(int pid_a_buscar){
-    for (int i = 0; i<list_size(cola_exec); i++)
+pcb* buscar_proceso_para_finalizar(int pid_a_buscar){ 
+    for (int i = 0; i<list_size(cola_exec); i++)       
     {
         pcb* proceso = list_get(cola_exec,i);
         if(proceso->PID == pid_a_buscar){
@@ -100,8 +104,9 @@ pcb* buscar_proceso_para_finalizar(int pid_a_buscar){
     
 }
 
-void finalizar_proceso(char* arg1){
-    int pid_busado = atoi(arg1);
+//Esta funcion va a tener que ser revisada cuando hagamos largo plazo, ya que ahora no tiene mucho sentido seguir desarrollandola porq muy probablemente sea una abstraccion de logica de varias cosas. NO SE COMITEO
+void finalizar_proceso(char* PID){
+    int pid_busado = atoi(PID);
     pcb* pcb_buscado = buscar_proceso_para_finalizar(pid_busado);
 
     if(strcmp(string_de_estado(pcb_buscado->estado), "EXEC") == 0){
@@ -143,6 +148,8 @@ pcb *crear_pcb(){
     return un_pcb;
 }
 
+/* PARTE DE LA LOGICA SIRVE PERO HAY QUE VERLO BIEN CUANDO HAGAMOS LA PLANIFICACION A LARGO PLAZO
+
 // esto es mas de planificador a largo plazo, tener cuidado con los semaforos a implementar
 void proceso_a_ready(){ //mucho ojo con los posibles mutex y semaforos necesarios para este punto
     int cantidad_de_procesos_en_READY = list_size(cola_ready);
@@ -155,6 +162,8 @@ void proceso_a_ready(){ //mucho ojo con los posibles mutex y semaforos necesario
     }
     log_info(logger_kernel,"NO se pueden agregar mas procesos a READY");
 }
+*/
+
 
 int asignar_pid(){
     
@@ -230,7 +239,7 @@ void atender_instruccion_valida(char* leido){
 
     //A TODOS LES FALTA IMPLEMENTAR LA LOGICA, PERO DEJO EL ESQUELETO ARMADO
     if(strcmp(comando_consola[0] , "EJECUTAR_SCRIPT") == 0){
-
+        // falta
     }else if(strcmp(comando_consola[0], "INICIAR_PROCESO") == 0){
         iniciar_proceso(comando_consola[1]);
     }else if(strcmp(comando_consola[0], "FINALIZAR_PROCESO") == 0){
@@ -240,9 +249,9 @@ void atender_instruccion_valida(char* leido){
     }else if(strcmp(comando_consola[0] , "INICIAR_PLANIFICAION") == 0){
         iniciar_planificacion();
     }else if(strcmp(comando_consola[0] , "MULTIPROGRAMACION") == 0){
-    
+        // falta
     }else if(strcmp(comando_consola[0] , "PROCESO_ESTADO") == 0){
-
+        // falta
     }else{
         log_error(logger_kernel, "Nunca tendria que llegar aca por el filtro, pero si llega lo aviso por las dudas. FILTRO MAL HECHO");
         exit(EXIT_FAILURE);
@@ -479,7 +488,7 @@ int es_path(char* path){
     }
     return cantidadDeSlash || cantidadDePuntos;
 }
-
+ 
 void despachar_pcb(pcb * un_pcb){
     t_paquete * paquete_pcb = crear_paquete(CODE_PCB);
 
