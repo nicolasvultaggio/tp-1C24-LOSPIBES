@@ -303,9 +303,13 @@ void atender_vuelta_dispatch(){
 		// actualizar_pcb;	//  """""""""""""""""""""""""""""""""""""""""""""
 		// switch(MOTIVO_DE_DESALOJO);
 		// case FIN_DE_QUANTUM:
-		//	cambiar_estado(pcb_actualizado, READY); -> No se si esta funcion esta creada o no, me tengo q fijar
+		//	cambiar_estado(pcb_actualizado, READY); -> No se si esta funcion esta creada o no, me tengo q fijar. SI esta creada pero solo cambia el estado dentro del PCB
+		//      mandar pcb a la cola de ready -> No importa si es RR o VRR ya que ambos actuan igual ante el FIN DE QUANTUM, solo encolan el proceso en READY. Lo que cambia es cuando va a blockeado, en VRR hay q fijarse cuanto q le quedo
+		// 	sem post del semaforo de ready
+		// 	APARCAO
+		//  	IDEA EN PSEUDOCODIGO, cuando me funque la MV la paso a codigo 
 		//case EXIT:
-		//	pareciera que es la misma logica que fin de quantum pero cambiando a la cola de EXIT
+		//	Logica q hace TINCHO
                 break;
                 case RECURSO:
                 //recibir pcb y manejar motivo de desalojo
