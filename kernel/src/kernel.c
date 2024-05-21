@@ -299,7 +299,13 @@ void atender_vuelta_dispatch(){
             op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");//ponerse a escuchar el fd_dispatch
             switch(codop){
                 case PCB_ACTUALIZADO:
-                //recibir pcb y manejar motivo de desalojo
+                // recibir_pcb;		//ESTO SE PODRIA PONER ARRIBA DEL SWITCH CODOP CREO, YA QUE NO IMPORTA LO QUE HAYA Q HACER SIEMPRE HAY Q ACTUALIZAR EL PCB
+		// actualizar_pcb;	//  """""""""""""""""""""""""""""""""""""""""""""
+		// switch(MOTIVO_DE_DESALOJO);
+		// case FIN_DE_QUANTUM:
+		//	cambiar_estado(pcb_actualizado, READY); -> No se si esta funcion esta creada o no, me tengo q fijar
+		//case EXIT:
+		//	pareciera que es la misma logica que fin de quantum pero cambiando a la cola de EXIT
                 break;
                 case RECURSO:
                 //recibir pcb y manejar motivo de desalojo
