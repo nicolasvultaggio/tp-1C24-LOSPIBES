@@ -298,25 +298,21 @@ void atender_vuelta_dispatch(){
             sem_wait(&sem_atender_rta);//esperar a que se haya despachado un pcb
             op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");//ponerse a escuchar el fd_dispatch
             switch(codop){
+            t_list * lista = recibir_paquete(fd_conexion_dispatch); //Esto me parece que tendria que ir arriba del SWITCH ya que en todos los casos vamos a tomar un pcb y actualizarlo.
+            pcb* pcb_actualizado = guardar_datos_del_pcb(lista);
                 case PCB_ACTUALIZADO:
-                // recibir_pcb;		//ESTO SE PODRIA PONER ARRIBA DEL SWITCH CODOP CREO, YA QUE NO IMPORTA LO QUE HAYA Q HACER SIEMPRE HAY Q ACTUALIZAR EL PCB
-		// actualizar_pcb;	//  """""""""""""""""""""""""""""""""""""""""""""
-		// switch(MOTIVO_DE_DESALOJO);
-		// case FIN_DE_QUANTUM:
-		//	cambiar_estado(pcb_actualizado, READY); -> No se si esta funcion esta creada o no, me tengo q fijar. SI esta creada pero solo cambia el estado dentro del PCB
-		//      mandar pcb a la cola de ready -> No importa si es RR o VRR ya que ambos actuan igual ante el FIN DE QUANTUM, solo encolan el proceso en READY. Lo que cambia es cuando va a blockeado, en VRR hay q fijarse cuanto q le quedo
-		// 	sem post del semaforo de ready
-		// 	APARCAO
-		//  	IDEA EN PSEUDOCODIGO, cuando me funque la MV la paso a codigo 
-		//case EXIT:
-		//	Logica q hace TINCHO
+		        switch(pcb_actualizado -> motivo);
+		            case FIN_DE_QUANTUM: //No sabemos el nombre pero me imagino que se va a llamar asi 
+		        	cambiar_estado(pcb_actualizado, READY); // -> No se si esta funcion esta creada o no, me tengo q fijar. SI esta creada pero solo cambia el estado dentro del PCB
+		            push_con_mutex(cola_ready, pcb_actualizado, &mutex_lista_ready);// No importa si es RR o VRR ya que ambos actuan igual ante el FIN DE QUANTUM, solo encolan el proceso en READY. Lo que cambia es cuando va a blockeado, en VRR hay q fijarse cuanto q le quedo
+                    sem_post(&sem_procesos_ready);
+		            //case EXIT:
+		            //	Logica q hace TINCHO
                 break;
                 case RECURSO:
                 //recibir pcb y manejar motivo de desalojo
                 break;
                 case INTERFAZ:
-                t_list * lista = recibir_paquete(fd_conexion_dispatch);//recibir pcb y manejar motivo de desalojo
-                pcb* pcb_actualizado = guardar_datos_del_pcb(lista);//si acepta instruccion, cargar con datos en un pcb_blocked, y si no es valida, mandar a exit el pcb
                 switch(pcb_actualizado->motivo){
                     case IO_GEN_SLEEP: // OJO, no va a ser IO_GEN_SLEEP, va a ser el motivo de desalojo que elija sergio para estos casos, pongo esto para ir haciendo por ahora
                         char * instruccion = list_get(lista,14); //devuelve el puntero al dato del elemento de la lista original
@@ -333,7 +329,7 @@ void atender_vuelta_dispatch(){
                                 info_de_bloqueo->el_pcb = pcb_actualizado ; //simplemente otra referencia 
                                 info_de_bloqueo->unidad_de_tiempo= tiempo_a_esperar; //simplemente otra referencia
                                 push_con_mutex(interfaz->cola_bloqueados,info_de_bloqueo,interfaz->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
-                                sem_post(interfaz->sem_procesos_blocked);
+                                sem_post(interfaz->sem_procesos_blocked); 
                                 break;
                             }
                         }
@@ -431,7 +427,7 @@ char* string_de_estado(estadosDeLosProcesos estado){
 		case BLOCKED:
 			return "BLOCKED";
 			break;
-		case EXIT:
+		case EXITT:
 			return "EXIT";
 			break;
 		default:
