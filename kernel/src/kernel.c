@@ -79,7 +79,7 @@ void iniciar_proceso(char *arg1){
     pcb* proceso_nuevo = crear_pcb();
     
     enviar_datos_proceso(path, proceso_nuevo->PID, fd_conexion_memoria); // ENVIO PATH Y PID PARA QUE CUANDO CPU PIDA MANDE PID Y PC, Y AHI MEMORIA TENGA EL PID PARA IDENTIFICAR
-    list_add(cola_new, proceso_nuevo);
+    list_add(cola_new, proceso_nuevo);//ojo, capaz necesite mutex
     log_info(logger_obligatorio, "Se creo el proceso %d en NEW", proceso_nuevo -> PID);
     
     
@@ -91,7 +91,7 @@ pcb* buscar_proceso_para_finalizar(int pid_a_buscar){
     {
         pcb* proceso = list_get(cola_exec,i);
         if(proceso->PID == pid_a_buscar){
-            list_remove(cola_exec,i);
+            list_remove(cola_exec,i);//ojo, capaz necesite mutex
             return proceso;
         }
     }
@@ -105,7 +105,7 @@ void finalizar_proceso(char* arg1){
     pcb* pcb_buscado = buscar_proceso_para_finalizar(pid_busado);
 
     if(strcmp(string_de_estado(pcb_buscado->estado), "EXEC") == 0){
-        enviar_interrupcion(EXIT_CONSOLA); 
+        enviar_interrupcion(EXIT_CONSOLA); //ojo, capaz necesite mutex, los fd son compartidos
     }else{
         pcb_buscado->motivo = EXIT_CONSOLA;
         push_con_mutex(cola_exit,pcb_buscado,&mutex_lista_exit);
@@ -144,7 +144,7 @@ pcb *crear_pcb(){
 }
 
 // esto es mas de planificador a largo plazo, tener cuidado con los semaforos a implementar
-void proceso_a_ready(){
+void proceso_a_ready(){ //mucho ojo con los posibles mutex y semaforos necesarios para este punto
     int cantidad_de_procesos_en_READY = list_size(cola_ready);
     int cantidad_de_procesos_en_NEW = list_size(cola_new);
     int gradoDeMulti = atoi(gradoDeMultiprogramacion);
@@ -338,8 +338,8 @@ void atender_vuelta_dispatch(){
                         free(nombre_interfaz); //ya no me importa el nombre , no se pudo hacer la instruccion
                         free(tiempo_a_esperar); //ya no me importa el tiempo a esperar
                         list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
-                        //tiene que hacer algo con la memoria tambien? preguntarle a tomi y a tincho
                         push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+                        //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
                         break;
                 }
                 
@@ -580,19 +580,31 @@ void atender_interfaz_generica(element_interfaz * datos_interfaz){
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
             agregar_a_paquete(paquete,proceso_a_atender->unidad_de_tiempo,strlen(proceso_a_atender->unidad_de_tiempo)+1);//unidad de tiempo
             enviar_paquete(paquete,*(datos_interfaz->fd_conexion_con_interfaz));
-            int notificacion;
-            notificacion = recibir_operacion(*(datos_interfaz->fd_conexion_con_interfaz),logger_kernel,datos_interfaz->nombre);
-            if(notificacion){ // la interfaz devolvio el numero 1, entonces la operacion salio bien papa
-                //segun algoritmo de planificacion, lo pone en la cola correspondiente
-            }else{
-                //que pasa si la operacion malio sal
+            free(proceso_a_atender->unidad_de_tiempo); // ya no necesito mas la instruccion
+            int notificacion = recibir_operacion(*(datos_interfaz->fd_conexion_con_interfaz),logger_kernel,datos_interfaz->nombre);
+            if(notificacion == 1 ){ // la interfaz devolvio el numero 1, entonces la operacion salio bien papa
+                procesar_vuelta_blocked_a_ready( proceso_a_atender);
+            }else if(notificacion == (-1)){
+                //quitar interfaz de lista de interfaces
+                //liberar las estructuras de datos_interfaz
             }
             
-            //------------------------------------------------------------------------------------------------------------------------------- SEGUIR ACA
         }
     }
 }
 
+void procesar_vuelta_blocked_a_ready(pcb_block_gen * proceso_a_atender){ //libera la estructura pcb_blocked, pero de los punteros dinamicos que contenga esta, nos encargamos antes
+    char * algoritmo = config_get_string_value(config_kernel,"ALGORITMO_PLANIFICACION");
+    if(!strcmp(algoritmo, "FIFO")) {
+    push_con_mutex(cola_ready,proceso_a_atender->el_pcb,&mutex_lista_ready);
+    free(proceso_a_atender);
+	}else if(!strcmp(algoritmo, "RR")){
+    push_con_mutex(cola_ready,proceso_a_atender->el_pcb,&mutex_lista_ready);
+    free(proceso_a_atender);
+    }else{ //todavía no analizamos VRR
+                        
+    }
+}
 
 
 //PRIMERO RECIBIR CODIGO DE OPERACION, SE PUEDE ENVIAR UN CODIGO DE OPERACION SIN ENVIAR UN PAQUETE

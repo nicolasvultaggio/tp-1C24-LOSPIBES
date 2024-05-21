@@ -112,6 +112,8 @@ bool interfaz_con_nombre(void * una_interfaz);
 char * preguntar_nombre_interfaz(int un_fd);
 void atender_interfaz_generica(element_interfaz * datos_interfaz);
 
+void procesar_vuelta_blocked_a_ready(pcb_block_gen * proceso_a_atender);
+
 bool debe_planificar;
 bool esta_planificando;
 

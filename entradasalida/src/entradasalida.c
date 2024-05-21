@@ -46,22 +46,6 @@ int main(int argc, char* argv[]) {
     //         ==> envia algo a memoria y espera su respuesta
     // IMPORTANTE: que se le DEVUELVE al kernel como respuesta? un flag diciendole que ya se hizo la operacion.
     
-    /*
-    //atender a Kernel
-    args_atendedor * args_kernel = crear_args(fd_conexion_kernel,logger_io,"Kernel");
-    pthread_t hilo_kernel;
-    pthread_create(&hilo_kernel,NULL,(void*)atender_conexion,(void *)args_kernel);
-    pthread_detach(hilo_kernel);
-
-    //atender a Memoria
-    args_atendedor * args_memoria = crear_args(fd_conexion_memoria,logger_io,"Memoria");
-    pthread_t hilo_memoria;
-    pthread_create(&hilo_memoria,NULL,(void*)atender_conexion,(void *)args_memoria);
-    pthread_join(hilo_memoria,NULL);
-
-    */
-    
-    
     terminar_programa();
 
     return 0;
