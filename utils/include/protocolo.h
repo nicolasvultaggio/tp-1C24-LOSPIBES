@@ -123,7 +123,7 @@ typedef enum {
 	SOLICITAR_INSTRUCCION,
 	PROXIMA_INSTRUCCION,
 
-	INTERR,
+	INTERR, //UNICO codigo de operacion de la conexion interrupt
 }op_code; //codigos de operacion entre modulos, sirven para establecer que tipos de datos recibe el paquete
 
 

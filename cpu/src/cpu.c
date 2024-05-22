@@ -61,7 +61,7 @@ void dispatch(void *arg){
 
 	while (1) {
 		sem_wait(&sem_recibir_pcb);
-		hay_interrupcion = false;
+		hay_interrupcion = false;// ponerle mutex a hay_interrupción, ya que dos procesos que se ejecutan paralelamente lo modifican o leen --> puede haber condicion de carrera
 		int codigo_operacion = recibir_operacion(fd_escucha_dispatch, logger_cpu, "Kernell (dispatch)");
 		switch (codigo_operacion) {
 		case PCBBITO:
@@ -207,8 +207,8 @@ void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
 	}
 
 	if(medir_registro(destinoregistro)){
-		setear_registro8(PCB, destinoregistro, destino + (uint8_t) origen);
-	}else{
+		setear_registro8(PCB, destinoregistro, destino + (uint8_t) origen); 
+	}else{//																	//ojo, aca no hay mas referencia a origen ni destino, solo 
 		setear_registro32(PCB, destinoregistro, destino + (uint32_t) origen);
 	}
 		
