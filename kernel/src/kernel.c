@@ -311,8 +311,10 @@ void atender_vuelta_dispatch(){
 		        	cambiar_estado(pcb_actualizado, READY); // -> No se si esta funcion esta creada o no, me tengo q fijar. SI esta creada pero solo cambia el estado dentro del PCB
 		            push_con_mutex(cola_ready, pcb_actualizado, &mutex_lista_ready);// No importa si es RR o VRR ya que ambos actuan igual ante el FIN DE QUANTUM, solo encolan el proceso en READY. Lo que cambia es cuando va a blockeado, en VRR hay q fijarse cuanto q le quedo
                     sem_post(&sem_procesos_ready);
-		            //case EXIT:
-		            //	Logica q hace TINCHO
+		            case EXIT:
+                    cambiar_estado(pcb_actualizado, EXIT);
+                    push_con_mutex(cola_exit, pcb_actualizado, &mutex_lista_exit;)
+                    sem_post(&sem_procesos_exit);
                 break;
                 case RECURSO:
                 //recibir pcb y manejar motivo de desalojo
