@@ -306,16 +306,17 @@ void atender_vuelta_dispatch(){
             t_list * lista = recibir_paquete(fd_conexion_dispatch); //Esto me parece que tendria que ir arriba del SWITCH ya que en todos los casos vamos a tomar un pcb y actualizarlo.
             pcb* pcb_actualizado = guardar_datos_del_pcb(lista);
                 case PCB_ACTUALIZADO:
-		        switch(pcb_actualizado -> motivo);
+		        switch(pcb_actualizado -> motivo){
 		            case FIN_QUANTUM: //No sabemos el nombre pero me imagino que se va a llamar asi 
 		        	cambiar_estado(pcb_actualizado, READY); // -> No se si esta funcion esta creada o no, me tengo q fijar. SI esta creada pero solo cambia el estado dentro del PCB
-		            push_con_mutex(cola_ready, pcb_actualizado, &mutex_lista_ready);// No importa si es RR o VRR ya que ambos actuan igual ante el FIN DE QUANTUM, solo encolan el proceso en READY. Lo que cambia es cuando va a blockeado, en VRR hay q fijarse cuanto q le quedo
-                    sem_post(&sem_procesos_ready);
+		            	push_con_mutex(cola_ready, pcb_actualizado, &mutex_lista_ready);// No importa si es RR o VRR ya que ambos actuan igual ante el FIN DE QUANTUM, solo encolan el proceso en READY. Lo que cambia es cuando va a blockeado, en VRR hay q fijarse cuanto q le quedo
+                    		sem_post(&sem_procesos_ready);
 		            case EXIT:
-                    cambiar_estado(pcb_actualizado, EXIT);
-                    push_con_mutex(cola_exit, pcb_actualizado, &mutex_lista_exit;)
-                    sem_post(&sem_procesos_exit);
-                break;
+                    		cambiar_estado(pcb_actualizado, EXIT);
+                    		push_con_mutex(cola_exit, pcb_actualizado, &mutex_lista_exit);
+                    		sem_post(&sem_procesos_exit);
+			}
+               		break;
                 case RECURSO:
                 //recibir pcb y manejar motivo de desalojo
                 break;
