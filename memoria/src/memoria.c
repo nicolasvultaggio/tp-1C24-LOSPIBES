@@ -38,7 +38,7 @@ void terminar_programa(){
     config_destroy(config_memoria);
     log_destroy(logger_memoria);
 }
-t_list leer_pseudocodigo(char* ruta){
+t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
     
     t_list* instrucciones = list_create();
     FILE* f;
@@ -110,8 +110,8 @@ t_list leer_pseudocodigo(char* ruta){
 	return instrucciones;
 }
 	
-
-int server_escuchar() {
+//aca se le conectan primero cpu, despues kernel, y despues pueden conectarse MUULTIPLES interfaces
+int server_escuchar() { 
 	 
 	int cliente_socket = esperar_cliente(fd_escucha_memoria, logger_memoria, "SOY UN CLIENTE");
 
@@ -126,7 +126,9 @@ int server_escuchar() {
 
 	return 0;
 }
-static void procesar_clientes(void* void_args){
+
+//por que necesita static? no la invoca ningun otro archivo
+static void procesar_clientes(void* void_args){ 
 	int *args = (int*) void_args;
 	int cliente_socket = *args;
 
@@ -145,8 +147,8 @@ static void procesar_clientes(void* void_args){
 			log_info(logger_memoria, "Recibí un paquete con los siguientes valores: ");
 			list_iterate(paquete_recibido, (void*) iterator);
 			break;	
-		case DATOS_PROCESO: //se arregla cuando unamos ramas,  en protocolo.h, SINO agregar a struct op_code de protocolo.h
-				t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);//se arregla cuando unamos ramas,se halla en protocolo.h cuando
+		case DATOS_PROCESO: //se arregla cuando unamos ramas,  en protocolo.h, SINO agregar a struct op_code de protocolo.h                                             / este codigo SOLO LO ENVIA EL KERNEL
+				t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);//se arregla cuando unamos ramas,se halla en protocolo.h cuando              / por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
 				iniciar_memoria_apedidodeKernel(datos_proceso->path, datos_proceso->pid, cliente_socket);//el parametro size sera usado en el 3er check,"datos_proceso->size"
 				free(datos_proceso->path);
 				free(datos_proceso);
@@ -165,7 +167,7 @@ static void procesar_clientes(void* void_args){
 			send_valor_leido_cpu(valor_leido_cpu, *tamanio_lectura_cpu, cliente_socket);
 			break;*/
 		
-		case SOLICITAR_INSTRUCCION:// preguntar a sergio como envia el pedido ojo que es distinto a como lo va recibir el
+		case SOLICITAR_INSTRUCCION:// preguntar a sergio como envia el pedido ojo que es distinto a como lo va recibir el                        / ESTE CODIGO SOLO LO ENVÍA CPU
 				log_info(logger_memoria, "Solicitud de instruccion recibida");
 				procesar_pedido_instruuccion(cliente_socket, proceso_instrucciones);
 				break;
@@ -228,7 +230,7 @@ codigo_instrucciones instruccion_to_enum(char* instruccion){
 }
 void iniciar_memoria_apedidodeKernel(char* path, int size, int pid, int socket_kernel) {
     // Construir la ruta completa del archivo
-    char* rutaCompleta = string_from_format("/home/utnso/Desktop/trabajoramamemoria/tp-2024-1c-Grupo-5/memoria%s.txt", path);//CAMBIAR RUTAAA
+    char* rutaCompleta = string_from_format("/home/utnso/Desktop/trabajoramamemoria/tp-2024-1c-Grupo-5/memoria%s.txt", path);//CAMBIAR RUTAAA      OJO, esta ruta hardcodeada depende de la pc
 
     // Generar instrucciones y cargarlas a la variable global PROCESO_INSTRUCCIONES
     t_list* instrucciones = leer_pseudocodigo(rutaCompleta);
