@@ -79,11 +79,7 @@ void iniciar_proceso(char *arg1){
     pcb* proceso_nuevo = crear_pcb();
     
     enviar_datos_proceso(path, proceso_nuevo->PID, fd_conexion_memoria); // ENVIO PATH Y PID PARA QUE CUANDO CPU PIDA MANDE PID Y PC, Y AHI MEMORIA TENGA EL PID PARA IDENTIFICAR
-<<<<<<< HEAD
-    list_add(cola_new, proceso_nuevo);//ojo, capaz necesite mutex
-=======
     push_con_mutex(cola_new,proceso_nuevo,&mutex_lista_new);
->>>>>>> a881b005391f4498154c4c20023708fa23e36b68
     log_info(logger_obligatorio, "Se creo el proceso %d en NEW", proceso_nuevo -> PID);
     
     
@@ -579,7 +575,6 @@ void procesar_conexion_interfaz(void * arg){
     }
     
 }
-
 void atender_interfaz_generica(element_interfaz * datos_interfaz){
     while(1){ //este es para que se pueda pausar y reanudar planificacion 
         while(leer_debe_planificar_con_mutex()){ // genera algo de espera activa cuando debe_planificar = 0;
@@ -588,14 +583,13 @@ void atender_interfaz_generica(element_interfaz * datos_interfaz){
             //contenido del paquete de instruccion
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
             agregar_a_paquete(paquete,proceso_a_atender->unidad_de_tiempo,strlen(proceso_a_atender->unidad_de_tiempo)+1);//unidad de tiempo
-            enviar_paquete(paquete,*(datos_interfaz->fd_conexion_con_interfaz));
+            /*CUIDADO CON DESCONEXION DE INTERFAZ*/enviar_paquete(paquete,*(datos_interfaz->fd_conexion_con_interfaz));
             free(proceso_a_atender->unidad_de_tiempo); // ya no necesito mas la instruccion
-            int notificacion = recibir_operacion(*(datos_interfaz->fd_conexion_con_interfaz),logger_kernel,datos_interfaz->nombre);
+            /*CUIDADO CON DESCONEXION DE INTERFAZ*/int notificacion = recibir_operacion(*(datos_interfaz->fd_conexion_con_interfaz),logger_kernel,datos_interfaz->nombre);
             if(notificacion == 1 ){ // la interfaz devolvio el numero 1, entonces la operacion salio bien papa
                 procesar_vuelta_blocked_a_ready( proceso_a_atender);
             }else if(notificacion == (-1)){
-                //quitar interfaz de lista de interfaces
-                //liberar las estructuras de datos_interfaz
+                //INTERFAZ SE DESCONECTO: NO SE PUDO REALIZAR LA OPERACION
             }
             
         }
