@@ -109,6 +109,7 @@ void finalizar_proceso(char* PID){
         enviar_interrupcion(EXIT_CONSOLA); //ojo, capaz necesite mutex, los fd son compartidos
     }else{
         pcb_buscado->motivo = EXIT_CONSOLA;
+        cambiar_estado(pcb_buscado,EXITT);
         push_con_mutex(cola_exit,pcb_buscado,&mutex_lista_exit);
         sem_post(&sem_procesos_exit);
     }
@@ -302,21 +303,23 @@ void atender_vuelta_dispatch(){
         while(leer_debe_planificar_con_mutex()){
             sem_wait(&sem_atender_rta);//esperar a que se haya despachado un pcb
             op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");//ponerse a escuchar el fd_dispatch
-            switch(codop){
             t_list * lista = recibir_paquete(fd_conexion_dispatch); //Esto me parece que tendria que ir arriba del SWITCH ya que en todos los casos vamos a tomar un pcb y actualizarlo.
             pcb* pcb_actualizado = guardar_datos_del_pcb(lista);
+            switch(codop){
                 case PCB_ACTUALIZADO:
 		        switch(pcb_actualizado -> motivo){
 		            case FIN_QUANTUM: //No sabemos el nombre pero me imagino que se va a llamar asi 
 		        	cambiar_estado(pcb_actualizado, READY); // -> No se si esta funcion esta creada o no, me tengo q fijar. SI esta creada pero solo cambia el estado dentro del PCB
 		            	push_con_mutex(cola_ready, pcb_actualizado, &mutex_lista_ready);// No importa si es RR o VRR ya que ambos actuan igual ante el FIN DE QUANTUM, solo encolan el proceso en READY. Lo que cambia es cuando va a blockeado, en VRR hay q fijarse cuanto q le quedo
                     		sem_post(&sem_procesos_ready);
-		            case EXIT:
-                    		cambiar_estado(pcb_actualizado, EXIT);
+                            break;
+		            case EXITO:
+                    		cambiar_estado(pcb_actualizado, EXITT);
                     		push_con_mutex(cola_exit, pcb_actualizado, &mutex_lista_exit);
                     		sem_post(&sem_procesos_exit);
-			}
-               		break;
+                            break;
+			    }
+               	break;
                 case RECURSO:
                 //recibir pcb y manejar motivo de desalojo
                 break;
@@ -336,6 +339,7 @@ void atender_vuelta_dispatch(){
                                 pcb_block_gen * info_de_bloqueo = malloc(sizeof(pcb_block_gen));//falta liberar
                                 info_de_bloqueo->el_pcb = pcb_actualizado ; //simplemente otra referencia 
                                 info_de_bloqueo->unidad_de_tiempo= tiempo_a_esperar; //simplemente otra referencia
+                                cambiar_estado(pcb_actualizado,BLOCKED);
                                 push_con_mutex(interfaz->cola_bloqueados,info_de_bloqueo,interfaz->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
                                 sem_post(interfaz->sem_procesos_blocked); 
                                 break;
@@ -346,6 +350,7 @@ void atender_vuelta_dispatch(){
                         free(nombre_interfaz); //ya no me importa el nombre , no se pudo hacer la instruccion
                         free(tiempo_a_esperar); //ya no me importa el tiempo a esperar
                         list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
+                        cambiar_estado(pcb_actualizado,EXITT);
                         push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
                         //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
                         break;
@@ -619,10 +624,12 @@ size_t enviar_paquete_io(t_paquete* paquete, int socket_cliente) //modificacion 
 void procesar_vuelta_blocked_a_ready(pcb_block_gen * proceso_a_atender){ //libera la estructura pcb_blocked, pero de los punteros dinamicos que contenga esta, nos encargamos antes
     char * algoritmo = config_get_string_value(config_kernel,"ALGORITMO_PLANIFICACION");
     if(!strcmp(algoritmo, "FIFO")) {
+    cambiar_estado(proceso_a_atender->el_pcb,READY);
     push_con_mutex(cola_ready,proceso_a_atender->el_pcb,&mutex_lista_ready);
     free(proceso_a_atender->unidad_de_tiempo);
     free(proceso_a_atender);
 	}else if(!strcmp(algoritmo, "RR")){
+    cambiar_estado(proceso_a_atender->el_pcb,READY);
     push_con_mutex(cola_ready,proceso_a_atender->el_pcb,&mutex_lista_ready);
     free(proceso_a_atender->unidad_de_tiempo);
     free(proceso_a_atender);
@@ -676,6 +683,7 @@ void liberar_datos_interfaz(element_interfaz * datos_interfaz){ // se invoca cua
 void liberar_pcb_block_gen(void * pcb_bloqueado){
     pcb_block_gen * pcb_bloqueado_c = (pcb_block_gen *) pcb_bloqueado;
     free(pcb_bloqueado_c->unidad_de_tiempo);
+    cambiar_estado(pcb_bloqueado_c->el_pcb,EXITT);
     push_con_mutex(cola_exit,pcb_bloqueado_c->el_pcb,&mutex_lista_exit);
     //falta solicitar a memoria liberar las estructuras de ese proceso
     free(pcb_bloqueado_c); //nodo liberado, solo queda destruir la lista
