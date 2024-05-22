@@ -25,7 +25,7 @@ typedef enum {
 	SOLICITAR_INTERFAZ_GENERICA,
 	SOLICITAR_WAIT,
 	SOLICITAR_SIGNAL
-} motivo_desalojo;
+} motivo_desalojo; //motivos de desalojo del proceso
 
 /* INSTRUCCIONES */
 typedef enum{
@@ -50,7 +50,7 @@ typedef enum{
 	IO_FS_READ,
 	EXIT
 
-} cod_instruccion;
+} cod_instruccion; //son para entender instrucciones entre cpu y memoria
 
 /* PCB */
 
@@ -73,7 +73,7 @@ typedef enum{
     EXECUTE,
     BLOCKED,
     EXITT
-}estadosDeLosProcesos;
+}estadosDeLosProcesos; //son para manejo del kernel, no deberían ser usados por ningún otro modulo
 
 /* PBC PLAYS */
 typedef struct {
@@ -124,7 +124,7 @@ typedef enum {
 	PROXIMA_INSTRUCCION,
 
 	INTERR,
-}op_code;
+}op_code; //codigos de operacion entre modulos, sirven para establecer que tipos de datos recibe el paquete
 
 
 
