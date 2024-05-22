@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
     
 
     pthread_t hilo_consola;
-	pthread_create(&hilo_consola, NULL, (void*)iniciar_consola, NULL);
+	pthread_create(&hilo_consola, NULL, (void*)iniciar_consola, NULL); //si termina siendo solo esto lo que hace, hace falta que sea un hilo a parte?
 	pthread_join(hilo_consola, NULL);
 
 
@@ -330,7 +330,7 @@ void atender_vuelta_dispatch(){
                                 free(nombre_interfaz); //ya no me importa el nombre
                                 //debemos mantener la referencia a tiempo_a_esperar
                                 list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
-                                pcb_block_gen * info_de_bloqueo = malloc(sizeof(pcb_block_gen));
+                                pcb_block_gen * info_de_bloqueo = malloc(sizeof(pcb_block_gen));//falta liberar
                                 info_de_bloqueo->el_pcb = pcb_actualizado ; //simplemente otra referencia 
                                 info_de_bloqueo->unidad_de_tiempo= tiempo_a_esperar; //simplemente otra referencia
                                 push_con_mutex(interfaz->cola_bloqueados,info_de_bloqueo,interfaz->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
@@ -540,7 +540,7 @@ void iniciar_escucha_io(){
 void escuchar_interfaces(){
     int check=0;
     do{
-        int * fd_conexion_io = malloc(sizeof(int)); //falta liberar, posiblemente cuando se desconecte interfaz, esta en memoria dinamica para que sea manipulable por varios hilos
+        int * fd_conexion_io = malloc(sizeof(int)); //falta liberar, posiblemente cuando se desconecte interfaz, esta en memoria dinamica para que sea manipulable por varios hilos, liberado
         (*fd_conexion_io) = esperar_cliente(fd_escucha_kernel,logger_kernel,"IO");
         check = (*fd_conexion_io);
         //procesa conexion
@@ -557,8 +557,8 @@ void escuchar_interfaces(){
 void procesar_conexion_interfaz(void * arg){
     int * fd_conexion_io = (int*)arg;
     element_interfaz * datos_interfaz = malloc(sizeof(element_interfaz));//falta liberar, posiblemente cuando se desconecte la interfaz
-    datos_interfaz->fd_conexion_con_interfaz = fd_conexion_io;//otra a referencia al mismo malloc recibido por parametro, usar para liberar
-    datos_interfaz->nombre = preguntar_nombre_interfaz((*fd_conexion_io)); //falta liberar, posiblemente cuando se desconecte interfaz, ¿Por qué es dinámico? porque en principio, no se sabe el tamaño que ocupara el nombre
+    datos_interfaz->fd_conexion_con_interfaz = fd_conexion_io;//otra a referencia al mismo malloc recibido por parametro, usar para liberar / liberado
+    datos_interfaz->nombre = preguntar_nombre_interfaz((*fd_conexion_io)); //falta liberar, posiblemente cuando se desconecte interfaz, ¿Por qué es dinámico? porque en principio, no se sabe el tamaño que ocupara el nombre / liberado
     datos_interfaz->tipo = (io_type) preguntar_tipo_interfaz((*fd_conexion_io));
     datos_interfaz->cola_bloqueados=list_create();  //pcbs_bloqueados es una lista de pcb_block
     sem_init((datos_interfaz->sem_procesos_blocked),0,0); 
@@ -575,6 +575,7 @@ void procesar_conexion_interfaz(void * arg){
     }
     
 }
+
 void atender_interfaz_generica(element_interfaz * datos_interfaz){
     while(1){ //este es para que se pueda pausar y reanudar planificacion 
         while(leer_debe_planificar_con_mutex()){ // genera algo de espera activa cuando debe_planificar = 0;
@@ -583,26 +584,44 @@ void atender_interfaz_generica(element_interfaz * datos_interfaz){
             //contenido del paquete de instruccion
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
             agregar_a_paquete(paquete,proceso_a_atender->unidad_de_tiempo,strlen(proceso_a_atender->unidad_de_tiempo)+1);//unidad de tiempo
-            /*CUIDADO CON DESCONEXION DE INTERFAZ*/enviar_paquete(paquete,*(datos_interfaz->fd_conexion_con_interfaz));
-            free(proceso_a_atender->unidad_de_tiempo); // ya no necesito mas la instruccion
-            /*CUIDADO CON DESCONEXION DE INTERFAZ*/int notificacion = recibir_operacion(*(datos_interfaz->fd_conexion_con_interfaz),logger_kernel,datos_interfaz->nombre);
-            if(notificacion == 1 ){ // la interfaz devolvio el numero 1, entonces la operacion salio bien papa
-                procesar_vuelta_blocked_a_ready( proceso_a_atender);
-            }else if(notificacion == (-1)){
+            if (enviar_paquete_io(paquete,*(datos_interfaz->fd_conexion_con_interfaz)) == (-1)){
+                push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
+                liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
+            }else{
+                int notificacion = recibir_operacion(*(datos_interfaz->fd_conexion_con_interfaz),logger_kernel,datos_interfaz->nombre);
+                if(notificacion == 1 ){ // la interfaz devolvio el numero 1, entonces la operacion salio bien papa
+                    procesar_vuelta_blocked_a_ready( proceso_a_atender);
+                }else if(notificacion == (-1)){
                 //INTERFAZ SE DESCONECTO: NO SE PUDO REALIZAR LA OPERACION
+                push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
+                liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
+                }
             }
-            
+            eliminar_paquete(paquete);
         }
     }
+}
+size_t enviar_paquete_io(t_paquete* paquete, int socket_cliente) //modificacion de enviar_paquete para detectar si no se pudo enviar el paquete porque se desconecto la interfaz
+{
+	int bytes = paquete->buffer->size + 2*sizeof(int);
+	void* a_enviar = serializar_paquete(paquete, bytes);
+
+	size_t err = send(socket_cliente, a_enviar, bytes, 0);
+
+	free(a_enviar);
+
+    return err;
 }
 
 void procesar_vuelta_blocked_a_ready(pcb_block_gen * proceso_a_atender){ //libera la estructura pcb_blocked, pero de los punteros dinamicos que contenga esta, nos encargamos antes
     char * algoritmo = config_get_string_value(config_kernel,"ALGORITMO_PLANIFICACION");
     if(!strcmp(algoritmo, "FIFO")) {
     push_con_mutex(cola_ready,proceso_a_atender->el_pcb,&mutex_lista_ready);
+    free(proceso_a_atender->unidad_de_tiempo);
     free(proceso_a_atender);
 	}else if(!strcmp(algoritmo, "RR")){
     push_con_mutex(cola_ready,proceso_a_atender->el_pcb,&mutex_lista_ready);
+    free(proceso_a_atender->unidad_de_tiempo);
     free(proceso_a_atender);
     }else{ //todavía no analizamos VRR
                         
@@ -631,8 +650,30 @@ int preguntar_tipo_interfaz(int un_fd){
 }
 
 
-void liberar_datos_interfaz(){ // se invoca cuando el kernel detecte que la interfaz se desconecto, en el hilo este que va actualizando cola de bloqueados
-//HACER FREE DE TODOS LOS ELEMENTOS DE ELEMENT_INTEFAZ QUE SEAN DINAMICOS, las funciones de commons me sirven al eliminar un elemento de una lista?NO
-//con las commons obtengo la data del elemento, lo unico que libera son las estructuras para agregarlo a la lista
-//despues tengo que liberar todos los datos dinamicos de ese element_interfaz (incluida la sublista)
+void liberar_datos_interfaz(element_interfaz * datos_interfaz){ // se invoca cuando el kernel detecte que la interfaz se desconecto, en el hilo este que va actualizando cola de bloqueados
+    pthread_mutex_lock(&mutex_lista_interfaces);
+    list_remove_element(interfaces_conectadas,datos_interfaz); //removimos la interfaz de la lista de interfaces conectadas
+    pthread_mutex_unlock(&mutex_lista_interfaces);
+    //ahora hay que liberar su informacion
+    free(datos_interfaz->fd_conexion_con_interfaz);//si se esta haciendo esto, ya se le hizo close
+    free(datos_interfaz->nombre);
+
+    switch (datos_interfaz->tipo)
+    {
+    case GENERICA:
+        list_iterate(datos_interfaz->cola_bloqueados,(void*)liberar_pcb_block_gen);
+        list_destroy(datos_interfaz->cola_bloqueados);
+        break;
+    default:
+        break;
+    }
+    
+}
+
+void liberar_pcb_block_gen(void * pcb_bloqueado){
+    pcb_block_gen * pcb_bloqueado_c = (pcb_block_gen *) pcb_bloqueado;
+    free(pcb_bloqueado_c->unidad_de_tiempo);
+    push_con_mutex(cola_exit,pcb_bloqueado_c->el_pcb,&mutex_lista_exit);
+    //falta solicitar a memoria liberar las estructuras de ese proceso
+    free(pcb_bloqueado_c); //nodo liberado, solo queda destruir la lista
 }

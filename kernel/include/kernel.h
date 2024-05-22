@@ -113,6 +113,9 @@ char * preguntar_nombre_interfaz(int un_fd);
 void atender_interfaz_generica(element_interfaz * datos_interfaz);
 
 void procesar_vuelta_blocked_a_ready(pcb_block_gen * proceso_a_atender);
+size_t enviar_paquete_io(t_paquete* paquete, int socket_cliente);
+void liberar_pcb_block_gen(void * pcb_bloqueado);
+void liberar_datos_interfaz(element_interfaz * datos_interfaz);
 
 bool debe_planificar;
 bool esta_planificando;
