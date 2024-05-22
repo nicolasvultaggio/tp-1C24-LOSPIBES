@@ -467,7 +467,7 @@ void reducir_quantum(void *ppid){ // como todo hilo, es esa su especificacion
 }
 
 void enviar_interrupcion(motivo_desalojo motivo){
-    t_paquete* paquete = crear_paquete(INTERRUPCION);
+    t_paquete* paquete = crear_paquete(INTERR);
 	agregar_a_paquete(paquete, &motivo, sizeof(motivo));
 	enviar_paquete(paquete, fd_conexion_interrupt);
 	eliminar_paquete(paquete);

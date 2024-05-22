@@ -393,14 +393,13 @@ void detectar_motivo_desalojo(){
 		case INTERRUPCION:
 			log_info(logger_cpu, "Interrupcion: Finalizar proceso.");
 			PCB->motivo = INTERRUPCION;
-			enviar_pcb(PCB, fd_escucha_dispatch); // sin codigo de operacion?? esta raro esto
-			//enviar_solicitud_de_cambio_de_estado(EXITT, fd_escucha_interrupt);   OJO, no se envia nada por interrupt, solo se escucha
+			enviar_pcb(PCB, fd_escucha_dispatch, INTERR, INTERRUPCION); 
 			break;
+
 		case FIN_QUANTUM:
 			log_info(logger_cpu, "Interrupcion: Fin de Quantum.");
 			PCB->motivo = FIN_QUANTUM;
-			enviar_pcb(PCB, fd_escucha_dispatch); // sin codigo de operacion?? esta raro esto 
-			//enviar_solicitud_de_cambio_de_estado(READY, fd_escucha_interrupt);  OJO, no se envia nada por interrupt, solo se escucha
+			enviar_pcb(PCB, fd_escucha_dispatch, INTERR, FIN_QUANTUM);
 			break;
 	}
 	return;
