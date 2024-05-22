@@ -327,7 +327,7 @@ void ejecutar_wait(pcb* PCB, char* registro){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "WAIT", registro);
 	char* recurso = malloc(strlen(registro) + 1);
 	strcpy(recurso, registro);
-	enviar_pcb(PCB, fd_escucha_dispatch, ESPERA, recurso);
+	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_WAIT);
 	free(recurso);
 	sem_post(&sem_recibir_pcb);
 }
@@ -336,26 +336,26 @@ void ejecutar_signal(pcb* PCB, char* registro){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "SIGNAL", registro);
 	char* recurso = malloc(strlen(registro) + 1);
 	strcpy(recurso, registro);
-	enviar_pcb(PCB, fd_escucha_dispatch, SIGNAL, recurso);
+	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_SIGNAL);
 	free(recurso);
 	sem_post(&sem_execute);
 }
 
 void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* unidad_de_tiempo){
-	enviar_pcb(PCB, fd_escucha_dispatch, SOLICITAR_IO_GEN_SLEEP, instruccion, interfaz, unidad_de_tiempo);
+	enviar_pcb(PCB, fd_escucha_dispatch, INTERFAZ, SOLICITAR_INTERFAZ_GENERICA, instruccion, interfaz, unidad_de_tiempo);
 	sem_post(&sem_execute);
 	return;
 }
 
 void ejecutar_exit(pcb* PCB){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
-	enviar_pcb(PCB, fd_escucha_dispatch, EXITO);
+	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXITO);
 	sem_post(&sem_execute);
 }
 
 void ejecutar_error(pcb* PCB){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
-	enviar_pcb(PCB, fd_escucha_dispatch,EXIT_CONSOLA);
+	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXIT_CONSOLA);
 	sem_post(&sem_execute);
 }
 
@@ -393,14 +393,13 @@ void detectar_motivo_desalojo(){
 		case INTERRUPCION:
 			log_info(logger_cpu, "Interrupcion: Finalizar proceso.");
 			PCB->motivo = INTERRUPCION;
-			enviar_pcb(PCB, fd_escucha_dispatch); // sin codigo de operacion?? esta raro esto
-			//enviar_solicitud_de_cambio_de_estado(EXITT, fd_escucha_interrupt);   OJO, no se envia nada por interrupt, solo se escucha
+			enviar_pcb(PCB, fd_escucha_dispatch, INTERR, INTERRUPCION); 
 			break;
+
 		case FIN_QUANTUM:
 			log_info(logger_cpu, "Interrupcion: Fin de Quantum.");
 			PCB->motivo = FIN_QUANTUM;
-			enviar_pcb(PCB, fd_escucha_dispatch); // sin codigo de operacion?? esta raro esto 
-			//enviar_solicitud_de_cambio_de_estado(READY, fd_escucha_interrupt);  OJO, no se envia nada por interrupt, solo se escucha
+			enviar_pcb(PCB, fd_escucha_dispatch, INTERR, FIN_QUANTUM);
 			break;
 	}
 	return;

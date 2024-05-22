@@ -55,12 +55,13 @@ void push_con_mutex(t_list* lista, void * elemento ,pthread_mutex_t* mutex){
     return;
 }
 
-void empaquetar_pcb(t_paquete* paquete, pcb* PCB){
+void empaquetar_pcb(t_paquete* paquete, pcb* PCB, motivo_desalojo MOTIVO){
 
 	agregar_a_paquete(paquete, &(PCB->PID), sizeof(int));
 	agregar_a_paquete(paquete, &(PCB->PC), sizeof(uint32_t));
 	agregar_a_paquete(paquete, &(PCB->QUANTUM), sizeof(int));
-	agregar_a_paquete(paquete, &(PCB->estado), sizeof(estadosDeLosProcesos));
+	agregar_a_paquete(paquete, &(PCB->motivo), sizeof(int));
+	agregar_a_paquete(paquete, &(PCB->estado), sizeof(int));
 	agregar_a_paquete(paquete, &(PCB->registros.AX), sizeof(uint8_t));
 	agregar_a_paquete(paquete, &(PCB->registros.BX), sizeof(uint8_t));
 	agregar_a_paquete(paquete, &(PCB->registros.CX), sizeof(uint8_t));
@@ -193,22 +194,44 @@ void enviar_datos_proceso(char* path, int pid, int fd_conexion){
 	eliminar_paquete(paquete_de_datos_proceso);
 }
 
-void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, char* parametro1, char* parametro2, char* parametro3, char* parametro4, char* parametro5){
+void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_desalojo MOTIVO, char* parametro1, char* parametro2, char* parametro3, char* parametro4, char* parametro5){
 
 	t_paquete* paquete = crear_paquete(OPERACION);
-	empaquetar_pcb(paquete, PCB);
-	switch (OPERACION){ //ahora debería ser segun el motivo de desalojo (del pcb) (switch(PCB->MOTIVO)) que empaquetas el resto, el codigo de operacion solo era para indicar QUE VA además del pcb
-		case ESPERA:
-			agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
+	empaquetar_pcb(paquete, PCB, MOTIVO);
+	switch (MOTIVO){ 
+		case EXITO:
 			break;
-		case SIGNAL:
-			agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
+
+		case EXIT_CONSOLA:
+			//
 			break;
-		case SOLICITAR_IO_GEN_SLEEP:
-			agregar_a_paquete(paquete, &parametro1, sizeof(char)); // no debería ser : agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1; ?
-			agregar_a_paquete(paquete, &parametro2, sizeof(char)); // idem arriba
-			agregar_a_paquete(paquete, &parametro3, sizeof(char)); // idem arriba
+
+		case INTERRUPCION:
+			//
 			break;
+
+		case FIN_QUANTUM:
+			//
+			break;	
+
+		case PROCESO_ACTIVO:
+			//NO SE QUE ES
+			break;
+
+		case SOLICITAR_INTERFAZ_GENERICA:
+			agregar_a_paquete(paquete, &parametro1, strlen(parametro1) + 1);
+			agregar_a_paquete(paquete, &parametro2, strlen(parametro2) + 1);
+			agregar_a_paquete(paquete, &parametro3, strlen(parametro3) + 1);
+			break;
+
+		case SOLICITAR_WAIT:
+			agregar_a_paquete(paquete, &parametro1, strlen(parametro1) + 1);
+			break;
+
+		case SOLICITAR_SIGNAL:
+			agregar_a_paquete(paquete, &parametro1, strlen(parametro1) + 1);
+			break;
+			
 		default:
 			break;
 	}
@@ -277,11 +300,11 @@ pcb* recibir_pcb(int socket){
 	t_list* paquete = recibir_paquete(socket);
 	pcb* PCB = malloc(sizeof(PCB));
 
-	uint32_t* pid = list_get(paquete, 0);
+	int* pid = list_get(paquete, 0);
 	PCB->PID = *pid;
 	free(pid);
 
-	int* program_counter = list_get(paquete, 1);
+	uint32_t* program_counter = list_get(paquete, 1);
 	PCB->PC = *program_counter;
 	free(program_counter);
 

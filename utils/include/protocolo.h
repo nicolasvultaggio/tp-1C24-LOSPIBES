@@ -21,7 +21,10 @@ typedef enum {
 	EXIT_CONSOLA, //Finalizacion por Error o por Consola
 	INTERRUPCION, //Finalizacaion forzada por parte del Kernel
 	FIN_QUANTUM, //Finalizacion por parte del Algoritmo
-	PROCESO_ACTIVO
+	PROCESO_ACTIVO,
+	SOLICITAR_INTERFAZ_GENERICA,
+	SOLICITAR_WAIT,
+	SOLICITAR_SIGNAL
 } motivo_desalojo;
 
 /* INSTRUCCIONES */
@@ -93,24 +96,34 @@ typedef struct {
 
 /* OPERACIONES */
 typedef enum {
+	/* JANYEIK */
 	handshakeCPU,
 	handshakeKERNEL,
 	handshakeIO,
 	handshakeMEMORIA,
-	
-	
+
+	/* TP0 */
 	MENSAJE,
 	PAQUETE,
+
+	/* KERNEL envia PCB a CPU y CPU recibe */
 	PCBBITO,
+
+	/* CPU envia PCB a KERNEL  */
+	PCB_ACTUALIZADO,
+
+	/************************/
+	RECURSO, //cuando CPU envia PCB por wait o signal
+	INTERFAZ, //cuando CPU envia PCB por interfaz generica
+
 	CODE_PCB,
 	DATOS_PROCESO,
+
+	/* MEMORIA - CPU / CPU - MEMORIA */
 	SOLICITAR_INSTRUCCION,
 	PROXIMA_INSTRUCCION,
-	SOLICITAR_IO_GEN_SLEEP,
-	INTERR,
-	ESPERA,
-	SENIAL
 
+	INTERR,
 }op_code;
 
 

@@ -307,7 +307,7 @@ void atender_vuelta_dispatch(){
             pcb* pcb_actualizado = guardar_datos_del_pcb(lista);
                 case PCB_ACTUALIZADO:
 		        switch(pcb_actualizado -> motivo);
-		            case FIN_DE_QUANTUM: //No sabemos el nombre pero me imagino que se va a llamar asi 
+		            case FIN_QUANTUM: //No sabemos el nombre pero me imagino que se va a llamar asi 
 		        	cambiar_estado(pcb_actualizado, READY); // -> No se si esta funcion esta creada o no, me tengo q fijar. SI esta creada pero solo cambia el estado dentro del PCB
 		            push_con_mutex(cola_ready, pcb_actualizado, &mutex_lista_ready);// No importa si es RR o VRR ya que ambos actuan igual ante el FIN DE QUANTUM, solo encolan el proceso en READY. Lo que cambia es cuando va a blockeado, en VRR hay q fijarse cuanto q le quedo
                     sem_post(&sem_procesos_ready);
@@ -319,7 +319,7 @@ void atender_vuelta_dispatch(){
                 break;
                 case INTERFAZ:
                 switch(pcb_actualizado->motivo){
-                    case IO_GEN_SLEEP: // OJO, no va a ser IO_GEN_SLEEP, va a ser el motivo de desalojo que elija sergio para estos casos, pongo esto para ir haciendo por ahora
+                    case SOLICITAR_INTERFAZ_GENERICA: // OJO, no va a ser IO_GEN_SLEEP, va a ser el motivo de desalojo que elija sergio para estos casos, pongo esto para ir haciendo por ahora
                         char * instruccion = list_get(lista,14); //devuelve el puntero al dato del elemento de la lista original
                         char * nombre_interfaz=list_get(lista,15); //devuelve el puntero al dato del elemento de la lista original
                         char * tiempo_a_esperar=list_get(lista,16); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
@@ -463,7 +463,7 @@ void reducir_quantum(void *ppid){ // como todo hilo, es esa su especificacion
 }
 
 void enviar_interrupcion(motivo_desalojo motivo){
-    t_paquete* paquete = crear_paquete(INTERRUPCION);
+    t_paquete* paquete = crear_paquete(INTERR);
 	agregar_a_paquete(paquete, &motivo, sizeof(motivo));
 	enviar_paquete(paquete, fd_conexion_interrupt);
 	eliminar_paquete(paquete);
