@@ -179,7 +179,7 @@ typedef enum{
     INSTRUCCION_REALIZADA
 }op_io_a_kernel;
 
-void empaquetar_pcb(t_paquete* paquete, pcb* PCB);
+void empaquetar_pcb(t_paquete* paquete, pcb* PCB,motivo_desalojo MOTIVO);
 t_paquete* crear_paquete(op_code OPERACION);
 void crear_buffer(t_paquete* paquete);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
@@ -194,8 +194,7 @@ void enviar_operacion(int socket_conexion, op_code numero);
 void snd_handshake(int fd_socket_cliente);
 void enviar_solicitud_de_instruccion(int fd, int pid, int program_counter);
 void enviar_datos_proceso(char* path,int pid,int fd_conexion);
-void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, char* parametro1, char* parametro2, char* parametro3, char* parametro4, char* parametro5);
-
+void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_desalojo MOTIVO, char* parametro1, char* parametro2, char* parametro3, char* parametro4, char* parametro5);
 /* RECVS */
 void recibir_mensaje(t_log* loggerServidor, int socket_cliente);
 t_list* recibir_paquete(int socket_cliente);
