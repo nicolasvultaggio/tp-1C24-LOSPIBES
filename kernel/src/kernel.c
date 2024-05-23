@@ -548,7 +548,7 @@ void iniciar_escucha_io(){
 void escuchar_interfaces(){
     int check=0;
     do{
-        int * fd_conexion_io = malloc(sizeof(int)); //falta liberar, posiblemente cuando se desconecte interfaz, esta en memoria dinamica para que sea manipulable por varios hilos, liberado
+        int * fd_conexion_io = malloc(sizeof(int)); //falta liberar, posiblemente cuando se desconecte interfaz, esta en memoria dinamica para que se pueda pasar por parametro, liberado
         (*fd_conexion_io) = esperar_cliente(fd_escucha_kernel,logger_kernel,"IO");
         check = (*fd_conexion_io);
         //procesa conexion
@@ -592,14 +592,14 @@ void atender_interfaz_generica(element_interfaz * datos_interfaz){
             //contenido del paquete de instruccion
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
             agregar_a_paquete(paquete,proceso_a_atender->unidad_de_tiempo,strlen(proceso_a_atender->unidad_de_tiempo)+1);//unidad de tiempo
-            if (enviar_paquete_io(paquete,*(datos_interfaz->fd_conexion_con_interfaz)) == (-1)){
+            if (enviar_paquete_io(paquete,*(datos_interfaz->fd_conexion_con_interfaz)) == (-1) ){ //devuelve -1 la interfaz había cerrado la conexion
                 push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
                 liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
             }else{
                 int notificacion = recibir_operacion(*(datos_interfaz->fd_conexion_con_interfaz),logger_kernel,datos_interfaz->nombre);
                 if(notificacion == 1 ){ // la interfaz devolvio el numero 1, entonces la operacion salio bien papa
                     procesar_vuelta_blocked_a_ready( proceso_a_atender);
-                }else if(notificacion == (-1)){
+                }else if(notificacion  == (-1) ){ //recibir operacion devuelve -1 en caso de que se haya desconectado la interfaz
                 //INTERFAZ SE DESCONECTO: NO SE PUDO REALIZAR LA OPERACION
                 push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
                 liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
@@ -614,7 +614,7 @@ size_t enviar_paquete_io(t_paquete* paquete, int socket_cliente) //modificacion 
 	int bytes = paquete->buffer->size + 2*sizeof(int);
 	void* a_enviar = serializar_paquete(paquete, bytes);
 
-	size_t err = send(socket_cliente, a_enviar, bytes, 0);
+	size_t err = send(socket_cliente, a_enviar, bytes, MSG_NOSIGNAL);//MSG_NOSIGNAL PARA QUE NO CORTE LA EJECUCION DE KERNEL SI LA INTERFAZ SE DESCONECTÓ (BROKEN PIPE)
 
 	free(a_enviar);
 
