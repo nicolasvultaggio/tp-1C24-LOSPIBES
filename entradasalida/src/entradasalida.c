@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
     leer_configuraciones();//eso, guarda toda la info necesaria del archivo de las configuraciones
     
     if(iniciar_conexiones()){
-        log_info(logger_io,"Error al iniciar conexiones");
+        log_info(logger_io,"Error al iniciar conexión al Kernel");
         terminar_programa();
         exit (2);
     }
@@ -236,18 +236,4 @@ void terminar_programa()
     liberar_conexion(fd_conexion_memoria);
 }
 
-/*
-    
-    enviar_operacion(fd_conexion_client_memoria, handshakeIO);
-    char mensaje_ok_memoria[1024] = {0};
-    recv(fd_conexion_client_memoria, mensaje_ok_memoria, 1024, 0);
-    printf("Respuesta del servidor: %s\n", mensaje_ok_memoria);
-
-    //IO-KERNEL
-    enviar_operacion(fd_conexion_client_kernel,handshakeIO);
-    char mensaje_ok_kernel[1024] = {0};
-    recv(fd_conexion_client_kernel, mensaje_ok_kernel, 1024, 0);
-    printf("Respuesta del servidor: %s\n", mensaje_ok_kernel);
-*/
-   
 
