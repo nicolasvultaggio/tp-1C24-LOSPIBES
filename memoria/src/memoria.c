@@ -42,7 +42,7 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
     
     t_list* instrucciones = list_create();
     FILE* f;
-    char buffer[256];
+    char buffer[256]; // xq 256? 
     char* palabra;
     char* instruccion_leida= NULL;
     char* parametros[5];
@@ -50,7 +50,7 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
 
     f=fopen(ruta,"r");
 	while (fgets(buffer, 256, f) != NULL) {
-		t_instruccion* instruccion = malloc(sizeof(t_instruccion));
+		t_instruccion* instruccion = malloc(sizeof(t_instruccion)); // CAMBIAR por el t_linea_instruccion de PROTOCOLO.H
 		instruccion->parametro1 = malloc(256);
 		instruccion->parametro2 = malloc(256);
 		instruccion->parametro3 = malloc(256);
@@ -117,7 +117,7 @@ int server_escuchar() {
 
 	if (cliente_socket != -1) {
 		pthread_t hilo;
-		int *args = malloc(sizeof(int));
+		int *args = malloc(sizeof(int)); // En algun momento se le esta haciendo free a esto?? *1
 		args = &cliente_socket;
 		pthread_create(&hilo, NULL, (void*) procesar_clientes, (void*) args);
 		pthread_detach(hilo);
@@ -135,7 +135,7 @@ static void procesar_clientes(void* void_args){
 	op_code cop;
 	while (cliente_socket != -1) {
 		if (recv(cliente_socket, &cop, sizeof(op_code), 0) != sizeof(op_code)) {
-			log_info(logger_memoria, "El cliente se desconecto de memoria server");
+			log_info(logger_memoria, "El cliente se desconecto de memoria server"); // Aca tendria que ir el free(args)
 			return;
 		}
 		switch (cop) {
