@@ -72,7 +72,7 @@ void ejecutar_resize();
 void ejecutar_copy_string();
 void ejecutar_wait(pcb* PCB, char* registro);
 void ejecutar_signal(pcb* PCB, char* registro);
-void ejecutar_io_gen_sleep(char* parametro1, char* parametro2);
+void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* unidad_de_tiempo);
 void ejecutar_io_stdin_read();
 void ejecutar_io_stdout_write();
 void ejecutar_io_fs_create();

@@ -96,7 +96,7 @@ void fetch (void *arg){
 t_linea_instruccion* prox_instruccion(int pid, int program_counter){
 	
 	t_linea_instruccion* instruccion_recibida = malloc(sizeof(t_linea_instruccion*));
-	enviar_solicitud_de_instruccion(fd_conexion_memoria, pid, program_counter);
+	//enviar_solicitud_de_instruccion(fd_conexion_memoria, pid, program_counter);
 	
 	while (1) {
 		int codigo_operacion = recibir_operacion(fd_conexion_memoria, logger_cpu, "Memoria");
@@ -117,10 +117,10 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			check_interrupt();
 			break;
 		case MOV_IN:
-			ejecutar_mov_in();
+			//ejecutar_mov_in();
 			break;
 		case MOV_OUT:
-			ejecutar_mov_out();
+			//ejecutar_mov_out();
 			break;
 		case SUM:
 			ejecutar_sum(PCB, instruccion->parametro1, instruccion->parametro2);
@@ -135,10 +135,10 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			check_interrupt();
 			break;
 		case RESIZE:
-			ejecutar_resize();
+			//ejecutar_resize();
 			break;
 		case COPY_STRING:
-			ejecutar_copy_string();
+			//ejecutar_copy_string();
 			break;
 		case WAIT:
 			ejecutar_wait(PCB, instruccion->parametro1);
@@ -150,25 +150,25 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			ejecutar_io_gen_sleep(PCB, "IO_GEN_SLEEP", instruccion->parametro1, instruccion->parametro2);
 			break;
 		case IO_STDIN_READ:
-			ejecutar_io_stdin_read();
+			//ejecutar_io_stdin_read();
 			break;
 		case IO_STDOUT_WRITE:
-			ejecutar_io_stdout_write();
+			//ejecutar_io_stdout_write();
 			break;
 		case IO_FS_CREATE:
-			ejecutar_io_fs_create();
+			//ejecutar_io_fs_create();
 			break;
 		case IO_FS_DELETE:
-			ejecutar_io_fs_delete();
+			//ejecutar_io_fs_delete();
 			break;
 		case IO_FS_TRUNCATE:
-			ejecutar_io_fs_truncate();
+			//ejecutar_io_fs_truncate();
 			break;
 		case IO_FS_WRITE:
-			ejecutar_io_fs_write();
+			//ejecutar_io_fs_write();
 			break;
 		case IO_FS_READ:
-			ejecutar_io_fs_read();
+			//ejecutar_io_fs_read();
 			break;
 		case EXIT:
 			ejecutar_exit(PCB);
@@ -193,23 +193,26 @@ void ejecutar_set(pcb* PCB, char* registro, char* valor){
 }
 
 void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
-
+	uint8_t destino8;
+	uint8_t origen8;
+	uint32_t destino32;
+	uint32_t origen32;
 	if(medir_registro(destinoregistro)){
-		uint8_t destino = capturar_registro8(PCB, destinoregistro);
+		destino8 = capturar_registro8(PCB, destinoregistro);
 	}else{
-		uint32_t destino = capturar_registro32(PCB, destinoregistro);
+		destino32 = capturar_registro32(PCB, destinoregistro);
 	}
 
 	if(medir_registro(origenregistro)){
-		uint8_t origen = capturar_registro8(PCB, origenregistro);
+		origen8 = capturar_registro8(PCB, origenregistro);
 	}else{
-		uint32_t origen = capturar_registro32(PCB, origenregistro);
+		origen32 = capturar_registro32(PCB, origenregistro);
 	}
 
 	if(medir_registro(destinoregistro)){
-		setear_registro8(PCB, destinoregistro, destino + (uint8_t) origen); 
+		setear_registro8(PCB, destinoregistro, destino8 + (uint8_t) origen8); 
 	}else{//																	//ojo, aca no hay mas referencia a origen ni destino, solo 
-		setear_registro32(PCB, destinoregistro, destino + (uint32_t) origen);
+		setear_registro32(PCB, destinoregistro, destino32 + (uint32_t) origen32);
 	}
 		
 	return;
@@ -218,7 +221,7 @@ void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
 void ejecutar_sub(pcb* PCB, char* destinoregistro, char* origenregistro){
 
 	uint8_t origen;
-	uint32_t origen;
+	uint32_t origen32;
 
 	if(medir_registro(origenregistro)){
 		origen = capturar_registro8(PCB, origenregistro);
@@ -232,7 +235,7 @@ void ejecutar_sub(pcb* PCB, char* destinoregistro, char* origenregistro){
 		setear_registro8(PCB, destinoregistro, destino + origen8);
 	}else{
 		uint32_t destino = capturar_registro32(PCB, destinoregistro);
-		uint32_t origen8 = (uint32_t) origen;
+		uint32_t origen8 = (uint32_t) origen32;
 		setear_registro32(PCB, destinoregistro, destino + origen32);
 	}
 		
@@ -327,7 +330,7 @@ void ejecutar_wait(pcb* PCB, char* registro){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "WAIT", registro);
 	char* recurso = malloc(strlen(registro) + 1);
 	strcpy(recurso, registro);
-	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_WAIT);
+	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_WAIT,NULL,NULL,NULL,NULL,NULL);
 	free(recurso);
 	sem_post(&sem_recibir_pcb);
 }
@@ -336,26 +339,26 @@ void ejecutar_signal(pcb* PCB, char* registro){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "SIGNAL", registro);
 	char* recurso = malloc(strlen(registro) + 1);
 	strcpy(recurso, registro);
-	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_SIGNAL);
+	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_SIGNAL,NULL,NULL,NULL,NULL,NULL);
 	free(recurso);
 	sem_post(&sem_execute);
 }
 
 void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* unidad_de_tiempo){
-	enviar_pcb(PCB, fd_escucha_dispatch, INTERFAZ, SOLICITAR_INTERFAZ_GENERICA, instruccion, interfaz, unidad_de_tiempo);
+	enviar_pcb(PCB, fd_escucha_dispatch, INTERFAZ, SOLICITAR_INTERFAZ_GENERICA, instruccion, interfaz, unidad_de_tiempo,NULL,NULL);
 	sem_post(&sem_execute);
 	return;
 }
 
 void ejecutar_exit(pcb* PCB){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
-	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXITO);
+	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXITO,NULL,NULL,NULL,NULL,NULL);
 	sem_post(&sem_execute);
 }
 
 void ejecutar_error(pcb* PCB){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
-	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXIT_CONSOLA);
+	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXIT_CONSOLA,NULL,NULL,NULL,NULL,NULL);
 	sem_post(&sem_execute);
 }
 
@@ -393,13 +396,13 @@ void detectar_motivo_desalojo(){
 		case INTERRUPCION:
 			log_info(logger_cpu, "Interrupcion: Finalizar proceso.");
 			PCB->motivo = INTERRUPCION;
-			enviar_pcb(PCB, fd_escucha_dispatch, INTERR, INTERRUPCION); 
+			enviar_pcb(PCB, fd_escucha_dispatch, INTERR, INTERRUPCION,NULL,NULL,NULL,NULL,NULL); 
 			break;
 
 		case FIN_QUANTUM:
 			log_info(logger_cpu, "Interrupcion: Fin de Quantum.");
 			PCB->motivo = FIN_QUANTUM;
-			enviar_pcb(PCB, fd_escucha_dispatch, INTERR, FIN_QUANTUM);
+			enviar_pcb(PCB, fd_escucha_dispatch, INTERR, FIN_QUANTUM,NULL,NULL,NULL,NULL,NULL);
 			break;
 	}
 	return;

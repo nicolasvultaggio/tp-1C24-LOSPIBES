@@ -185,6 +185,7 @@ void crear_buffer(t_paquete* paquete);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void* serializar_paquete(t_paquete* paquete, int bytes);
 void eliminar_paquete(t_paquete* paquete);
+void iterator(char* value, t_log *logger);
 
 /* SENDS */
 void enviar_mensaje(char* mensaje, int socket_cliente);

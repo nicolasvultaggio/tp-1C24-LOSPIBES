@@ -124,6 +124,10 @@ void eliminar_paquete(t_paquete* paquete)
 	free(paquete);
 }
 
+void iterator(char* value, t_log *logger) {
+	log_info(logger,"%s", value);
+}
+
 /* FUNCIONES DE ENVIO (SENDS) */
 void enviar_mensaje(char* mensaje, int socket_cliente)
 {

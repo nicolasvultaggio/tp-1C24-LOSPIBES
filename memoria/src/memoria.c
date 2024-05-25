@@ -25,6 +25,11 @@ int main() {
     
 }
 
+void inicializar_semaforos(){
+	//pthread_mutex_init(&mutex_lista_new, NULL);
+	pthread_mutex_init(&mutex_lista_instrucciones, NULL);
+}
+
 //Esta pensado para que en un futuro lea mas de una configuracion. 
 void leer_configuraciones(){
     puerto_propio = config_get_string_value(config_memoria,"PUERTO_PROPIO");
@@ -42,7 +47,7 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
     
     t_list* instrucciones = list_create();
     FILE* f;
-    char buffer[256]; // xq 256? 
+    char buffer[256]; 
     char* palabra;
     char* instruccion_leida= NULL;
     char* parametros[5];
@@ -50,7 +55,7 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
 
     f=fopen(ruta,"r");
 	while (fgets(buffer, 256, f) != NULL) {
-		t_instruccion* instruccion = malloc(sizeof(t_instruccion)); // CAMBIAR por el t_linea_instruccion de PROTOCOLO.H
+		t_linea_instruccion* instruccion = malloc(sizeof(cod_instruccion)); 
 		instruccion->parametro1 = malloc(256);
 		instruccion->parametro2 = malloc(256);
 		instruccion->parametro3 = malloc(256);
@@ -61,16 +66,16 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
 		// Eliminar el carácter de salto de línea del final de la línea
 		buffer[strcspn(buffer, "\n")] = '\0';
 
-        instruccion_leida = strtok(buffer, " ");
+        instruccion_leida = strtok(buffer, " ");                                                             
         contadordeparametros = 0;
         while ((palabra = strtok(NULL, " ")) != NULL && contadordeparametros < 5) {
             parametros[contadordeparametros++] = palabra;
         }
 
         if(instruccion_leida != NULL){
-            codigo_instrucciones cod_inst = instruccion_to_enum(instruccion_leida);
+            cod_instruccion cod_inst = instruccion_to_enum(instruccion_leida);
 
-            instruccion->instruccion1 = cod_inst;
+            instruccion->instruccion = cod_inst;
             if(contadordeparametros > 0){
             	strcpy(instruccion->parametro1, parametros[0]);
             }else{
@@ -109,7 +114,15 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
 
 	return instrucciones;
 }
-	
+void instruccion_destroyer(t_linea_instruccion* instruccion){
+	free(instruccion);
+	free(instruccion->parametro1);
+	free(instruccion->parametro2);
+	free(instruccion->parametro3);
+	free(instruccion->parametro4);
+	free(instruccion->parametro5);
+}
+
 //aca se le conectan primero cpu, despues kernel, y despues pueden conectarse MUULTIPLES interfaces
 int server_escuchar() { 
 	 
@@ -117,7 +130,7 @@ int server_escuchar() {
 
 	if (cliente_socket != -1) {
 		pthread_t hilo;
-		int *args = malloc(sizeof(int)); // En algun momento se le esta haciendo free a esto?? *1
+		int *args = malloc(sizeof(int)); 
 		args = &cliente_socket;
 		pthread_create(&hilo, NULL, (void*) procesar_clientes, (void*) args);
 		pthread_detach(hilo);
@@ -135,7 +148,8 @@ static void procesar_clientes(void* void_args){
 	op_code cop;
 	while (cliente_socket != -1) {
 		if (recv(cliente_socket, &cop, sizeof(op_code), 0) != sizeof(op_code)) {
-			log_info(logger_memoria, "El cliente se desconecto de memoria server"); // Aca tendria que ir el free(args)
+			log_info(logger_memoria, "El cliente se desconecto de memoria server"); 
+			free(args);
 			return;
 		}
 		switch (cop) {
@@ -147,27 +161,13 @@ static void procesar_clientes(void* void_args){
 			log_info(logger_memoria, "Recibí un paquete con los siguientes valores: ");
 			list_iterate(paquete_recibido, (void*) iterator);
 			break;	
-		case DATOS_PROCESO: //se arregla cuando unamos ramas,  en protocolo.h, SINO agregar a struct op_code de protocolo.h                                             / este codigo SOLO LO ENVIA EL KERNEL
-				t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);//se arregla cuando unamos ramas,se halla en protocolo.h cuando              / por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
+		case DATOS_PROCESO: // este codigo SOLO LO ENVIA EL KERNEL
+				t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);// por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
 				iniciar_memoria_apedidodeKernel(datos_proceso->path, datos_proceso->pid, cliente_socket);//el parametro size sera usado en el 3er check,"datos_proceso->size"
 				free(datos_proceso->path);
 				free(datos_proceso);
 			break;
-		
-		/*case PEDIDO_LECTURA_CPU:  // NO APLICA CASE XQ NO SE LEE MEMORIA EN ESTE CHECK solo operaciones CPUbound
-			t_list* parametros_lectura_cpu= recv_leer_valor(cliente_socket);
-			int* posicion_lectura_cpu = list_get(parametros_lectura_cpu, 0);
-			int* tamanio_lectura_cpu = list_get(parametros_lectura_cpu, 1);
-			int* pid_lectura_cpu = list_get(parametros_lectura_cpu, 2);
-			char* valor_leido_cpu = malloc(*tamanio_lectura_cpu);
-			usleep(RETARDO_MEMORIA * 1000);
-			memcpy(valor_leido_cpu, espacio_usuario + *posicion_lectura_cpu, *tamanio_lectura_cpu);
-			log_info(logger_obligatorio, "PID: %d - Acción: LEER - Dirección física: %d - Tamaño: %d - Origen: CPU",*pid_lectura_cpu, *posicion_lectura_cpu, *tamanio_lectura_cpu);
-			log_valor_espacio_usuario(valor_leido_cpu, *tamanio_lectura_cpu);
-			send_valor_leido_cpu(valor_leido_cpu, *tamanio_lectura_cpu, cliente_socket);
-			break;*/
-		
-		case SOLICITAR_INSTRUCCION:// preguntar a sergio como envia el pedido ojo que es distinto a como lo va recibir el                        / ESTE CODIGO SOLO LO ENVÍA CPU
+		case SOLICITAR_INSTRUCCION:// ESTE CODIGO SOLO LO ENVÍA CPU
 				log_info(logger_memoria, "Solicitud de instruccion recibida");
 				procesar_pedido_instruuccion(cliente_socket, proceso_instrucciones);
 				break;
@@ -181,7 +181,7 @@ static void procesar_clientes(void* void_args){
 	log_warning(logger_memoria, "El cliente se desconecto de %s server", "memoria");
 	return;
 }
-codigo_instrucciones instruccion_to_enum(char* instruccion){
+cod_instruccion instruccion_to_enum(char* instruccion){
 	if(strcmp(instruccion, "SET") == 0){
 		return SET;
 	} else if(strcmp(instruccion, "SUM") == 0){
@@ -228,9 +228,9 @@ codigo_instrucciones instruccion_to_enum(char* instruccion){
 	}
 	return EXIT_FAILURE;
 }
-void iniciar_memoria_apedidodeKernel(char* path, int size, int pid, int socket_kernel) {
-    // Construir la ruta completa del archivo
-    char* rutaCompleta = string_from_format("/home/utnso/Desktop/trabajoramamemoria/tp-2024-1c-Grupo-5/memoria%s.txt", path);//CAMBIAR RUTAAA      OJO, esta ruta hardcodeada depende de la pc
+void iniciar_memoria_apedidodeKernel(char* path, int pid, int socket_kernel) {
+    // Construir la ruta completa del archivo  
+    char* rutaCompleta = string_from_format("%s%s.txt",path_instrucciones ,path);
 
     // Generar instrucciones y cargarlas a la variable global PROCESO_INSTRUCCIONES
     t_list* instrucciones = leer_pseudocodigo(rutaCompleta);
@@ -241,29 +241,7 @@ void iniciar_memoria_apedidodeKernel(char* path, int size, int pid, int socket_k
     proceso_instr->pid = pid;
     proceso_instr->instrucciones = instrucciones;
 
-    list_add(proceso_instrucciones, proceso_instr);
-
-    /* Crear la tabla de páginas
-    t_tdp* tdp = malloc(sizeof(t_tdp));
-    tdp->pid = pid;
-
-    int cant_paginas = size / tam_pagina;
-    t_list* paginas = list_create();
-
-    for (int i = 0; i < cant_paginas; i++) {
-        t_pagina* pag = malloc(sizeof(t_pagina));
-        pag->pid = pid;
-        pag->numpag = i;
-        pag->marco = -1;
-        pag->bit_presencia = 0;
-        pag->bit_modificado = 0;
-        list_add(paginas, pag);
-    }
-
-    tdp->paginas = paginas;//FUTURA IMPLEMENTACION PAGINACION SIMPLE!!!
-
-    list_add(tablas_de_paginas, tdp);
-    log_info(logger_memoria, "Tabla de paginas creada. PID: %d - Tamaño: %d\n", pid, cant_paginas);*/
+	push_con_mutex(proceso_instrucciones, proceso_instr, &mutex_lista_instrucciones);
 }
 
 t_solicitud_instruccion* recv_solicitar_instruccion(int fd){
@@ -281,21 +259,26 @@ t_solicitud_instruccion* recv_solicitar_instruccion(int fd){
 	list_destroy(paquete);
 	return solicitud_instruccion_recibida;
 }// RECIBE EL PEDIDO DE CPU, PID Y PROGRAM COUNTER
-t_instruccion* buscar_instruccion(int pid, int program_counter, t_list* proceso_instrucciones){
+t_linea_instruccion* buscar_instruccion(int pid, int program_counter, t_list* proceso_instrucciones){
 	int i = 0;
+	
+	pthread_mutex_lock(&proceso_instrucciones);
 	t_listaprincipal* proceso_instr = list_get(proceso_instrucciones, i);
+	pthread_mutex_unlock(&proceso_instrucciones);
 
 	while(pid != proceso_instr->pid){
 		i++;
+		pthread_mutex_lock(&proceso_instrucciones);
 		proceso_instr = list_get(proceso_instrucciones, i);
+		pthread_mutex_unlock(&proceso_instrucciones);
 	}
 
 	return list_get(proceso_instr->instrucciones, program_counter);
 }//BUSCA LA INSTRUCCION EN LA LISTA QUE CREAMOS CUANDO KERNEL PIDIO INCIAR PROCESO, YA ESTA CREADA EN UNA VARIABLE GLOBAL
-void send_proxima_instruccion(int filedescriptor, t_instruccion* instruccion){
-	t_paquete* paquete = crear_paquete(PROXIMA_INSTRUCCION);///MUUUUY IMPORTANTE PREGUNTAR A SERGIO CON QUE NOMBRE LO RECIBE Y AGREGARLO AL op_code sino esta
+void send_proxima_instruccion(int filedescriptor, t_linea_instruccion* instruccion){
+	t_paquete* paquete = crear_paquete(PROXIMA_INSTRUCCION);
 
-	agregar_a_paquete(paquete, &(instruccion->instruccion1), sizeof(codigo_instrucciones));
+	agregar_a_paquete(paquete, &(instruccion->instruccion), sizeof(cod_instruccion));
 	agregar_a_paquete(paquete, instruccion->parametro1, strlen(instruccion->parametro1) + 1);
 	agregar_a_paquete(paquete, instruccion->parametro2, strlen(instruccion->parametro2) + 1);
 	agregar_a_paquete(paquete, instruccion->parametro3, strlen(instruccion->parametro3) + 1);
@@ -308,12 +291,10 @@ void send_proxima_instruccion(int filedescriptor, t_instruccion* instruccion){
 
 void procesar_pedido_instruuccion(int socket_cpu, t_list* proceso_instrucciones){
 
-	int retardo_respuesta = config_get_long_value(config, "RETARDO_RESPUESTA");
+	int retardo_respuesta = config_get_long_value(config_memoria, "RETARDO_RESPUESTA");
 	t_solicitud_instruccion* solicitud_instruccion = recv_solicitar_instruccion(socket_cpu);
-	/*t_listaprincipal* pruebita = list_get(proceso_instrucciones, 0);
-//	t_instruccion* pruebita2 = list_get(pruebita->instrucciones, 0);*/
 
-	t_instruccion* instruccion_a_enviar = buscar_instruccion(solicitud_instruccion->pid, solicitud_instruccion->program_counter - 1, proceso_instrucciones);//es -1 xq como se va a llamar varias veces una vez que 
+	t_linea_instruccion* instruccion_a_enviar = buscar_instruccion(solicitud_instruccion->pid, solicitud_instruccion->program_counter - 1, proceso_instrucciones);//es -1 xq como se va a llamar varias veces una vez que 
 	free(solicitud_instruccion);
 	usleep(retardo_respuesta*1000);//preguntar 
 	send_proxima_instruccion(socket_cpu, instruccion_a_enviar);

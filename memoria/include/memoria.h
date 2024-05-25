@@ -4,6 +4,16 @@
 #include <../../utils/include/socket.h>
 #include <../../utils/include/protocolo.h>
 
+typedef struct {
+	int pid;
+	t_list* instrucciones;
+} t_listaprincipal;//para armar mi lista de procesos en memoria
+typedef struct
+{
+	int pid;
+	int program_counter;
+} t_solicitud_instruccion;//lo que uso para recibir los datos que me envia CPU
+
 int fd_escucha_memoria;
 int fd_conexion_server;
 
@@ -19,6 +29,13 @@ int fd_conexion_io;
 
 void terminar_programa();
 void leer_configuraciones();
+
+//MUTEX
+void inicializar_semaforos();
+pthread_mutex_t mutex_lista_instrucciones; 
+
+
+
 //2do checkpoint
 int puerto_escucha;
 int tam_memoria;
@@ -28,51 +45,16 @@ int retardo_respuesta;
 /**********/
 char* memoria;
 t_list* proceso_instrucciones;// esta sera una lista de procesos, entonces cada nodo es un proceso(con un pid y una sublista de instrucciones)
-    char* server_name = "SOY UN CLIENTE";
-typedef enum{
-    SET,
-    MOV_IN,
-    MOV_OUT,
-    SUM,
-    SUB,
-    JNZ,
-    RESIZE,
-    COPY_STRING,
-    WAIT,
-    SIGNAL,
-    IO_STDIN_READ,
-    IO_STDOUT_WRITE,
-    IO_FS_CREATE,
-    IO_FS_DELETE,
-    IO_FS_TRUNCATE,
-    IO_FS_WRITE,
-    IO_FS_READ,
-    EXIT,
-
-}codigo_instrucciones;
-
-typedef struct {
-    codigo_instrucciones instruccion1;
-    char* parametro1;
-    char* parametro2;
-    char* parametro3;
-    char* parametro4;
-    char* parametro5;
-
-}t_instruccion;
-
-typedef struct{
-    int pid;
-	char* path;
-}t_datos_proceso;///lo que recibo de kernel
-typedef struct {
-	int pid;
-	t_list* instrucciones;
-} t_listaprincipal;//para armar mi lista de procesos en memoria
-typedef struct
-{
-	int pid;
-	int program_counter;
-} t_solicitud_instruccion;//lo que uso para recibir los datos que me envia CPU
+char* server_name = "SOY UN CLIENTE";
+t_list * leer_pseudocodigo(char* ruta);
+int server_escuchar();
+static void procesar_clientes(void* void_args);
+cod_instruccion instruccion_to_enum(char* instruccion);
+void iniciar_memoria_apedidodeKernel(char* path, int pid, int socket_kernel);
+t_solicitud_instruccion* recv_solicitar_instruccion(int fd);
+t_linea_instruccion* buscar_instruccion(int pid, int program_counter, t_list* proceso_instrucciones);
+void send_proxima_instruccion(int filedescriptor, t_linea_instruccion *instruccion);
+void procesar_pedido_instruuccion(int socket_cpu, t_list* proceso_instrucciones);
+void instruccion_destroyer(t_linea_instruccion* instruccion);
 
 #endif
