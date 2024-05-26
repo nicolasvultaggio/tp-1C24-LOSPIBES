@@ -48,6 +48,7 @@ t_list* cola_exit;
 
 int generador_pid = 0;
 
+sem_t sem_multiprogramacion; 
 sem_t sem_procesos_new; // semaforo que marca procesos disponibles en new
 sem_t sem_procesos_ready; // semaforo que marca procesos disponibles en ready
 sem_t sem_despachar;
@@ -89,25 +90,32 @@ bool validacion_de_instrucciones(char* leido);
 void atender_instruccion_valida(char* leido);
 int es_path(char* path);
 void iniciar_proceso(char* pathPasadoPorConsola);
-
-
-
-bool iniciar_conexiones();
 void iniciar_planificacion();
 void detener_planificacion();
+
+
 void planificar_largo_plazo();
+void planificacion_procesos_ready();
+void semaforos_destroy();
+void logger_cola_ready();
+char *de_lista_a_string(t_list *list);
+t_list* obtener_lista_pid(t_list* lista);
+
 void iniciar_planificacion_corto_plazo();
 void despachador();
 void atender_vuelta_dispatch();
 pcb * obtener_pcb_segun_algoritmo(char * algoritmo);
 void cambiar_estado(pcb * un_pcb , estadosDeLosProcesos estado);
 char* string_de_estado(estadosDeLosProcesos estado);
+void manejar_quantum(int pid);
+void reducir_quantum(void *args);
+
+
+
 void escuchar_interfaces();
 void procesar_conexion_interfaz(void * arg);
 void despachar_pcb(pcb * un_pcb);
-void proceso_a_ready();
-void manejar_quantum(int pid);
-void reducir_quantum(void *args);
+void proceso_a_ready(pcb *pcb);
 void enviar_interrupcion(motivo_desalojo motivo);
 bool leer_debe_planificar_con_mutex();
 element_interfaz * interfaz_existe_y_esta_conectada(char * un_nombre);
@@ -119,6 +127,7 @@ void procesar_vuelta_blocked_a_ready(pcb_block_gen * proceso_a_atender);
 size_t enviar_paquete_io(t_paquete* paquete, int socket_cliente);
 void liberar_pcb_block_gen(void * pcb_bloqueado);
 void liberar_datos_interfaz(element_interfaz * datos_interfaz);
+
 
 bool debe_planificar;
 bool esta_planificando;

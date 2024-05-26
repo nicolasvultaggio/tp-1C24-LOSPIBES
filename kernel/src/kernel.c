@@ -47,7 +47,7 @@ void inicializar_semaforos(){
     pthread_mutex_init(&mutex_lista_interfaces, NULL);
     pthread_mutex_init(&mutex_debe_planificar, NULL);
     
-
+    sem_init(&sem_multiprogramacion, 0, gradoDeMultiprogramacion);
     sem_init(&sem_procesos_new, 0, 0); // en principio nohay procesos en new, logicamente
 	sem_init(&sem_procesos_ready, 0, 0); // en principio, no hay procesos en ready, logicamente
     sem_init(&sem_despachar, 0, 1); // en 1 porque primero se despacha
@@ -80,7 +80,7 @@ void iniciar_proceso(char *pathPasadoPorConsola){
     
     enviar_datos_proceso(path, proceso_nuevo->PID, fd_conexion_memoria); // ENVIO PATH Y PID PARA QUE CUANDO CPU PIDA MANDE PID Y PC, Y AHI MEMORIA TENGA EL PID PARA IDENTIFICAR
     push_con_mutex(cola_new,proceso_nuevo,&mutex_lista_new);
-    log_info(logger_obligatorio, "Se creo el proceso %d en NEW", proceso_nuevo -> PID);
+    log_info(logger_obligatorio, "Se creo el proceso %d en NEW", proceso_nuevo -> PID);    
     
     
     
@@ -144,23 +144,6 @@ pcb *crear_pcb(){
 
     return un_pcb;
 }
-
-/* PARTE DE LA LOGICA SIRVE PERO HAY QUE VERLO BIEN CUANDO HAGAMOS LA PLANIFICACION A LARGO PLAZO
-
-// esto es mas de planificador a largo plazo, tener cuidado con los semaforos a implementar
-void proceso_a_ready(){ //mucho ojo con los posibles mutex y semaforos necesarios para este punto
-    int cantidad_de_procesos_en_READY = list_size(cola_ready);
-    int cantidad_de_procesos_en_NEW = list_size(cola_new);
-    int gradoDeMulti = atoi(gradoDeMultiprogramacion);
-    while(cantidad_de_procesos_en_NEW > 0 && cantidad_de_procesos_en_READY < gradoDeMulti){ //No tengo la mas puta idea si esto funciona o no, me base en las commons
-        pcb *un_pcb = list_remove(cola_new,0); //ME PARECE QUE ESTO ^^^^^^^^^^^^^^^^^^^^^^^^^^^ CONVIENE ENCARARLO CON UN SEMAFORO
-        list_add(cola_ready,un_pcb);
-        un_pcb->estado = READY;
-    }
-    log_info(logger_kernel,"NO se pueden agregar mas procesos a READY");
-}
-*/
-
 
 int asignar_pid(){
     
@@ -263,7 +246,7 @@ void iniciar_planificacion(){
     debe_planificar = true; // algunos hilos solo leen la variable, pero hay dos o tres que la escriben, entonces, tiene que haber un mutex, para leerla como para escribirla, mira leer_debe_planificar_con_mutex()
     pthread_mutex_unlock(&mutex_debe_planificar);
     if(!esta_planificando){
-        //planificar_largo_plazo();
+        planificar_largo_plazo();
         iniciar_planificacion_corto_plazo();
         esta_planificando = true;
     }
@@ -282,11 +265,70 @@ void detener_planificacion() {
     pthread_mutex_lock(&mutex_debe_planificar);
 	debe_planificar = false; // ponerle un mutex, porque muchos hilos deben leer esta variable
     pthread_mutex_unlock(&mutex_debe_planificar);
+
+    semaforos_destroy(); // Cierra todos los semaforos
 }
 
-//void planificar_largo_plazo(){
+void planificar_largo_plazo(){
+    pthread_t hilo_ready;
 
-//}
+    pthread_create(&hilo_ready,NULL,(void*) planificacion_procesos_ready,NULL);
+    pthread_detach(hilo_ready);
+}
+
+void planificacion_procesos_ready(){
+    while (esta_planificando)
+    {
+        sem_wait(&sem_procesos_new); // Cantidad de proceso en NEW
+        pcb* pcb = pop_con_mutex(cola_new, &mutex_lista_new); //Agarramos el primero de la lista de NEW
+        sem_wait(&sem_multiprogramacion); // Todavia podemos mandar procesos a ready?
+        proceso_a_ready(pcb); // Mandamos el proceso a ready
+        sem_post(&sem_procesos_ready); // +1 a la cantidad de procesos en ready 
+    }
+    
+}
+
+void proceso_a_ready(pcb* pcb){
+    pthread_mutex_lock(&mutex_lista_ready);
+    push_con_mutex(cola_ready, pcb, &mutex_lista_ready); //Agregamos el proceso a ready
+    logger_cola_ready(); //Logger obligatorio para romper las pelotillas
+    pthread_mutex_unlock(&mutex_lista_ready); 
+    cambiar_estado(pcb,READY); // Cambiamos el estado dentro del PCB, no hace falta q este en seccion critica
+}
+
+//Ingreso a Ready: Cola Ready <COLA>: [<LISTA DE PIDS>]
+void logger_cola_ready(){
+    t_list* lista_pids = obtener_pids(cola_ready);
+    char* lista = de_lista_a_string(lista_pids);        //  ESTO DE ABAJO HAY QUE PASARLO AL LEER CONFIG, PERO ESTABA EN EL DESPACHADOR
+    log_info(logger_obligatorio,"Cola Ready %s: [%s]", config_get_string_value(config_kernel,"ALGORITMO_PLANIFICACION"), lista);
+    list_destroy(lista_pids);
+    free(lista);
+};
+
+t_list* obtener_lista_pid(t_list* lista){
+    t_list* lista_pids = list_create();
+    	for (int i = 0; i < list_size(lista); i++){
+		pcb* pcb = list_get(lista, i);
+		list_add(lista_pids, &(pcb->pid));
+	}
+
+	return lista_pids;
+}
+
+//CHAT GPT, hay que pasarlo a STRING ya que no se puede concatenar una lista con un string
+char *de_lista_a_string(t_list *lista) {
+    char *string = string_new(); // Inicializa una nueva cadena vacía
+    for (int i = 0; i < list_size(lista); i++) { // Itera sobre cada elemento de la lista
+        int *numero = (int *)list_get(lista, i); // Obtiene el elemento en la posición i y lo convierte a puntero a int
+        if (i < list_size(list) - 1) { // Si no es el último elemento
+            string_append_with_format(&string, "%d,", *numero); // Añade el número seguido de una coma
+        } else { // Si es el último elemento
+            string_append_with_format(&string, "%d", *numero); // Añade solo el número
+        }
+    }
+    return string; // Devuelve la cadena resultante
+}
+
 
 void iniciar_planificacion_corto_plazo(){
     pthread_t hilo_exec;
@@ -488,7 +530,7 @@ int es_path(char* path){
         }else if(*path == '.'){
             cantidadDePuntos = 1;
         }
-        path ++; //raro, que es esto?
+        path ++; //raro, que es esto?. *path es un puntero, no el path. Entonces el ++ funciona
     }
     return cantidadDeSlash || cantidadDePuntos;
 }
@@ -518,6 +560,16 @@ void despachar_pcb(pcb * un_pcb){
     //DESPUES CPU VA A TENER QUE TENER UNA FUNCION QUE RECIBA UN PCB, ESTABLECIENDO TODAS LAS ESTRUCTURAS
 
 }
+
+void semaforos_destroy() {
+	sem_close(&sem_multiprogramacion);
+	sem_close(&sem_procesos_new);
+	sem_close(&sem_procesos_ready);
+	sem_close(&sem_despachar);
+	sem_close(&sem_procesos_exit);
+    sem_close(&sem_atender_rta)
+}
+
 
 void terminar_programa(){
 
