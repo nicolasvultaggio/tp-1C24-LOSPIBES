@@ -67,13 +67,32 @@ t_log* logger_kernel;
 t_config* config_kernel;
 t_log * logger_obligatorio;
 
-void iniciar_escucha_io();
-bool iniciar_conexiones();
-void terminar_programa();
+//FUNCIONES DENTRO DEL MAIN
 void leer_configuraciones();
+void inicializar_semaforos();
+bool crear_conexiones();
+void terminar_programa();
+void iniciar_colas_de_estados();
+void iniciar_escucha_io();
 void iniciar_consola();
+
+//CREACION DEL PROCESO
+pcb *crear_pcb();
+int asignar_pid();
+
+//FIN DEL PROCESO (FALTAN REVISARLAS Y TERMINARLAS)
+void finalizar_proceso(char* arg1);
+pcb* buscar_proceso_para_finalizar(int pid_a_buscar);
+
+//CONSOLA
 bool validacion_de_instrucciones(char* leido);
 void atender_instruccion_valida(char* leido);
+int es_path(char* path);
+void iniciar_proceso(char* pathPasadoPorConsola);
+
+
+
+bool iniciar_conexiones();
 void iniciar_planificacion();
 void detener_planificacion();
 void planificar_largo_plazo();
@@ -85,33 +104,17 @@ void cambiar_estado(pcb * un_pcb , estadosDeLosProcesos estado);
 char* string_de_estado(estadosDeLosProcesos estado);
 void escuchar_interfaces();
 void procesar_conexion_interfaz(void * arg);
-
-void iniciar_proceso(char* arg1);
-void finalizar_proceso(char* arg1);
-pcb* buscar_proceso_para_finalizar(int pid_a_buscar);
-pcb *crear_pcb();
 void despachar_pcb(pcb * un_pcb);
-void iniciar_colas_de_estados();
 void proceso_a_ready();
-int asignar_pid();
-void inicializar_semaforos();
-
 void manejar_quantum(int pid);
 void reducir_quantum(void *args);
-
 void enviar_interrupcion(motivo_desalojo motivo);
-
-bool crear_conexiones();
-
 bool leer_debe_planificar_con_mutex();
-
 element_interfaz * interfaz_existe_y_esta_conectada(char * un_nombre);
-
 bool generica_acepta_instruccion(char * instruccion);
 bool interfaz_con_nombre(void * una_interfaz);
 char * preguntar_nombre_interfaz(int un_fd);
 void atender_interfaz_generica(element_interfaz * datos_interfaz);
-
 void procesar_vuelta_blocked_a_ready(pcb_block_gen * proceso_a_atender);
 size_t enviar_paquete_io(t_paquete* paquete, int socket_cliente);
 void liberar_pcb_block_gen(void * pcb_bloqueado);

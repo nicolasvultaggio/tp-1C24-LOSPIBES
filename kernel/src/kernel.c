@@ -73,8 +73,8 @@ void iniciar_colas_de_estados(){
     interfaces_conectadas= list_create();
 };
 
-void iniciar_proceso(char *arg1){
-    char* path = arg1;
+void iniciar_proceso(char *pathPasadoPorConsola){
+    char* path = pathPasadoPorConsola;
 
     pcb* proceso_nuevo = crear_pcb();
     
