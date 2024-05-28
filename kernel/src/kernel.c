@@ -271,10 +271,26 @@ void detener_planificacion() {
 
 void planificar_largo_plazo(){
     pthread_t hilo_ready;
+    pthread_t hilo_exit;
 
     pthread_create(&hilo_ready,NULL,(void*) planificacion_procesos_ready,NULL);
+    pthread_create(&hilo_exit,NULL,(void*) procesos_en_exit, NULL);
+
     pthread_detach(hilo_ready);
+    pthread_detach(hilo_exit);
 }
+
+void procesos_en_exit(){
+    while(1){ // YA QUE CONSTANTEMENTE TIENE Q ESTAR VIENDO QUE LLEGUE UN PROCESO A EXIT
+        sem_wait(&sem_procesos_exit);
+        pcb* pcb = pop_con_mutex(cola_exit,&mutex_lista_exit);
+        char* motivo_del_desalojo = motivo_a_string(pcb->motivo);
+        log_info(logger_obligatorio, "Finaliza el proceso: %d - Motivo: %s", pcb->PID, motivo_del_desalojo);
+        sem_post(&sem_multiprogramacion); // +1 a la multiprogramacion ya que hay 1 proceso menos en READY-EXEC-BLOCK
+        send_liberar_proceso(pcb, fd_conexion_memoria);
+    }
+}
+
 
 void planificacion_procesos_ready(){
     while (esta_planificando)
