@@ -81,9 +81,6 @@ void iniciar_proceso(char *pathPasadoPorConsola){
     enviar_datos_proceso(path, proceso_nuevo->PID, fd_conexion_memoria); // ENVIO PATH Y PID PARA QUE CUANDO CPU PIDA MANDE PID Y PC, Y AHI MEMORIA TENGA EL PID PARA IDENTIFICAR
     push_con_mutex(cola_new,proceso_nuevo,&mutex_lista_new);
     log_info(logger_obligatorio, "Se creo el proceso %d en NEW", proceso_nuevo -> PID);    
-    
-    
-    
 }
 
 pcb* buscar_proceso_para_finalizar(int pid_a_buscar){ 
@@ -287,10 +284,44 @@ void procesos_en_exit(){
         char* motivo_del_desalojo = motivo_a_string(pcb->motivo);
         log_info(logger_obligatorio, "Finaliza el proceso: %d - Motivo: %s", pcb->PID, motivo_del_desalojo);
         sem_post(&sem_multiprogramacion); // +1 a la multiprogramacion ya que hay 1 proceso menos en READY-EXEC-BLOCK
-        send_liberar_proceso(pcb, fd_conexion_memoria);
+        enviar_liberar_proceso(pcb, fd_conexion_memoria); //mando el fd para ponerlo en protocolo con todos los sends
+        pcb_destroy(pcb);
     }
 }
 
+char* motivo_a_string(motivo_desalojo motivo){
+    switch (motivo)
+    {
+    case EXITO:
+        return "SUCCES";
+        break;
+    case EXIT_CONSOLA:
+        return "INTERRUPTED_BY_USER";
+        break;
+    //case RECURSO_INVALIDO:
+    //return "INVALID_RESOURCE";
+    //break;
+    //case INTERFAZ_INVALIDA
+    //return "INVALID_INTERFACE";
+    //break;
+    //case SIN_MEMORIA
+    //return "OUT_OF_MEMORY";
+    //break
+
+
+    //TODAS COMENTADAS PORQ TODAVIA NO LAS IMPLEMENTARON
+
+
+    default:
+        return "NO CONOZCO ESE MOTIVO"
+        break;
+    }
+};
+//SEGUIR DESAROLLANDO
+
+void pcb_destroy(pcb* pcb){
+    free(pcb)
+}
 
 void planificacion_procesos_ready(){
     while (esta_planificando)

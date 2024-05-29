@@ -109,6 +109,9 @@ typedef enum {
 	/* KERNEL envia PCB a CPU y CPU recibe */
 	PCBBITO,
 
+	// KERNEL envia a MEMORIA
+	FINALIZAR_PROCESO,
+
 	/* CPU envia PCB a KERNEL  */
 	PCB_ACTUALIZADO,
 
@@ -196,6 +199,8 @@ void snd_handshake(int fd_socket_cliente);
 void enviar_solicitud_de_instruccion(int fd, int pid, int program_counter);
 void enviar_datos_proceso(char* path,int pid,int fd_conexion);
 void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_desalojo MOTIVO, char* parametro1, char* parametro2, char* parametro3, char* parametro4, char* parametro5);
+void enviar_liberar_proceso(pcb* pcb,int fd);
+
 /* RECVS */
 void recibir_mensaje(t_log* loggerServidor, int socket_cliente);
 t_list* recibir_paquete(int socket_cliente);
@@ -205,6 +210,7 @@ t_linea_instruccion* recibir_proxima_instruccion(int fd_conexion);
 t_datos_proceso* recibir_datos_del_proceso(int fd_kernel);
 pcb* recibir_pcb(int socket);
 motivo_desalojo recibir_motiv_desalojo(int fd_escucha_dispatch);
+pcb* recibir_liberar_proceso(int fd);
 
 pcb* guardar_datos_del_pcb(t_list* paquete); //usar para cuando en un paquete, vienen los datos de un pcb y otras cosas mas
 

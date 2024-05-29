@@ -102,6 +102,7 @@ char *de_lista_a_string(t_list *list);
 t_list* obtener_lista_pid(t_list* lista);
 void procesos_en_exit();
 char* motivo_a_string(motivo_desalojo motivo);
+void pcb_destroy(pcb* pcb);
 
 void iniciar_planificacion_corto_plazo();
 void despachador();

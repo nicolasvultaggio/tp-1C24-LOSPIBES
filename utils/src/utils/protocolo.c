@@ -243,6 +243,15 @@ void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_des
 	eliminar_paquete(paquete);
 
 }
+void enviar_liberar_proceso(pcb* pcb, int fd){
+	t_paquete* paquete = crear_paquete(FINALIZAR_PROCESO);
+
+	agregar_a_paquete(paquete, pcb,sizeof(pcb));
+
+	enviar_paquete(paquete, fd);
+	eliminar_paquete(paquete);
+}
+
 
 /* FUNNCIONES DE RECIBO (RECV) */
 void recibir_mensaje(t_log* loggerServidor ,int socket_cliente)
@@ -491,4 +500,12 @@ pcb* guardar_datos_del_pcb(t_list* paquete){
 	free(di);
 
 	return PCB;
+}
+
+pcb* recibir_liberar_proceso(int fd){
+	t_list* paqute = recibir_paquete(fd);
+	pcb* pcb = list_get(paqute, 0);
+
+	list_destroy(paqute);
+	return pcb
 }
