@@ -25,6 +25,19 @@ typedef struct {
     char * unidad_de_tiempo; 
 } pcb_block_gen ; // son elementos de las colas de pcb bloqueados
 
+typedef struct{
+    pcb * el_pcb;
+    char * direccion_fisica;
+    char * tamanio;
+}pcb_block_STDIN ;
+
+//no importa que sean exactamente iguales me importa que sean de un tipo distinto
+typedef struct{
+    pcb * el_pcb;
+    char * direccion_fisica;
+    char * tamanio;
+}pcb_block_STDOUT;
+
 t_list * interfaces_conectadas;
 int fd_escucha_kernel;
 int fd_conexion_dispatch;
@@ -131,6 +144,8 @@ size_t enviar_paquete_io(t_paquete* paquete, int socket_cliente);
 void liberar_pcb_block_gen(void * pcb_bloqueado);
 void liberar_datos_interfaz(element_interfaz * datos_interfaz);
 
+bool STDIN_acepta_instruccion(char * instruccion);
+bool STDOUT_acepta_instruccion(char * instruccion);
 
 bool debe_planificar;
 bool esta_planificando;

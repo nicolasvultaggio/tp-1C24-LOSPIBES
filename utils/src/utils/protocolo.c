@@ -507,5 +507,5 @@ pcb* recibir_liberar_proceso(int fd){
 	pcb* pcb = list_get(paqute, 0);
 
 	list_destroy(paqute);
-	return pcb
+	return pcb;
 }

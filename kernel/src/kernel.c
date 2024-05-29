@@ -313,14 +313,14 @@ char* motivo_a_string(motivo_desalojo motivo){
 
 
     default:
-        return "NO CONOZCO ESE MOTIVO"
+        return "NO CONOZCO ESE MOTIVO";
         break;
     }
 };
 //SEGUIR DESAROLLANDO
 
 void pcb_destroy(pcb* pcb){
-    free(pcb)
+    free(pcb);
 }
 
 void planificacion_procesos_ready(){
@@ -412,32 +412,94 @@ void atender_vuelta_dispatch(){
                 case RECURSO:
                 //recibir pcb y manejar motivo de desalojo
                 break;
-                case INTERFAZ:
+                case INTERFAZ: //aca repito logica como loco pero sucede que me chupa la cabeza de la chota 
                 switch(pcb_actualizado->motivo){
-                    case SOLICITAR_INTERFAZ_GENERICA: // OJO, no va a ser IO_GEN_SLEEP, va a ser el motivo de desalojo que elija sergio para estos casos, pongo esto para ir haciendo por ahora
-                        char * instruccion = list_get(lista,14); //devuelve el puntero al dato del elemento de la lista original
-                        char * nombre_interfaz=list_get(lista,15); //devuelve el puntero al dato del elemento de la lista original
+                    case SOLICITAR_INTERFAZ_GENERICA: 
+                        char * instruccion_gen = list_get(lista,14); //devuelve el puntero al dato del elemento de la lista original
+                        char * nombre_interfaz_gen=list_get(lista,15); //devuelve el puntero al dato del elemento de la lista original
                         char * tiempo_a_esperar=list_get(lista,16); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
-                        element_interfaz * interfaz = interfaz_existe_y_esta_conectada(nombre_interfaz); //puntero al elemento original de la lista, ojo
-                        if(interfaz){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
-                            if(generica_acepta_instruccion(instruccion)){
-                                free(instruccion); //ya no me importa la instruccion, (ya se cual es)
-                                free(nombre_interfaz); //ya no me importa el nombre
+                        element_interfaz * interfaz_gen = interfaz_existe_y_esta_conectada(nombre_interfaz_gen); //puntero al elemento original de la lista, ojo
+                        if(interfaz_gen){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
+                            if(generica_acepta_instruccion(instruccion_gen)){
+                                free(instruccion_gen); //ya no me importa la instruccion, (ya se cual es)
+                                free(nombre_interfaz_gen); //ya no me importa el nombre
                                 //debemos mantener la referencia a tiempo_a_esperar
                                 list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
                                 pcb_block_gen * info_de_bloqueo = malloc(sizeof(pcb_block_gen));//falta liberar
                                 info_de_bloqueo->el_pcb = pcb_actualizado ; //simplemente otra referencia 
                                 info_de_bloqueo->unidad_de_tiempo= tiempo_a_esperar; //simplemente otra referencia
                                 cambiar_estado(pcb_actualizado,BLOCKED);
-                                push_con_mutex(interfaz->cola_bloqueados,info_de_bloqueo,interfaz->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
-                                sem_post(interfaz->sem_procesos_blocked); 
+                                push_con_mutex(interfaz_gen->cola_bloqueados,info_de_bloqueo,interfaz_gen->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                sem_post(interfaz_gen->sem_procesos_blocked); 
                                 break;
                             }
                         }
                         //finalizar proceso
-                        free(instruccion); //ya no me importa la instruccion, no se pudo hacer la instruccion
-                        free(nombre_interfaz); //ya no me importa el nombre , no se pudo hacer la instruccion
+                        free(instruccion_gen); //ya no me importa la instruccion, no se pudo hacer la instruccion
+                        free(nombre_interfaz_gen); //ya no me importa el nombre , no se pudo hacer la instruccion
                         free(tiempo_a_esperar); //ya no me importa el tiempo a esperar
+                        list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
+                        cambiar_estado(pcb_actualizado,EXITT);
+                        push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+                        //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
+                        break;
+                    case SOLICITAR_STDIN:
+                        char * instruccion_STDIN = list_get(lista,14); 
+                        char * nombre_interfaz_STDIN=list_get(lista,15); 
+                        char * direccion_real_STDIN=list_get(lista,16);// supongo que las direcciones logicas son strings tipo : "00101010010101"
+                        char * registro_tamanio_STDIN=list_get(lista,17); 
+                        element_interfaz * interfaz_STDIN = interfaz_existe_y_esta_conectada(nombre_interfaz_STDIN);
+                         if(interfaz_STDIN){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
+                            if(STDIN_acepta_instruccion(instruccion_STDIN)){
+                                free(instruccion_STDIN); //ya no me importa la instruccion, (ya se cual es)
+                                free(nombre_interfaz_STDIN); //ya no me importa el nombre
+                                list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
+                                pcb_block_STDIN * info_de_bloqueo = malloc(sizeof(pcb_block_STDIN));//falta liberar
+                                info_de_bloqueo->el_pcb = pcb_actualizado ; //simplemente otra referencia 
+                                info_de_bloqueo->direccion_fisica= direccion_real_STDIN; //simplemente otra referencia
+                                info_de_bloqueo->tamanio=registro_tamanio_STDIN;
+                                cambiar_estado(pcb_actualizado,BLOCKED);
+                                push_con_mutex(interfaz_STDIN->cola_bloqueados,info_de_bloqueo,interfaz_STDIN->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                sem_post(interfaz_STDIN->sem_procesos_blocked); 
+                                break;
+                            }
+                        }
+                        //finalizar proceso
+                        free(instruccion_STDIN); 
+                        free(nombre_interfaz_STDIN); 
+                        free(direccion_real_STDIN); //ya no me importa la direccion
+                        free(registro_tamanio_STDIN);
+                        list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
+                        cambiar_estado(pcb_actualizado,EXITT);
+                        push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+                        //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
+                        break;
+                    case SOLICITAR_STDOUT:
+                        char * instruccion_STDOUT = list_get(lista,14); 
+                        char * nombre_interfaz_STDOUT=list_get(lista,15); 
+                        char * direccion_real_STDOUT=list_get(lista,16); // supongo que las direcciones logicas son strings tipo : "00101010010101"
+                        char * registro_tamanio_STDOUT=list_get(lista,17); 
+                        element_interfaz * interfaz_STDOUT = interfaz_existe_y_esta_conectada(nombre_interfaz_STDOUT);
+                         if(interfaz_STDOUT){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
+                            if(STDOUT_acepta_instruccion(instruccion_STDOUT)){
+                                free(instruccion_STDOUT); //ya no me importa la instruccion, (ya se cual es)
+                                free(nombre_interfaz_STDOUT); //ya no me importa el nombre
+                                list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
+                                pcb_block_STDOUT* info_de_bloqueo = malloc(sizeof(pcb_block_STDOUT));//falta liberar
+                                info_de_bloqueo->el_pcb = pcb_actualizado ; //simplemente otra referencia 
+                                info_de_bloqueo->direccion_fisica= direccion_real_STDOUT; //simplemente otra referencia
+                                info_de_bloqueo->tamanio=registro_tamanio_STDOUT;
+                                cambiar_estado(pcb_actualizado,BLOCKED);
+                                push_con_mutex(interfaz_STDOUT->cola_bloqueados,info_de_bloqueo,interfaz_STDOUT->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                sem_post(interfaz_STDOUT->sem_procesos_blocked); 
+                                break;
+                            }
+                        }
+                        //finalizar proceso
+                        free(instruccion_STDOUT); 
+                        free(nombre_interfaz_STDOUT); 
+                        free(direccion_real_STDOUT); 
+                        free(registro_tamanio_STDOUT);
                         list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
                         cambiar_estado(pcb_actualizado,EXITT);
                         push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
@@ -464,10 +526,11 @@ element_interfaz * interfaz_existe_y_esta_conectada(char * un_nombre){
     return interfaz;
 }
 
-bool generica_acepta_instruccion(char * instruccion){
-    return !strcmp("IO_GEN_SLEEP",instruccion);
-}
+bool generica_acepta_instruccion(char * instruccion){return !strcmp("IO_GEN_SLEEP",instruccion);}
 
+bool STDIN_acepta_instruccion(char * instruccion){return !strcmp("IO_STDIN_READ",instruccion);}
+
+bool STDOUT_acepta_instruccion(char * instruccion){return !strcmp("IO_STDOUT_WRITE",instruccion);}
 
 // ¿Como es esta coordinacion?
 // Suponete que A sea "despachar" y B sea "recibir respuesta"
@@ -614,7 +677,7 @@ void semaforos_destroy() {
 	sem_close(&sem_procesos_ready);
 	sem_close(&sem_despachar);
 	sem_close(&sem_procesos_exit);
-    sem_close(&sem_atender_rta)
+    sem_close(&sem_atender_rta);
 }
 
 

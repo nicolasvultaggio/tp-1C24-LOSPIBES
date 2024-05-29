@@ -23,6 +23,8 @@ typedef enum {
 	FIN_QUANTUM, //Finalizacion por parte del Algoritmo
 	PROCESO_ACTIVO,
 	SOLICITAR_INTERFAZ_GENERICA,
+	SOLICITAR_STDIN,
+	SOLICITAR_STDOUT,
 	SOLICITAR_WAIT,
 	SOLICITAR_SIGNAL
 } motivo_desalojo; //motivos de desalojo del proceso
@@ -214,7 +216,15 @@ pcb* recibir_liberar_proceso(int fd);
 
 pcb* guardar_datos_del_pcb(t_list* paquete); //usar para cuando en un paquete, vienen los datos de un pcb y otras cosas mas
 
-
+typedef struct{
+	int pagina;
+	int desplazamiento;
+}direccion_logica;
+//estos dos no creo que se usen pero es por si las direcciones vienen en decimal
+typedef struct{
+	int marco;
+	int desplazamiento;
+}direccion_fisica;
 
 
 #endif
