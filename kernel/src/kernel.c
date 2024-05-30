@@ -74,16 +74,23 @@ void iniciar_colas_de_estados(){
 };
 
 void iniciar_proceso(char *pathPasadoPorConsola){
+    int rta_memoria;
     char* path = pathPasadoPorConsola;
 
     pcb* proceso_nuevo = crear_pcb();
     
+    pthread_mutex_lock(&mutex_envio_memoria);
     enviar_datos_proceso(path, proceso_nuevo->PID, fd_conexion_memoria); // ENVIO PATH Y PID PARA QUE CUANDO CPU PIDA MANDE PID Y PC, Y AHI MEMORIA TENGA EL PID PARA IDENTIFICAR
+    recv(fd_conexion_memoria,&rta_memoria,sizeof(int),MSG_WAITALL);
+    pthread_mutex_unlock(&mutex_envio_memoria);
+    
     push_con_mutex(cola_new,proceso_nuevo,&mutex_lista_new);
     log_info(logger_obligatorio, "Se creo el proceso %d en NEW", proceso_nuevo -> PID);    
 }
 
+//Hay que buscarlo en: NEW,READY Y EXEC. NO hay que buscarlo si esta en block
 pcb* buscar_proceso_para_finalizar(int pid_a_buscar){ 
+
     for (int i = 0; i<list_size(cola_exec); i++)       
     {
         pcb* proceso = list_get(cola_exec,i);
@@ -97,13 +104,12 @@ pcb* buscar_proceso_para_finalizar(int pid_a_buscar){
     
 }
 
-//Esta funcion va a tener que ser revisada cuando hagamos largo plazo, ya que ahora no tiene mucho sentido seguir desarrollandola porq muy probablemente sea una abstraccion de logica de varias cosas. NO SE COMITEO
 void finalizar_proceso(char* PID){
     int pid_busado = atoi(PID);
     pcb* pcb_buscado = buscar_proceso_para_finalizar(pid_busado);
 
     if(strcmp(string_de_estado(pcb_buscado->estado), "EXEC") == 0){
-        enviar_interrupcion(EXIT_CONSOLA); //ojo, capaz necesite mutex, los fd son compartidos
+        enviar_interrupcion(EXIT_CONSOLA);
     }else{
         pcb_buscado->motivo = EXIT_CONSOLA;
         cambiar_estado(pcb_buscado,EXITT);
@@ -279,12 +285,18 @@ void planificar_largo_plazo(){
 
 void procesos_en_exit(){
     while(1){ // YA QUE CONSTANTEMENTE TIENE Q ESTAR VIENDO QUE LLEGUE UN PROCESO A EXIT
+        int rta_memoria;
         sem_wait(&sem_procesos_exit);
         pcb* pcb = pop_con_mutex(cola_exit,&mutex_lista_exit);
         char* motivo_del_desalojo = motivo_a_string(pcb->motivo);
         log_info(logger_obligatorio, "Finaliza el proceso: %d - Motivo: %s", pcb->PID, motivo_del_desalojo);
         sem_post(&sem_multiprogramacion); // +1 a la multiprogramacion ya que hay 1 proceso menos en READY-EXEC-BLOCK
+
+        pthread_mutex_lock(&mutex_envio_memoria);
         enviar_liberar_proceso(pcb, fd_conexion_memoria); //mando el fd para ponerlo en protocolo con todos los sends
+        recv(fd_conexion_memoria,&rta_memoria,sizeof(int),MSG_WAITALL);
+        pthread_mutex_unlock(&mutex_envio_memoria);
+        }
         pcb_destroy(pcb);
     }
 }

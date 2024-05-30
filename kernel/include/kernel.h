@@ -68,6 +68,7 @@ sem_t sem_despachar;
 sem_t sem_procesos_exit;
 sem_t sem_atender_rta;
 
+
 pthread_mutex_t mutex_pid; 
 pthread_mutex_t mutex_lista_ready; 
 pthread_mutex_t mutex_lista_new; 
@@ -75,6 +76,7 @@ pthread_mutex_t mutex_lista_exec;
 pthread_mutex_t mutex_lista_interfaces; 
 pthread_mutex_t mutex_lista_exit;
 pthread_mutex_t mutex_debe_planificar;
+pthread_mutex_t mutex_envio_memoria;
 
 //no sabemos cuales haran falta todavía, pero por las dudas los declaro
 t_log* logger_kernel;
