@@ -88,21 +88,32 @@ void iniciar_proceso(char *pathPasadoPorConsola){
     log_info(logger_obligatorio, "Se creo el proceso %d en NEW", proceso_nuevo -> PID);    
 }
 
-//Hay que buscarlo en: NEW,READY Y EXEC. NO hay que buscarlo si esta en block
-pcb* buscar_proceso_para_finalizar(int pid_a_buscar){ 
 
-    for (int i = 0; i<list_size(cola_exec); i++)       
-    {
-        pcb* proceso = list_get(cola_exec,i);
-        if(proceso->PID == pid_a_buscar){
-            list_remove(cola_exec,i);//ojo, capaz necesite mutex
-            return proceso;
+pcb* buscar_proceso_para_finalizar(int pid_a_buscar){ 
+    pcb* pcbEncontrado;
+    int posicionPCB = buscar_proceso_en_lista(cola_new, pid_a_buscar);
+
+    if (posicionPCB != -1) {
+        pcbEncontrado = remove_con_mutex(cola_new, &mutex_lista_new, posicionPCB);
+    } else {
+        posicionPCB = buscar_proceso_en_lista(cola_ready, pid_a_buscar);
+        if (posicionPCB != -1) {
+            pcbEncontrado = remove_con_mutex(cola_ready, &mutex_lista_new, posicionPCB);
+            sem_post(&sem_multiprogramacion);
+        } else {
+            posicionPCB = buscar_proceso_en_lista(cola_exec, pid_a_buscar);
+            if (posicionPCB != -1) {
+                pcbEncontrado = remove_con_mutex(cola_exec, &mutex_lista_exec, posicionPCB);
+            } else {
+                log_info(logger_kernel, "El proceso que busca se encuentra en una IO, espere a que regrese.")
+            }
         }
     }
 
-    return NULL;
+    return pcbEncontrado;
     
 }
+
 
 void finalizar_proceso(char* PID){
     int pid_busado = atoi(PID);

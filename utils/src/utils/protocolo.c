@@ -55,6 +55,25 @@ void push_con_mutex(t_list* lista, void * elemento ,pthread_mutex_t* mutex){
     return;
 }
 
+void * remove_con_mutex(t_list* lista, pthread_mutex_t* mutex, int posicion){
+	pthread_mutex_lock(mutex);
+	void* elemento = list_remove(lista, posicion); 
+	pthread_mutex_unlock(mutex);
+    return elemento;
+}
+
+int buscar_posicion_proceso(t_list* lista, int pid){
+
+	for(int i = 0; i<list_size(lista); i++){
+		pcb* pcb_buscado = list_get(lista, i);
+		if(pcb_buscado->pid == pid){
+			return i;
+		}
+	}
+	return -1;
+}
+
+
 void empaquetar_pcb(t_paquete* paquete, pcb* PCB, motivo_desalojo MOTIVO){
 
 	agregar_a_paquete(paquete, &(PCB->PID), sizeof(int));
