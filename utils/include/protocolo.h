@@ -155,6 +155,8 @@ args_atendedor* crear_args(int un_fd, t_log * un_logger, char * un_cliente);
 /*Operaciones de colas*/
 void* pop_con_mutex(t_list* lista, pthread_mutex_t* mutex);
 void push_con_mutex(t_list* lista, void * elemento,pthread_mutex_t* mutex);
+int buscar_posicion_proceso(t_list* lista, int pid);
+void * remove_con_mutex(t_list* lista, pthread_mutex_t* mutex, int posicion);
 
 /* PAQUETE */
 typedef struct{

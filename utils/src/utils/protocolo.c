@@ -66,7 +66,7 @@ int buscar_posicion_proceso(t_list* lista, int pid){
 
 	for(int i = 0; i<list_size(lista); i++){
 		pcb* pcb_buscado = list_get(lista, i);
-		if(pcb_buscado->pid == pid){
+		if(pcb_buscado->PID == pid){
 			return i;
 		}
 	}

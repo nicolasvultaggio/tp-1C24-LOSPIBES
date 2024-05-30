@@ -91,21 +91,21 @@ void iniciar_proceso(char *pathPasadoPorConsola){
 
 pcb* buscar_proceso_para_finalizar(int pid_a_buscar){ 
     pcb* pcbEncontrado;
-    int posicionPCB = buscar_proceso_en_lista(cola_new, pid_a_buscar);
+    int posicionPCB = buscar_posicion_proceso(cola_new, pid_a_buscar);
 
     if (posicionPCB != -1) {
         pcbEncontrado = remove_con_mutex(cola_new, &mutex_lista_new, posicionPCB);
     } else {
-        posicionPCB = buscar_proceso_en_lista(cola_ready, pid_a_buscar);
+        posicionPCB = buscar_posicion_proceso(cola_ready, pid_a_buscar);
         if (posicionPCB != -1) {
             pcbEncontrado = remove_con_mutex(cola_ready, &mutex_lista_new, posicionPCB);
             sem_post(&sem_multiprogramacion);
         } else {
-            posicionPCB = buscar_proceso_en_lista(cola_exec, pid_a_buscar);
+            posicionPCB = buscar_posicion_proceso(cola_exec, pid_a_buscar);
             if (posicionPCB != -1) {
                 pcbEncontrado = remove_con_mutex(cola_exec, &mutex_lista_exec, posicionPCB);
             } else {
-                log_info(logger_kernel, "El proceso que busca se encuentra en una IO, espere a que regrese.")
+                log_info(logger_kernel, "El proceso que busca se encuentra en una IO, espere a que regrese.");
             }
         }
     }
@@ -113,7 +113,6 @@ pcb* buscar_proceso_para_finalizar(int pid_a_buscar){
     return pcbEncontrado;
     
 }
-
 
 void finalizar_proceso(char* PID){
     int pid_busado = atoi(PID);
@@ -295,22 +294,22 @@ void planificar_largo_plazo(){
 }
 
 void procesos_en_exit(){
+    pcb* pcbFinalizado;
     while(1){ // YA QUE CONSTANTEMENTE TIENE Q ESTAR VIENDO QUE LLEGUE UN PROCESO A EXIT
         int rta_memoria;
         sem_wait(&sem_procesos_exit);
-        pcb* pcb = pop_con_mutex(cola_exit,&mutex_lista_exit);
-        char* motivo_del_desalojo = motivo_a_string(pcb->motivo);
-        log_info(logger_obligatorio, "Finaliza el proceso: %d - Motivo: %s", pcb->PID, motivo_del_desalojo);
+        pcbFinalizado = pop_con_mutex(cola_exit,&mutex_lista_exit);
+        char* motivo_del_desalojo = motivo_a_string(pcbFinalizado->motivo);
+        log_info(logger_obligatorio, "Finaliza el proceso: %d - Motivo: %s", pcbFinalizado->PID, motivo_del_desalojo);
         sem_post(&sem_multiprogramacion); // +1 a la multiprogramacion ya que hay 1 proceso menos en READY-EXEC-BLOCK
 
         pthread_mutex_lock(&mutex_envio_memoria);
-        enviar_liberar_proceso(pcb, fd_conexion_memoria); //mando el fd para ponerlo en protocolo con todos los sends
+        enviar_liberar_proceso(pcbFinalizado, fd_conexion_memoria); //mando el fd para ponerlo en protocolo con todos los sends
         recv(fd_conexion_memoria,&rta_memoria,sizeof(int),MSG_WAITALL);
         pthread_mutex_unlock(&mutex_envio_memoria);
         }
-        pcb_destroy(pcb);
+        pcb_destroy(pcbFinalizado);
     }
-}
 
 char* motivo_a_string(motivo_desalojo motivo){
     switch (motivo)
@@ -368,7 +367,7 @@ void proceso_a_ready(pcb* pcb){
 
 //Ingreso a Ready: Cola Ready <COLA>: [<LISTA DE PIDS>]
 void logger_cola_ready(){
-    t_list* lista_pids = obtener_pids(cola_ready);
+    t_list* lista_pids = obtener_lista_pid(cola_ready);
     char* lista = de_lista_a_string(lista_pids);        //  ESTO DE ABAJO HAY QUE PASARLO AL LEER CONFIG, PERO ESTABA EN EL DESPACHADOR
     log_info(logger_obligatorio,"Cola Ready %s: [%s]", config_get_string_value(config_kernel,"ALGORITMO_PLANIFICACION"), lista);
     list_destroy(lista_pids);
@@ -379,7 +378,7 @@ t_list* obtener_lista_pid(t_list* lista){
     t_list* lista_pids = list_create();
     	for (int i = 0; i < list_size(lista); i++){
 		pcb* pcb = list_get(lista, i);
-		list_add(lista_pids, &(pcb->pid));
+		list_add(lista_pids, &(pcb->PID));
 	}
 
 	return lista_pids;
@@ -390,7 +389,7 @@ char *de_lista_a_string(t_list *lista) {
     char *string = string_new(); // Inicializa una nueva cadena vacía
     for (int i = 0; i < list_size(lista); i++) { // Itera sobre cada elemento de la lista
         int *numero = (int *)list_get(lista, i); // Obtiene el elemento en la posición i y lo convierte a puntero a int
-        if (i < list_size(list) - 1) { // Si no es el último elemento
+        if (i < list_size(lista) - 1) { // Si no es el último elemento
             string_append_with_format(&string, "%d,", *numero); // Añade el número seguido de una coma
         } else { // Si es el último elemento
             string_append_with_format(&string, "%d", *numero); // Añade solo el número
