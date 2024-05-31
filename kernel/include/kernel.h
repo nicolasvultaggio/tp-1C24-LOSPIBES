@@ -97,7 +97,7 @@ pcb *crear_pcb();
 int asignar_pid();
 
 //FIN DEL PROCESO (FALTAN REVISARLAS Y TERMINARLAS)
-void finalizar_proceso(char* arg1);
+void finalizar_proceso(char* PID);
 pcb* buscar_proceso_para_finalizar(int pid_a_buscar);
 
 //CONSOLA
@@ -107,6 +107,7 @@ int es_path(char* path);
 void iniciar_proceso(char* pathPasadoPorConsola);
 void iniciar_planificacion();
 void detener_planificacion();
+void cambiar_multiprogramacion(char* PID);
 
 
 void planificar_largo_plazo();

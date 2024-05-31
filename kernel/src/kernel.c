@@ -118,7 +118,7 @@ void finalizar_proceso(char* PID){
     int pid_busado = atoi(PID);
     pcb* pcb_buscado = buscar_proceso_para_finalizar(pid_busado);
 
-    if(strcmp(string_de_estado(pcb_buscado->estado), "EXEC") == 0){
+    if(strcmp(string_de_estado(pcb_buscado->estado), "EXEC") == 0){ 
         enviar_interrupcion(EXIT_CONSOLA);
     }else{
         pcb_buscado->motivo = EXIT_CONSOLA;
@@ -242,7 +242,7 @@ void atender_instruccion_valida(char* leido){
     }else if(strcmp(comando_consola[0] , "INICIAR_PLANIFICAION") == 0){
         iniciar_planificacion();
     }else if(strcmp(comando_consola[0] , "MULTIPROGRAMACION") == 0){
-        // falta
+        cambiar_multiprogramacion(comando_consola[1]);
     }else if(strcmp(comando_consola[0] , "PROCESO_ESTADO") == 0){
         // falta
     }else{
@@ -280,6 +280,22 @@ void detener_planificacion() {
     pthread_mutex_unlock(&mutex_debe_planificar);
 
     semaforos_destroy(); // Cierra todos los semaforos
+}
+
+void cambiar_multiprogramacion(char* nuevoGrado){
+    int nuevoGradoMultiprogramacion = atoi (nuevoGrado);
+    int antiguoGradoMultiprogramacion = atoi(gradoDeMultiprogramacion);
+    
+    //No se si habria q implementar un if que se fije si es igual el nuevo al antiguo. Creeria q si, HAY QUE IMPLEMENTAR.
+    if(nuevoGradoMultiprogramacion  > antiguoGradoMultiprogramacion){
+        for(int i=antiguoGradoMultiprogramacion ; i<nuevoGradoMultiprogramacion ; i++){
+            sem_post(&sem_multiprogramacion);
+        }
+    }else{
+        for(int i=nuevoGradoMultiprogramacion ; i<antiguoGradoMultiprogramacion; i++){
+            sem_wait(&gradoDeMultiprogramacion);
+        }
+    }
 }
 
 void planificar_largo_plazo(){
