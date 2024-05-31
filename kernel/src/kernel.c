@@ -98,7 +98,7 @@ pcb* buscar_proceso_para_finalizar(int pid_a_buscar){
     } else {
         posicionPCB = buscar_posicion_proceso(cola_ready, pid_a_buscar);
         if (posicionPCB != -1) {
-            pcbEncontrado = remove_con_mutex(cola_ready, &mutex_lista_new, posicionPCB);
+            pcbEncontrado = remove_con_mutex(cola_ready, &mutex_lista_ready, posicionPCB);
             sem_post(&sem_multiprogramacion);
         } else {
             posicionPCB = buscar_posicion_proceso(cola_exec, pid_a_buscar);
@@ -384,7 +384,7 @@ t_list* obtener_lista_pid(t_list* lista){
 	return lista_pids;
 }
 
-//CHAT GPT, hay que pasarlo a STRING ya que no se puede concatenar una lista con un string
+//CHAT GPT a rolete, hay que pasarlo a STRING ya que no se puede concatenar una lista con un string
 char *de_lista_a_string(t_list *lista) {
     char *string = string_new(); // Inicializa una nueva cadena vacía
     for (int i = 0; i < list_size(lista); i++) { // Itera sobre cada elemento de la lista
