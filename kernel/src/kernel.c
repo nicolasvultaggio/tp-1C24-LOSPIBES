@@ -88,6 +88,7 @@ void iniciar_proceso(char *pathPasadoPorConsola){
     pthread_mutex_unlock(&mutex_envio_memoria);
     
     push_con_mutex(cola_new,proceso_nuevo,&mutex_lista_new);
+    sem_post(&sem_procesos_new);
     log_info(logger_obligatorio, "Se creo el proceso %d en NEW", proceso_nuevo -> PID);    
 }
 
@@ -375,7 +376,7 @@ void planificacion_procesos_ready(){
     
 }
 
-void proceso_a_ready(pcb* pcb){
+void proceso_a_ready(pcb* pcb){ //ojo se se habilita el mutex dos veces analicenlo porque esta como el culo
     pthread_mutex_lock(&mutex_lista_ready);
     push_con_mutex(cola_ready, pcb, &mutex_lista_ready); //Agregamos el proceso a ready
     logger_cola_ready(); //Logger obligatorio para romper las pelotillas
@@ -497,6 +498,7 @@ void atender_vuelta_dispatch(){
                         list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
                         cambiar_estado(pcb_actualizado,EXITT);
                         push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+                        sem_post(&sem_procesos_exit);
                         //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
                         break;
                     case SOLICITAR_STDIN:
@@ -528,6 +530,7 @@ void atender_vuelta_dispatch(){
                         list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
                         cambiar_estado(pcb_actualizado,EXITT);
                         push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+                        sem_post(&sem_procesos_exit);
                         //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
                         break;
                     case SOLICITAR_STDOUT:
@@ -559,6 +562,7 @@ void atender_vuelta_dispatch(){
                         list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
                         cambiar_estado(pcb_actualizado,EXITT);
                         push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+                        sem_post(&sem_procesos_exit);
                         //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
                         break;
                 }
@@ -890,6 +894,7 @@ void atender_interfaz_STDIN(element_interfaz * datos_interfaz){
                 liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
                 }else if(!notificacion){
                     push_con_mutex(cola_exit,proceso_a_atender->el_pcb,&mutex_lista_exit);//finalizo el proceso si la memoria me dijo que no pudo escribir 
+                    sem_post(&sem_procesos_exit);
                     free(proceso_a_atender->direccion_fisica);
                     free(proceso_a_atender->tamanio);
                 }
@@ -920,6 +925,7 @@ void atender_interfaz_STDOUT(element_interfaz * datos_interfaz){
                 liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
                 }else if(!notificacion){
                 push_con_mutex(cola_exit,proceso_a_atender->el_pcb,&mutex_lista_exit);//finalizo el proceso si la memoria me dijo que no pudo escribir 
+                sem_post(&sem_procesos_exit);
                 free(proceso_a_atender->direccion_fisica);
                 free(proceso_a_atender->tamanio);
                 }
@@ -948,6 +954,7 @@ void procesar_vuelta_blocked_a_ready(void * proceso_a_atender, io_type tipo){ //
             pcb_block_gen * proceso_a_atender_gen = (pcb_block_gen *) proceso_a_atender;
             cambiar_estado(proceso_a_atender_gen->el_pcb,READY);
             push_con_mutex(cola_ready,proceso_a_atender_gen->el_pcb,&mutex_lista_ready);
+            sem_post(&sem_procesos_ready);
             free(proceso_a_atender_gen->unidad_de_tiempo);
             free(proceso_a_atender_gen);    
             break;
@@ -955,6 +962,7 @@ void procesar_vuelta_blocked_a_ready(void * proceso_a_atender, io_type tipo){ //
             pcb_block_STDIN * proceso_a_atender_STDIN = (pcb_block_STDIN *) proceso_a_atender;
             cambiar_estado(proceso_a_atender_STDIN->el_pcb,READY);
             push_con_mutex(cola_ready,proceso_a_atender_STDIN->el_pcb,&mutex_lista_ready);
+            sem_post(&sem_procesos_ready);
             free(proceso_a_atender_STDIN->direccion_fisica);
             free(proceso_a_atender_STDIN->tamanio);
             free(proceso_a_atender_STDIN);    
@@ -963,6 +971,7 @@ void procesar_vuelta_blocked_a_ready(void * proceso_a_atender, io_type tipo){ //
             pcb_block_STDOUT * proceso_a_atender_STDOUT = (pcb_block_STDOUT *) proceso_a_atender;
             cambiar_estado(proceso_a_atender_STDOUT->el_pcb,READY);
             push_con_mutex(cola_ready,proceso_a_atender_STDOUT->el_pcb,&mutex_lista_ready);
+            sem_post(&sem_procesos_ready);
             free(proceso_a_atender_STDOUT->direccion_fisica);
             free(proceso_a_atender_STDOUT->tamanio);
             free(proceso_a_atender_STDOUT);     
@@ -1028,6 +1037,7 @@ void liberar_pcb_block_gen(void * pcb_bloqueado){
     free(pcb_bloqueado_c->unidad_de_tiempo);
     cambiar_estado(pcb_bloqueado_c->el_pcb,EXITT);
     push_con_mutex(cola_exit,pcb_bloqueado_c->el_pcb,&mutex_lista_exit);
+    sem_post(&sem_procesos_exit);
     //falta solicitar a memoria liberar las estructuras de ese proceso
     free(pcb_bloqueado_c); //nodo liberado, solo queda destruir la lista
 }
@@ -1038,6 +1048,7 @@ void liberar_pcb_block_STDIN(void * pcb_bloqueado){
     free(pcb_bloqueado_c->tamanio);
     cambiar_estado(pcb_bloqueado_c->el_pcb,EXITT);
     push_con_mutex(cola_exit,pcb_bloqueado_c->el_pcb,&mutex_lista_exit);
+    sem_post(&sem_procesos_exit);
     //falta solicitar a memoria liberar las estructuras de ese proceso
     free(pcb_bloqueado_c); //nodo liberado, solo queda destruir la lista
 }
@@ -1048,6 +1059,7 @@ void liberar_pcb_block_STDOUT(void * pcb_bloqueado){
     free(pcb_bloqueado_c->tamanio);
     cambiar_estado(pcb_bloqueado_c->el_pcb,EXITT);
     push_con_mutex(cola_exit,pcb_bloqueado_c->el_pcb,&mutex_lista_exit);
+    sem_post(&sem_procesos_exit);
     //falta solicitar a memoria liberar las estructuras de ese proceso
     free(pcb_bloqueado_c); //nodo liberado, solo queda destruir la lista
 }
