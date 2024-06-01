@@ -27,8 +27,8 @@ typedef struct {
 
 typedef struct{
     pcb * el_pcb;
-    char * direccion_fisica;
-    char * tamanio;
+    size_t * direccion_fisica;
+    size_t * tamanio;
 }pcb_block_STDIN ;
 
 typedef struct{
@@ -41,8 +41,8 @@ typedef struct{
 //no importa que sean exactamente iguales me importa que sean de un tipo distinto
 typedef struct{
     pcb * el_pcb;
-    char * direccion_fisica;
-    char * tamanio;
+    size_t * direccion_fisica;
+    size_t * tamanio;
 }pcb_block_STDOUT;
 
 t_list * interfaces_conectadas;
@@ -149,9 +149,13 @@ bool generica_acepta_instruccion(char * instruccion);
 bool interfaz_con_nombre(void * una_interfaz);
 char * preguntar_nombre_interfaz(int un_fd);
 void atender_interfaz_generica(element_interfaz * datos_interfaz);
-void procesar_vuelta_blocked_a_ready(pcb_block_gen * proceso_a_atender);
+void atender_interfaz_STDIN(element_interfaz * datos_interfaz);
+void atender_interfaz_STDOUT(element_interfaz * datos_interfaz);
+void procesar_vuelta_blocked_a_ready(void * proceso_a_atender,io_type tipo);
 size_t enviar_paquete_io(t_paquete* paquete, int socket_cliente);
 void liberar_pcb_block_gen(void * pcb_bloqueado);
+void liberar_pcb_block_STDIN(void * pcb_bloqueado);
+void liberar_pcb_block_STDOUT(void * pcb_bloqueado);
 void liberar_datos_interfaz(element_interfaz * datos_interfaz);
 
 bool STDIN_acepta_instruccion(char * instruccion);
