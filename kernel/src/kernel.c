@@ -62,6 +62,8 @@ void leer_configuraciones(){
     puerto_cpu_interrupt = config_get_string_value(config_kernel,"PUERTO_CPU_INTERRUPT");
     quantum = config_get_string_value(config_kernel,"QUANTUM");
     gradoDeMultiprogramacion = config_get_string_value(config_kernel,"GRADO_MULTIPROGRAMACION");
+    recursos = config_get_array_value(config_kernel, "RECURSOS"); // char** porq es un array
+	instancias = config_get_array_value(config_kernel, "INSTANCIAS_RECURSOS"); // char** porq es un array
 
 }
 
@@ -100,7 +102,6 @@ pcb* buscar_proceso_para_finalizar(int pid_a_buscar){
         posicionPCB = buscar_posicion_proceso(cola_ready, pid_a_buscar);
         if (posicionPCB != -1) {
             pcbEncontrado = remove_con_mutex(cola_ready, &mutex_lista_ready, posicionPCB);
-            sem_post(&sem_multiprogramacion);
         } else {
             posicionPCB = buscar_posicion_proceso(cola_exec, pid_a_buscar);
             if (posicionPCB != -1) {
@@ -294,7 +295,7 @@ void cambiar_multiprogramacion(char* nuevoGrado){
         }
     }else{
         for(int i=nuevoGradoMultiprogramacion ; i<antiguoGradoMultiprogramacion; i++){
-            sem_wait(&gradoDeMultiprogramacion);
+            sem_wait(&sem_multiprogramacion);
         }
     }
 }
@@ -450,11 +451,18 @@ void atender_vuelta_dispatch(){
                	break;
                 case RECURSO:
                 switch(pcb_actualizado ->motivo){
-                    case: SOLICITAR_WAIT:
+                    case: SOLICITAR_WAIT: // NO VA A QUEDAR NADA DE ESTA LOGICA PERO LA DEJO POR AHORA
                     char * recurso = list_get(lista,15);
-                    if(!buscarRecurso(char* recurso)){
-                        log_info(logger_kernel,"El siguiente recurso NO existe %s:" recurso);
+                    if(!buscarRecurso(char* recurso)){//IMPLEMENTAR ESTA FUNCION
+                        log_info(logger_kernel,"El siguiente recurso NO existe %s:", recurso);
+                        pcb_actualizado->motivo = RECURSO_INVALIDO; //SE LE ACTUALIZA EL MOTIVO DE DESALOJO
+                        cambiar_estado(pcb_actualizado, EXITT); 
+                        push_con_mutex(cola_exit,&sem_procesos_exit,pcb_actualizado);
+                        sem_post(&sem_procesos_exit);
+                    }else{
+                        manejar_wait(pcb_actualizado,recurso);
                     }
+                    free(recurso);
                     break;
                     case: SOLICITAR_SIGNAL:
                     break;
@@ -561,6 +569,42 @@ void atender_vuelta_dispatch(){
             sem_post(&sem_despachar);//una vez hecho todo, decirle a despachador() que puede planificar otro pcb
         }
     }
+}
+//SEGUIR CON RECURSOS.-
+t_list* inicializar_recursos(){
+	t_list* lista = list_create();
+	int* instancias_recursos = arrayDeStrings_a_arrayDeInts(instancias);
+	string_array_destroy(instancias);
+	int cantidad_recursos = string_array_size(recursos);
+
+	for(int i = 0; i < cantidad_recursos; i++){ // sobre cada recurso hace:
+		char* nombreRecurso = recursos[i];  // obtiene el "nombre"
+		recurso* recurso = malloc(sizeof(recurso)); // reserva memoria para la estructura
+		recurso->nombreRecurso = malloc(sizeof(char) * strlen(nombreRecurso) + 1); // reserva la memoria para el nombre
+		strcpy(recurso->nombreRecurso, recurso); // le encaja el nombre a la estructura en el espacio para el nombre
+		t_list* cola_block = list_create(); // crea la lista de blockeados para futuros procesos 
+		recurso->id = i; // le asigna un identificador
+		recurso->instancias = instancias_recursos[i]; // Pone la cantiad de instancias q tiene disponible
+		recurso->cola_block_asignada = cola_block; // le asigna la lista 
+		pthread_mutex_init(&recurso->mutex_asignado, NULL); //le creamos un mutex para ese recurso
+		list_add(lista, recurso); // agregamos a la lista de recursos este recurso
+	}
+
+	free(instancias_recursos);
+	string_array_destroy(recursos);
+	return lista;
+}
+
+//CHAT GPT total, pero se entiende lo que hace, por cada posicion le hace el atoi
+int* arrayDeStrings_a_arrayDeInts(char** array_de_strings){
+	int count = string_array_size(array_de_strings);
+	int *numbers = malloc(sizeof(int) * count);
+	for(int i = 0; i < count; i++){
+		int num = atoi(array_de_strings[i]);
+		numbers[i] = num;
+	}
+
+	return numbers;
 }
 
 element_interfaz * interfaz_existe_y_esta_conectada(char * un_nombre){

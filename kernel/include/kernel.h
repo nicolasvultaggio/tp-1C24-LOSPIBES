@@ -31,12 +31,6 @@ typedef struct{
     size_t * tamanio;
 }pcb_block_STDIN ;
 
-typedef struct{
-	char* recurso;
-	int instancias;
-	t_list* cola_block_asignada;
-	pthread_mutex_t mutex_asignado;
-}recurso;
 
 //no importa que sean exactamente iguales me importa que sean de un tipo distinto
 typedef struct{
@@ -44,6 +38,15 @@ typedef struct{
     size_t * direccion_fisica;
     size_t * tamanio;
 }pcb_block_STDOUT;
+
+typedef struct{
+	char* nombreRecurso;
+	int id;
+	int instancias;
+	t_list* cola_block_asignada;
+	pthread_mutex_t mutex_asignado;
+}recurso;
+
 
 t_list * interfaces_conectadas;
 int fd_escucha_kernel;
@@ -59,6 +62,8 @@ char * puerto_cpu_dispatch;
 char * puerto_cpu_interrupt;
 char * quantum;
 char * gradoDeMultiprogramacion;
+char ** recursos; 
+char ** instancias;
 
 t_list* cola_ready;
 t_list* cola_exec;
@@ -66,6 +71,7 @@ t_list* cola_new;
 t_list* cola_block_io;
 t_list* cola_exit;
 t_list* cola_exit_liberados;
+t_list* lista_recursos;
 
 int generador_pid = 0;
 
@@ -85,6 +91,11 @@ pthread_mutex_t mutex_lista_interfaces;
 pthread_mutex_t mutex_lista_exit;
 pthread_mutex_t mutex_debe_planificar;
 pthread_mutex_t mutex_envio_memoria;
+
+//MANEJO DE RECURSOS
+t_list* inicializar_recursos();
+int* arrayDeStrings_a_arrayDeInts(char** array_de_strings);
+bool buscarRecurso(char* recursoBuscado);
 
 //no sabemos cuales haran falta todavía, pero por las dudas los declaro
 t_log* logger_kernel;
