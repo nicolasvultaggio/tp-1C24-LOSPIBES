@@ -436,24 +436,31 @@ void atender_vuelta_dispatch(){
                 case PCB_ACTUALIZADO:
 		        switch(pcb_actualizado -> motivo){
 		            case FIN_QUANTUM: //No sabemos el nombre pero me imagino que se va a llamar asi 
-		        	cambiar_estado(pcb_actualizado, READY); // -> No se si esta funcion esta creada o no, me tengo q fijar. SI esta creada pero solo cambia el estado dentro del PCB
+		        	    cambiar_estado(pcb_actualizado, READY); 
 		            	push_con_mutex(cola_ready, pcb_actualizado, &mutex_lista_ready);// No importa si es RR o VRR ya que ambos actuan igual ante el FIN DE QUANTUM, solo encolan el proceso en READY. Lo que cambia es cuando va a blockeado, en VRR hay q fijarse cuanto q le quedo
-                    		sem_post(&sem_procesos_ready);
-                            break;
+                    	sem_post(&sem_procesos_ready);
+                        break;
 		            case EXITO:
-                    		cambiar_estado(pcb_actualizado, EXITT);
-                    		push_con_mutex(cola_exit, pcb_actualizado, &mutex_lista_exit);
-                    		sem_post(&sem_procesos_exit);
-                            break;
+                    	cambiar_estado(pcb_actualizado, EXITT);
+                    	push_con_mutex(cola_exit, pcb_actualizado, &mutex_lista_exit);
+                    	sem_post(&sem_procesos_exit);
+                        break;
 			    }
                	break;
                 case RECURSO:
-                //recibir pcb y manejar motivo de desalojo
+                switch(pcb_actualizado ->motivo){
+                    case: SOLICITAR_WAIT:
+                    char * recurso = list_get(lista,15);
+                    //SEGUIR
+                    break;
+                    case: SOLICITAR_SIGNAL:
+                    break;
+                }
                 break;
                 case INTERFAZ: //aca repito logica como loco pero sucede que me chupa la cabeza de la chota 
                 switch(pcb_actualizado->motivo){
                     case SOLICITAR_INTERFAZ_GENERICA: 
-                        char * instruccion_gen = list_get(lista,14); //devuelve el puntero al dato del elemento de la lista original
+                        char * instruccion_gen = list_get(lista,14); //devuelve el puntero al dato del elemento de la lista original // FIJATE QUE LA POSICION 14 CREO Q ES EL REGISTRO DI
                         char * nombre_interfaz_gen=list_get(lista,15); //devuelve el puntero al dato del elemento de la lista original
                         char * tiempo_a_esperar=list_get(lista,16); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
                         element_interfaz * interfaz_gen = interfaz_existe_y_esta_conectada(nombre_interfaz_gen); //puntero al elemento original de la lista, ojo

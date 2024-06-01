@@ -31,6 +31,13 @@ typedef struct{
     char * tamanio;
 }pcb_block_STDIN ;
 
+typedef struct{
+	char* recurso;
+	int instancias;
+	t_list* cola_block_asignada;
+	pthread_mutex_t mutex_asignado;
+}recurso;
+
 //no importa que sean exactamente iguales me importa que sean de un tipo distinto
 typedef struct{
     pcb * el_pcb;
@@ -107,7 +114,7 @@ int es_path(char* path);
 void iniciar_proceso(char* pathPasadoPorConsola);
 void iniciar_planificacion();
 void detener_planificacion();
-void cambiar_multiprogramacion(char* PID);
+void cambiar_multiprogramacion(char* nuevoGrado);
 
 
 void planificar_largo_plazo();
