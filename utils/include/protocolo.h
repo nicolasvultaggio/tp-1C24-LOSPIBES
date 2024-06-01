@@ -26,7 +26,8 @@ typedef enum {
 	SOLICITAR_STDIN,
 	SOLICITAR_STDOUT,
 	SOLICITAR_WAIT,
-	SOLICITAR_SIGNAL
+	SOLICITAR_SIGNAL,
+	RECURSO_INVALIDO
 } motivo_desalojo; //motivos de desalojo del proceso
 
 /* INSTRUCCIONES */
