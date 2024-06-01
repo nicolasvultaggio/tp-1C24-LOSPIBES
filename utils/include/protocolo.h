@@ -14,7 +14,7 @@
 #include<semaphore.h>
 #include<unistd.h>
 #include<stdbool.h>
-
+#include<readline/readline.h>
 /* DESALOJO */
 typedef enum {
 	EXITO, //finalizacion normal
@@ -130,6 +130,8 @@ typedef enum {
 	/* MEMORIA - CPU / CPU - MEMORIA */
 	SOLICITAR_INSTRUCCION,
 	PROXIMA_INSTRUCCION,
+	ESCRIBIR_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
+	LEER_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
 
 	INTERR, //UNICO codigo de operacion de la conexion interrupt
 }op_code; //codigos de operacion entre modulos, sirven para establecer que tipos de datos recibe el paquete

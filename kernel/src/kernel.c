@@ -841,6 +841,10 @@ void atender_interfaz_STDIN(element_interfaz * datos_interfaz){
                 }else if(notificacion  == (-1) ){ //recibir operacion devuelve -1 en caso de que se haya desconectado la interfaz
                 push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
                 liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
+                }else if(!notificacion){
+                    push_con_mutex(cola_exit,proceso_a_atender->el_pcb,&mutex_lista_exit);//finalizo el proceso si la memoria me dijo que no pudo escribir 
+                    free(proceso_a_atender->direccion_fisica);
+                    free(proceso_a_atender->tamanio);
                 }
             }
             eliminar_paquete(paquete);
@@ -867,6 +871,10 @@ void atender_interfaz_STDOUT(element_interfaz * datos_interfaz){
                 }else if(notificacion  == (-1) ){ //recibir operacion devuelve -1 en caso de que se haya desconectado la interfaz
                 push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
                 liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
+                }else if(!notificacion){
+                push_con_mutex(cola_exit,proceso_a_atender->el_pcb,&mutex_lista_exit);//finalizo el proceso si la memoria me dijo que no pudo escribir 
+                free(proceso_a_atender->direccion_fisica);
+                free(proceso_a_atender->tamanio);
                 }
             }
             eliminar_paquete(paquete);

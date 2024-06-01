@@ -185,7 +185,7 @@ void atender_instruccion(){
             break;
     }
 }
-//no va a funcionar asi
+//cambiar a recibirlo como una lista? porque si bien se envía como un paquete, se recibe como un mensaje, es compatible? tp0
 char * recibir_unidades_de_tiempo(){ // similar a recibir mensaje del tp0
     int size;
     char * buffer = recibir_buffer(&size,fd_conexion_kernel); //cuando se envie una peticion desde kernel: primero codop, despues unidad de tiempo
@@ -203,16 +203,54 @@ void atender_GENERICA(){// IO_GEN_SLEEP (Interfaz, Unidades de trabajo), no hace
 }
 
 void atender_STDIN(){
-   // char * instruccion = recibir_instruccion_de_kernel(); // instruccion queda en memoria dinamica
-    // hace falta validar la instruccion? creo que eso es trabajo del kernel
-    // se supone que la instruccion es valida, y para este tipo unica
-   // free(instruccion);
+    t_list * lista = recibir_paquete(fd_conexion_kernel);
+    size_t * direccion_fisica = list_get(lista,0);
+    size_t * tamanio =list_get(lista,1);
+    list_destroy(lista);
+    char * leido = readline("Ingrese una linea por consola:");
+    t_paquete * paquete = crear_paquete(ESCRIBIR_MEMORIA); //ojo que sergio lo tiene que hacer igual
+    agregar_a_paquete(paquete, direccion_fisica,sizeof(size_t));
+    agregar_a_paquete(paquete,tamanio,sizeof(size_t));
+    agregar_a_paquete(paquete,leido,strlen(leido)+1);
+    enviar_paquete(paquete,fd_conexion_memoria);
+    int size;
+    char * rta_memoria = recibir_buffer(&size,fd_conexion_memoria);
+    if(!strcmp(rta_memoria,"OK")){
+        int a =1;
+        send(fd_conexion_kernel,&a,sizeof(int),0); // le avisa al kernel que la escritura fue exitosa
+    }else{ //en teoria no debería entrar aca porque no falla en la escritura, ya lo controlo la MMU
+        int b = 0; //si falla al escribir en memoria finalizo el proceso
+        send(fd_conexion_kernel,&b,sizeof(int),0); //le avisa al kernel que la escritura salio mal
+    }
+    eliminar_paquete(paquete);
+    free(rta_memoria);
+    free(leido);
+    free(direccion_fisica);
+    free(tamanio);
 }
 void atender_STDOUT(){
-    //char * instruccion = recibir_instruccion_de_kernel();
-    // hace falta validar la instruccion? creo que eso es trabajo del kernel
-    // se supone que la instruccion es valida, y para este tipo unica
-    //free(instruccion);
+    t_list * lista = recibir_paquete(fd_conexion_kernel);
+    size_t * direccion_fisica = list_get(lista,0);
+    size_t * tamanio =list_get(lista,1);
+    list_destroy(lista);
+    t_paquete * paquete = crear_paquete(LEER_MEMORIA); //ojo que sergio lo tiene que hacer igual
+    agregar_a_paquete(paquete, direccion_fisica,sizeof(size_t));
+    agregar_a_paquete(paquete,tamanio,sizeof(size_t));
+    enviar_paquete(paquete,fd_conexion_memoria);
+    int size;
+    char * rta_memoria = recibir_buffer(&size,fd_conexion_memoria);//recibe la respuesta de la memoria
+    if(rta_memoria){ //la memoria devolvio algo no nulo, hacer que si la memoria no puede leer, devuelva un puntero nulo (MARCE)
+        int a =1;
+        printf("%s",rta_memoria);
+        send(fd_conexion_kernel,&a,sizeof(int),0); // le avisa al kernel que la lectura fue exitosa
+    }else{ //en teoria no debería entrar aca porque no falla en la escritura, ya lo controlo la MMU
+        int b = 0; //si falla al escribir en memoria finalizo el proceso
+        send(fd_conexion_kernel,&b,sizeof(int),0); //le avisa al kernel que la lectura salio mal
+    }
+    eliminar_paquete(paquete);
+    free(direccion_fisica);
+    free(tamanio);
+    free(rta_memoria);
 }
 void atender_DIALFS(){ // hoy, 2/5/2024, a las 20:07, esuchando JIMMY FALLON de Luchito, empiezo la funcion mas dificil de las interfaces, suerte loko
    // char * instruccion = recibir_instruccion_de_kernel();
