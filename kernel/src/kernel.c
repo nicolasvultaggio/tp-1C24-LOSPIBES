@@ -71,6 +71,7 @@ void iniciar_colas_de_estados(){
     cola_ready = list_create();
     cola_exit = list_create();
     interfaces_conectadas= list_create();
+    cola_exit_liberados = list_create();
 };
 
 void iniciar_proceso(char *pathPasadoPorConsola){
@@ -324,7 +325,7 @@ void procesos_en_exit(){
         recv(fd_conexion_memoria,&rta_memoria,sizeof(int),MSG_WAITALL);
         pthread_mutex_unlock(&mutex_envio_memoria);
         }
-        pcb_destroy(pcbFinalizado);
+        list_add(cola_exit_liberados,pcbFinalizado);
     }
 
 char* motivo_a_string(motivo_desalojo motivo){
