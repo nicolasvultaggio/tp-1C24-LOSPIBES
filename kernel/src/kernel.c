@@ -71,6 +71,7 @@ void iniciar_colas_de_estados(){
     cola_ready = list_create();
     cola_exit = list_create();
     interfaces_conectadas= list_create();
+    cola_exit_liberados = list_create();
 };
 
 void iniciar_proceso(char *pathPasadoPorConsola){
@@ -324,7 +325,7 @@ void procesos_en_exit(){
         recv(fd_conexion_memoria,&rta_memoria,sizeof(int),MSG_WAITALL);
         pthread_mutex_unlock(&mutex_envio_memoria);
         }
-        pcb_destroy(pcbFinalizado);
+        list_add(cola_exit_liberados,pcbFinalizado); //ESTAR ATENTO A SI EN UN FUTURO NECESITA MUTEX
     }
 
 char* motivo_a_string(motivo_desalojo motivo){
@@ -451,7 +452,9 @@ void atender_vuelta_dispatch(){
                 switch(pcb_actualizado ->motivo){
                     case: SOLICITAR_WAIT:
                     char * recurso = list_get(lista,15);
-                    //SEGUIR
+                    if(!buscarRecurso(char* recurso)){
+                        log_info(logger_kernel,"El siguiente recurso NO existe %s:" recurso);
+                    }
                     break;
                     case: SOLICITAR_SIGNAL:
                     break;

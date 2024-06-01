@@ -65,6 +65,7 @@ t_list* cola_exec;
 t_list* cola_new;
 t_list* cola_block_io;
 t_list* cola_exit;
+t_list* cola_exit_liberados;
 
 int generador_pid = 0;
 
