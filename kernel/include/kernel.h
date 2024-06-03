@@ -81,6 +81,8 @@ sem_t sem_procesos_ready; // semaforo que marca procesos disponibles en ready
 sem_t sem_despachar;
 sem_t sem_procesos_exit;
 sem_t sem_atender_rta;
+sem_t sem_asignacion_recursos;
+sem_t sem_vuelta_recursos;
 
 
 pthread_mutex_t mutex_pid; 
@@ -91,11 +93,13 @@ pthread_mutex_t mutex_lista_interfaces;
 pthread_mutex_t mutex_lista_exit;
 pthread_mutex_t mutex_debe_planificar;
 pthread_mutex_t mutex_envio_memoria;
+pthread_mutex_t mutex_asignacion_recursos;
 
 //MANEJO DE RECURSOS
 t_list* inicializar_recursos();
 int* arrayDeStrings_a_arrayDeInts(char** array_de_strings);
-bool buscarRecurso(char* recursoBuscado);
+t_list* iniciar_recursos_en_proceso();
+void manejar_wait(pcb* pcb, char* recurso_a_buscar);
 
 //no sabemos cuales haran falta todavía, pero por las dudas los declaro
 t_log* logger_kernel;

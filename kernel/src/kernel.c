@@ -46,7 +46,10 @@ void inicializar_semaforos(){
     pthread_mutex_init(&mutex_lista_ready, NULL);
     pthread_mutex_init(&mutex_lista_interfaces, NULL);
     pthread_mutex_init(&mutex_debe_planificar, NULL);
-    
+    pthread_mutex_init(&mutex_asignacion_recursos, NULL);
+
+    sem_init(&sem_asignacion_recursos, 0, 0);
+    sem_init(&sem_vuelta_recursos, 0, 0);
     sem_init(&sem_multiprogramacion, 0, gradoDeMultiprogramacion);
     sem_init(&sem_procesos_new, 0, 0); // en principio nohay procesos en new, logicamente
 	sem_init(&sem_procesos_ready, 0, 0); // en principio, no hay procesos en ready, logicamente
@@ -74,6 +77,9 @@ void iniciar_colas_de_estados(){
     cola_exit = list_create();
     interfaces_conectadas= list_create();
     cola_exit_liberados = list_create();
+
+    //ya se que la de recursos no tendria que ir aca pero fue, me sopla las bolas
+    lista_recursos = inicializar_recursos();
 };
 
 void iniciar_proceso(char *pathPasadoPorConsola){
@@ -140,6 +146,7 @@ pcb *crear_pcb(){
     un_pcb->QUANTUM = atoi(quantum);
     un_pcb->motivo = PROCESO_ACTIVO; 
     un_pcb->estado = NEW;
+    
 
     un_pcb->registros.AX = 0;
     un_pcb->registros.BX = 0;
@@ -153,6 +160,7 @@ pcb *crear_pcb(){
     un_pcb->registros.DI = 0;
 
     //pcb->motivo_exit = PROCESO_ACTIVO;
+    un_pcb->recursos_asignados = iniciar_recursos_en_proceso();
 
     
     // ojo, cuando hagamos planificador a largo plazo puede haber semaforos
@@ -456,7 +464,7 @@ void atender_vuelta_dispatch(){
 			    }
                	break;
                 case RECURSO:
-                switch(pcb_actualizado ->motivo){
+                switch(pcb_actualizado -> motivo){
                     case: SOLICITAR_WAIT: 
                     char * recurso = list_get(lista , final_pcb+1);
                     manejar_wait(pcb_actualizado, recurso);
@@ -573,8 +581,26 @@ void atender_vuelta_dispatch(){
     }
 }
 
-//FALTA UN MOTON, CUANDO TERMINE EL QUILOMBO DEL PCB LO TERMINO YA QUE CAMBIE MUCHOS NOMBRES Y COSAS
+//FALTA UNA BARBARIDAD
 //Podriamos poner un par de loggers para ver como va evolucionando el recurso pero me da mucha paja ABZ
+
+t_list* iniciar_recursos_en_proceso(){
+	t_list* lista = list_create();
+	int cantidad_recursos = string_array_size(recursos);
+	for(int i = 0; i<cantidad_recursos; i++){
+		char* nombre_obtenido = recursos[i];
+		recurso_asignado* recurso = malloc(sizeof(recurso_asignado));
+		recurso->nombre_recurso = malloc(sizeof(char) * strlen(nombre_obtenido) + 1);
+		strcpy(recurso->nombre_recurso, nombre_obtenido);
+		recurso->instancias = instancias[i];
+		list_add(lista, recurso);
+	}
+	string_array_destroy(recursos);
+
+	return lista;
+}
+
+
 void manejar_wait(pcb* pcb, char* recurso_a_buscar){
     recurso* recurso_buscado = buscar_recurso(recurso_a_buscar); // devuelve o el recurso encontrado o un recurso con ID = -1 que significa que NO EXISTE
 	if(recurso_buscado->id == -1){
