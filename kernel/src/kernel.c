@@ -376,9 +376,9 @@ void planificacion_procesos_ready(){
     
 }
 
-void proceso_a_ready(pcb* pcb){ //ojo se se habilita el mutex dos veces analicenlo porque esta como el culo
+void proceso_a_ready(pcb* pcb){ //ojo se se habilita el mutex dos veces analicenlo porque esta como el culo // respeta gordo trolo
     pthread_mutex_lock(&mutex_lista_ready);
-    push_con_mutex(cola_ready, pcb, &mutex_lista_ready); //Agregamos el proceso a ready
+    list_add(cola_ready, pcb);
     logger_cola_ready(); //Logger obligatorio para romper las pelotillas
     pthread_mutex_unlock(&mutex_lista_ready); 
     cambiar_estado(pcb,READY); // Cambiamos el estado dentro del PCB, no hace falta q este en seccion critica
@@ -452,18 +452,11 @@ void atender_vuelta_dispatch(){
                	break;
                 case RECURSO:
                 switch(pcb_actualizado ->motivo){
-                    case: SOLICITAR_WAIT: // NO VA A QUEDAR NADA DE ESTA LOGICA PERO LA DEJO POR AHORA
+                    case: SOLICITAR_WAIT: 
                     char * recurso = list_get(lista,15);
-                    if(!buscarRecurso(char* recurso)){//IMPLEMENTAR ESTA FUNCION
-                        log_info(logger_kernel,"El siguiente recurso NO existe %s:", recurso);
-                        pcb_actualizado->motivo = RECURSO_INVALIDO; //SE LE ACTUALIZA EL MOTIVO DE DESALOJO
-                        cambiar_estado(pcb_actualizado, EXITT); 
-                        push_con_mutex(cola_exit,&sem_procesos_exit,pcb_actualizado);
-                        sem_post(&sem_procesos_exit);
-                    }else{
-                        manejar_wait(pcb_actualizado,recurso);
-                    }
-                    free(recurso);
+                    manejar_wait(pcb_actualizado, recurso);
+				    free(recurso);
+				    break;
                     break;
                     case: SOLICITAR_SIGNAL:
                     break;
@@ -574,7 +567,32 @@ void atender_vuelta_dispatch(){
         }
     }
 }
-//SEGUIR CON RECURSOS.-
+
+//FALTA UN MOTON, CUANDO TERMINE EL QUILOMBO DEL PCB LO TERMINO YA QUE CAMBIE MUCHOS NOMBRES Y COSAS
+//Podriamos poner un par de loggers para ver como va evolucionando el recurso pero me da mucha paja ABZ
+void manejar_wait(pcb* pcb, char* recurso_a_buscar){
+    recurso* recurso_buscado = buscar_recurso(recurso_a_buscar); // devuelve o el recurso encontrado o un recurso con ID = -1 que significa que NO EXISTE
+	if(recurso_buscado->id == -1){
+		pcb->motivo_exit = RECURSO_INVALIDO;
+		procesar_cambio_estado(pcb, EXITT);
+        push_con_mutex(cola_exit,pcb,&mutex_lista_exit); //cuando no existe hay que mandarlo a exit 
+		sem_post(&sem_procesos_exit);
+        sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
+	} else {
+		recurso_buscado->instancias --;
+		if(recurso_buscado->instancias < 0){ //Obviamente si es < 0 se bloquea 
+			cambiar_estado(pcb, BLOCKED);
+            //cada recurso tiene SU cola y SU mutex
+			list_push_con_mutex(recurso_buscado->cola_block_asignada, pcb, &recurso_buscado->mutex_asignado);
+			sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
+		} else {
+			agregar_recurso(recurso_buscado->recurso, pcb); //Hay que asignarle el recurso usado al pcb AGREGAR LISTA DE RECURSOS A LA ESTRUCTURA PCB
+			queue_push_con_mutex(cola_exec, pcb, &mutex_lista_exec);
+			send_pcb(pcb, fd_conexion_dispatch);
+		}
+	}
+}
+
 t_list* inicializar_recursos(){
 	t_list* lista = list_create();
 	int* instancias_recursos = arrayDeStrings_a_arrayDeInts(instancias);

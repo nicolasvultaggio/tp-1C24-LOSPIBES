@@ -95,7 +95,14 @@ typedef struct {
     motivo_desalojo motivo;
 	estadosDeLosProcesos estado; //Estado en el que esta el proceso
     registrosCPU registros; //registros del cpu
+	t_list* recursos_asignados; //recursos asignados
 } pcb;
+
+typedef struct {
+	char* nombre_recurso;
+	int instancias;
+} recurso_asignado; 
+
 
 /* OPERACIONES */
 typedef enum {
@@ -193,6 +200,8 @@ typedef enum{
 }op_io_a_kernel;
 
 void empaquetar_pcb(t_paquete* paquete, pcb* PCB,motivo_desalojo MOTIVO);
+void empaquetar_recursos(t_paquete* paquete, t_list* lista_de_recursos);
+t_list* desempaquetar_recursos(t_list* paquete, int cantidad);
 t_paquete* crear_paquete(op_code OPERACION);
 void crear_buffer(t_paquete* paquete);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);

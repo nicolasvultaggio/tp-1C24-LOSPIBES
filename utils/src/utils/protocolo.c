@@ -92,8 +92,79 @@ void empaquetar_pcb(t_paquete* paquete, pcb* PCB, motivo_desalojo MOTIVO){
 	agregar_a_paquete(paquete, &(PCB->registros.SI), sizeof(uint32_t));
 	agregar_a_paquete(paquete, &(PCB->registros.DI), sizeof(uint32_t));
 
+
+}
+/* VER ESTO ANTES DE ENTENDER LOS PROXIMOS PROGRAMAS
+Ejemplo de como quedaria un PCB empaquetado
+
+pcb{
+	pid
+	pc
+	.
+	.
+	.
+	t_list * recursos_asignados = [recurso1, recurso2 recurso3]
 }
 
+recursos_asignados{
+	nombre
+	instancias_asignadas
+}
+
+1.PID
+2.PC
+.
+.
+.
+n.3
+n+1.nombre (recurso 1)
+n+2.instancias_asignadas(recurso1)
+n+3 nombre (recurso2)
+n+4 instancias_asignadas(recurso2)
+.
+.
+.
+*/
+
+void empaquetar_recursos(t_paquete* paquete, t_list* lista_de_recursos){
+	int cantidad_recursos = list_size(lista_de_recursos);
+	agregar_a_paquete(paquete, &(cantidad_recursos), sizeof(int));//Agregamos la CANTIDAD de RECURSOS
+	for(int i = 0; i<cantidad_recursos; i++){
+		recurso_asignado* recurso_asignado = list_get(lista_de_recursos, i);
+		agregar_a_paquete(paquete, recurso_asignado->nombre_recurso, strlen(recurso_asignado->nombre_recurso) + 1);
+		agregar_a_paquete(paquete, &(recurso_asignado->instancias), sizeof(int));
+	}
+}
+
+t_list* desempaquetar_recursos(t_list* paquete, int cantidad){
+	t_list* recursos = list_create();
+	int* cantidad_recursos = list_get(paquete, cantidad);
+	int i = cantidad + 1; //ej: cantidad = 3 -> arranca desde 4 porq el 3 seria la cantidad de recursos
+
+//PRIMERA TIRADA
+//	4-3-1 < 6 -> 0 < 6 -> 6, osea, hay 3 recursos (3 nombres + 3 instancias) 
+//SEGUNDA
+// 6-4 < 6 -> 2 < 6 -> faltan 2 recursos (2 nombres + 2 instancias)
+
+	while(i - cantidad - 1 < (*cantidad_recursos* 2)){
+		recurso_asignado* recurso_asignado = malloc(sizeof(recurso_asignado));
+		char* nombre = list_get(paquete, i); //nombe del primero
+		recurso_asignado->nombre_recurso = malloc(strlen(nombre) + 1);
+		strcpy(recurso_asignado->nombre_recurso, nombre);
+		i++; // para pasar a las instancias
+
+		int* instancia = list_get(paquete, i);
+		recurso_asignado->instancias = *instancia;
+		free(instancia);
+		i++; // para pasar al nombre del siguiente recurso
+
+		list_add(recursos, recurso_asignado);
+//		free(recurso_asignado->nombre_recurso);
+	}
+
+	free(cantidad_recursos);
+	return recursos;
+}
 
 
 /* FUNCIONES DE PAQUETE */
@@ -221,6 +292,8 @@ void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_des
 
 	t_paquete* paquete = crear_paquete(OPERACION);
 	empaquetar_pcb(paquete, PCB, MOTIVO);
+	empaquetar_recursos(paquete, pcb->recursos_asignados);
+	
 	switch (MOTIVO){ 
 		case EXITO:
 			break;
@@ -388,6 +461,11 @@ pcb* recibir_pcb(int socket){
 	PCB->registros.DI = *di;
 	free(di);
 
+	t_list* recursos = desempaquetar_recursos(paquete, 14);
+	pcb->recursos_asignados = recursos;
+
+	// Y EL MOTIVO??? HABLARLO Y CAMBIAR AL MOTIVO POR 14 Y RECURSOS POR 15
+
 	list_destroy(paquete);
 
 	return PCB;
@@ -517,6 +595,11 @@ pcb* guardar_datos_del_pcb(t_list* paquete){
 	uint32_t* di = list_get(paquete, 13);
 	PCB->registros.DI = *di;
 	free(di);
+
+	t_list* recursos = desempaquetar_recursos(paquete, 14);
+	pcb->recursos_asignados = recursos;
+
+	// Y EL MOTIVO??? HABLARLO Y CAMBIAR AL MOTIVO POR 14 Y RECURSOS POR 15
 
 	return PCB;
 }
