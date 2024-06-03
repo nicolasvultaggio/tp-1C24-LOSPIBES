@@ -151,6 +151,7 @@ t_list* desempaquetar_recursos(t_list* paquete, int cantidad){
 		char* nombre = list_get(paquete, i); //nombe del primero
 		recurso_asignado->nombre_recurso = malloc(strlen(nombre) + 1);
 		strcpy(recurso_asignado->nombre_recurso, nombre);
+		//free(nombre);           esto creo que tiene que estar porque ya se copio el valor a otro puntero
 		i++; // para pasar a las instancias
 
 		int* instancia = list_get(paquete, i);
@@ -292,7 +293,7 @@ void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_des
 
 	t_paquete* paquete = crear_paquete(OPERACION);
 	empaquetar_pcb(paquete, PCB, MOTIVO);
-	empaquetar_recursos(paquete, pcb->recursos_asignados);
+	empaquetar_recursos(paquete, PCB->recursos_asignados);
 	
 	switch (MOTIVO){ 
 		case EXITO:
@@ -423,7 +424,7 @@ pcb* recibir_pcb(int socket){
 
 	estadosDeLosProcesos* estado_recibido = list_get(paquete, 4);
 	PCB->estado = *estado_recibido;
-	free(estado);
+	free(estado_recibido);
 
 	uint8_t* ax = list_get(paquete, 5);
 	PCB->registros.AX = *ax;
@@ -466,7 +467,7 @@ pcb* recibir_pcb(int socket){
 	free(di);
 
 	t_list* recursos = desempaquetar_recursos(paquete, 15);
-	pcb->recursos_asignados = recursos;
+	PCB->recursos_asignados = recursos;
 
 	list_destroy(paquete);
 
@@ -560,7 +561,7 @@ pcb* guardar_datos_del_pcb(t_list* paquete){
 
 	estadosDeLosProcesos* estado_recibido = list_get(paquete, 4);
 	PCB->estado = *estado_recibido;
-	free(estado);
+	free(estado_recibido);
 
 	uint8_t* ax = list_get(paquete, 5);
 	PCB->registros.AX = *ax;
@@ -603,7 +604,7 @@ pcb* guardar_datos_del_pcb(t_list* paquete){
 	free(di);
 
 	t_list* recursos = desempaquetar_recursos(paquete, 15);
-	pcb->recursos_asignados = recursos;
+	PCB->recursos_asignados = recursos;
 
 	return PCB;
 }

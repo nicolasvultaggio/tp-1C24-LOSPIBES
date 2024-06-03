@@ -315,6 +315,7 @@ void planificar_largo_plazo(){
 void procesos_en_exit(){
     pcb* pcbFinalizado;
     while(1){ // YA QUE CONSTANTEMENTE TIENE Q ESTAR VIENDO QUE LLEGUE UN PROCESO A EXIT
+        // while(leer_debe_planificar_con_mutex()){}
         int rta_memoria;
         sem_wait(&sem_procesos_exit);
         pcbFinalizado = pop_con_mutex(cola_exit,&mutex_lista_exit);
@@ -328,6 +329,7 @@ void procesos_en_exit(){
         pthread_mutex_unlock(&mutex_envio_memoria);
         }
         list_add(cola_exit_liberados,pcbFinalizado); //ESTAR ATENTO A SI EN UN FUTURO NECESITA MUTEX
+        //}
     }
 
 char* motivo_a_string(motivo_desalojo motivo){
@@ -365,7 +367,8 @@ void pcb_destroy(pcb* pcb){
 }
 
 void planificacion_procesos_ready(){
-    while (esta_planificando)
+    //while(1){
+    while (esta_planificando) //no debería estar dentro de otro while(1)? no debería ser esta_planificando, debe ser leer_debe_planificar_con_mutex(), ojo con las condiciones de carrera, esta_planificando solo sirve para iniciar_planificacion
     {
         sem_wait(&sem_procesos_new); // Cantidad de proceso en NEW
         pcb* pcb = pop_con_mutex(cola_new, &mutex_lista_new); //Agarramos el primero de la lista de NEW
@@ -373,7 +376,7 @@ void planificacion_procesos_ready(){
         proceso_a_ready(pcb); // Mandamos el proceso a ready
         sem_post(&sem_procesos_ready); // +1 a la cantidad de procesos en ready 
     }
-    
+    //}
 }
 
 void proceso_a_ready(pcb* pcb){ //ojo se se habilita el mutex dos veces analicenlo porque esta como el culo // respeta gordo trolo
@@ -575,7 +578,7 @@ void atender_vuelta_dispatch(){
 void manejar_wait(pcb* pcb, char* recurso_a_buscar){
     recurso* recurso_buscado = buscar_recurso(recurso_a_buscar); // devuelve o el recurso encontrado o un recurso con ID = -1 que significa que NO EXISTE
 	if(recurso_buscado->id == -1){
-		pcb->motivo_exit = RECURSO_INVALIDO;
+		pcb->motivo = RECURSO_INVALIDO; // antes era motivo_exit, en vez de motivo
 		procesar_cambio_estado(pcb, EXITT);
         push_con_mutex(cola_exit,pcb,&mutex_lista_exit); //cuando no existe hay que mandarlo a exit 
 		sem_post(&sem_procesos_exit);
@@ -662,7 +665,7 @@ void despachador(){
             pcb * pcb_a_enviar = obtener_pcb_segun_algoritmo(algoritmo_de_planificacion); // obtiene un pcb de la cola de ready
             cambiar_estado(pcb_a_enviar,EXECUTE);
             push_con_mutex(cola_exec,pcb_a_enviar,&mutex_lista_exec); // uso con mutex porque posiblemente varios hilos agregen a exec
-            enviar_pcb(pcb_a_enviar, fd_conexion_dispatch,CODE_PCB,NULL,NULL,NULL,NULL,NULL,NULL);
+            enviar_pcb(pcb_a_enviar, fd_conexion_dispatch,CODE_PCB,,NULL,NULL,NULL,NULL,NULL);//falta motivo de desalojo
             sem_post(&sem_atender_rta);//signal para indicar que se despacho? no se si hace falta
             if(!strcmp(algoritmo_de_planificacion,"RR")){
                 manejar_quantum(pcb_a_enviar->PID);
@@ -763,12 +766,12 @@ int es_path(char* path){
 
 
 void semaforos_destroy() {
-	sem_close(&sem_multiprogramacion);
-	sem_close(&sem_procesos_new);
-	sem_close(&sem_procesos_ready);
-	sem_close(&sem_despachar);
-	sem_close(&sem_procesos_exit);
-    sem_close(&sem_atender_rta);
+	sem_destroy(&sem_multiprogramacion);//ojo, debería ser sem_destroy() creo 
+	sem_destroy(&sem_procesos_new);//ojo, debería ser sem_destroy() 
+	sem_destroy(&sem_procesos_ready);//ojo, debería ser sem_destroy() 
+	sem_destroy(&sem_despachar);//ojo, debería ser sem_destroy() 
+	sem_destroy(&sem_procesos_exit);//ojo, debería ser sem_destroy() 
+    sem_destroy(&sem_atender_rta);//ojo, debería ser sem_destroy() 
 }
 
 
@@ -1025,6 +1028,12 @@ void liberar_datos_interfaz(element_interfaz * datos_interfaz){ // se invoca cua
         break;
     }
     
+    sem_destroy(datos_interfaz->sem_procesos_blocked);
+    pthread_mutex_destroy(datos_interfaz->mutex_procesos_blocked);
+    free(datos_interfaz->sem_procesos_blocked);
+    free(datos_interfaz->mutex_procesos_blocked);
+    free(datos_interfaz);
+
 }
 
 void liberar_pcb_block_gen(void * pcb_bloqueado){
