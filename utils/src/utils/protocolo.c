@@ -126,6 +126,13 @@ n+4 instancias_asignadas(recurso2)
 .
 */
 
+int fin_pcb(t_list* lista){
+    int cantidad_de_recursos = *list_get(lista,15);
+    int cantidad_de_atributos_recursos = cantidad_de_recursos * 2;
+
+    return cantidad_de_recursos + cantidad_de_atributos_recursos;
+}
+
 void empaquetar_recursos(t_paquete* paquete, t_list* lista_de_recursos){
 	int cantidad_recursos = list_size(lista_de_recursos);
 	agregar_a_paquete(paquete, &(cantidad_recursos), sizeof(int));//Agregamos la CANTIDAD de RECURSOS
