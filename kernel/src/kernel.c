@@ -428,6 +428,7 @@ void iniciar_planificacion_corto_plazo(){
     pthread_detach(hilo_vuelta_dispatch);
 }
 
+
 void atender_vuelta_dispatch(){
     while(1){
         while(leer_debe_planificar_con_mutex()){
@@ -435,6 +436,7 @@ void atender_vuelta_dispatch(){
             op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");//ponerse a escuchar el fd_dispatch
             t_list * lista = recibir_paquete(fd_conexion_dispatch); //Esto me parece que tendria que ir arriba del SWITCH ya que en todos los casos vamos a tomar un pcb y actualizarlo.
             pcb* pcb_actualizado = guardar_datos_del_pcb(lista);
+            int final_pcb = fin_pcb(lista); //Te devuelve el numero del elemento de la lista donde esta el ultimo osea del final del pcb
             switch(codop){
                 case PCB_ACTUALIZADO:
 		        switch(pcb_actualizado -> motivo){
@@ -453,7 +455,7 @@ void atender_vuelta_dispatch(){
                 case RECURSO:
                 switch(pcb_actualizado ->motivo){
                     case: SOLICITAR_WAIT: 
-                    char * recurso = list_get(lista,15);
+                    char * recurso = list_get(lista , final_pcb+1);
                     manejar_wait(pcb_actualizado, recurso);
 				    free(recurso);
 				    break;
@@ -465,9 +467,9 @@ void atender_vuelta_dispatch(){
                 case INTERFAZ: //aca repito logica como loco pero sucede que me chupa la cabeza de la chota 
                 switch(pcb_actualizado->motivo){
                     case SOLICITAR_INTERFAZ_GENERICA: 
-                        char * instruccion_gen = list_get(lista,14); //devuelve el puntero al dato del elemento de la lista original // FIJATE QUE LA POSICION 14 CREO Q ES EL REGISTRO DI
-                        char * nombre_interfaz_gen=list_get(lista,15); //devuelve el puntero al dato del elemento de la lista original
-                        char * tiempo_a_esperar=list_get(lista,16); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
+                        char * instruccion_gen = list_get(lista,final_pcb+1); //devuelve el puntero al dato del elemento de la lista original // FIJATE QUE LA POSICION 14 CREO Q ES EL REGISTRO DI
+                        char * nombre_interfaz_gen=list_get(lista,final_pcb+2); //devuelve el puntero al dato del elemento de la lista original
+                        char * tiempo_a_esperar=list_get(lista,final_pcb+3); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
                         element_interfaz * interfaz_gen = interfaz_existe_y_esta_conectada(nombre_interfaz_gen); //puntero al elemento original de la lista, ojo
                         if(interfaz_gen){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
                             if(generica_acepta_instruccion(instruccion_gen)){
@@ -495,10 +497,10 @@ void atender_vuelta_dispatch(){
                         //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
                         break;
                     case SOLICITAR_STDIN:
-                        char * instruccion_STDIN = list_get(lista,14); 
-                        char * nombre_interfaz_STDIN=list_get(lista,15); 
-                        size_t * direccion_real_STDIN=list_get(lista,16);// supongo que las direcciones logicas son size_t que representan el numero de byte 
-                        size_t * registro_tamanio_STDIN=list_get(lista,17); 
+                        char * instruccion_STDIN = list_get(lista,final_pcb+1); 
+                        char * nombre_interfaz_STDIN=list_get(lista,final_pcb+2); 
+                        size_t * direccion_real_STDIN=list_get(lista,final_pcb+3);// supongo que las direcciones logicas son size_t que representan el numero de byte 
+                        size_t * registro_tamanio_STDIN=list_get(lista,final_pcb+4); 
                         element_interfaz * interfaz_STDIN = interfaz_existe_y_esta_conectada(nombre_interfaz_STDIN);
                          if(interfaz_STDIN){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
                             if(STDIN_acepta_instruccion(instruccion_STDIN)){
@@ -527,10 +529,10 @@ void atender_vuelta_dispatch(){
                         //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
                         break;
                     case SOLICITAR_STDOUT:
-                        char * instruccion_STDOUT = list_get(lista,14); 
-                        char * nombre_interfaz_STDOUT=list_get(lista,15); 
-                        size_t * direccion_real_STDOUT=list_get(lista,16); // supongo que las direcciones logicas son size_t que representan el numero de byte 
-                        size_t * registro_tamanio_STDOUT=list_get(lista,17); 
+                        char * instruccion_STDOUT = list_get(lista,final_pcb+1); 
+                        char * nombre_interfaz_STDOUT=list_get(lista,final_pcb+2); 
+                        size_t * direccion_real_STDOUT=list_get(lista,final_pcb+3); // supongo que las direcciones logicas son size_t que representan el numero de byte 
+                        size_t * registro_tamanio_STDOUT=list_get(lista,final_pcb+4); 
                         element_interfaz * interfaz_STDOUT = interfaz_existe_y_esta_conectada(nombre_interfaz_STDOUT);
                          if(interfaz_STDOUT){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
                             if(STDOUT_acepta_instruccion(instruccion_STDOUT)){
@@ -660,7 +662,7 @@ void despachador(){
             pcb * pcb_a_enviar = obtener_pcb_segun_algoritmo(algoritmo_de_planificacion); // obtiene un pcb de la cola de ready
             cambiar_estado(pcb_a_enviar,EXECUTE);
             push_con_mutex(cola_exec,pcb_a_enviar,&mutex_lista_exec); // uso con mutex porque posiblemente varios hilos agregen a exec
-            despachar_pcb(pcb_a_enviar);
+            enviar_pcb(pcb_a_enviar, fd_conexion_dispatch,CODE_PCB,NULL,NULL,NULL,NULL,NULL,NULL);
             sem_post(&sem_atender_rta);//signal para indicar que se despacho? no se si hace falta
             if(!strcmp(algoritmo_de_planificacion,"RR")){
                 manejar_quantum(pcb_a_enviar->PID);
@@ -758,32 +760,7 @@ int es_path(char* path){
     }
     return cantidadDeSlash || cantidadDePuntos;
 }
- 
-void despachar_pcb(pcb * un_pcb){
-    t_paquete * paquete_pcb = crear_paquete(CODE_PCB);
 
-    agregar_a_paquete(paquete_pcb, &(un_pcb->PID), sizeof(int));
-	agregar_a_paquete(paquete_pcb, &(un_pcb->PC), sizeof(int));
-    agregar_a_paquete(paquete_pcb, &(un_pcb->QUANTUM), sizeof(int));
-	agregar_a_paquete(paquete_pcb, &(un_pcb->estado), sizeof(estadosDeLosProcesos));
-
-    agregar_a_paquete(paquete_pcb, &(un_pcb->registros.AX), sizeof(uint8_t));
-	agregar_a_paquete(paquete_pcb, &(un_pcb->registros.BX), sizeof(uint8_t));
-	agregar_a_paquete(paquete_pcb, &(un_pcb->registros.CX), sizeof(uint8_t));
-	agregar_a_paquete(paquete_pcb, &(un_pcb->registros.DX), sizeof(uint8_t));
-    agregar_a_paquete(paquete_pcb, &(un_pcb->registros.EAX), sizeof(uint32_t ));
-	agregar_a_paquete(paquete_pcb, &(un_pcb->registros.EBX), sizeof(uint32_t ));
-	agregar_a_paquete(paquete_pcb, &(un_pcb->registros.ECX), sizeof(uint32_t ));
-	agregar_a_paquete(paquete_pcb, &(un_pcb->registros.EDX), sizeof(uint32_t ));
-    agregar_a_paquete(paquete_pcb, &(un_pcb->registros.SI), sizeof(uint32_t ));
-	agregar_a_paquete(paquete_pcb, &(un_pcb->registros.DI), sizeof(uint32_t ));
-    
-    enviar_paquete(paquete_pcb, fd_conexion_dispatch);
-
-    eliminar_paquete(paquete_pcb);
-    //DESPUES CPU VA A TENER QUE TENER UNA FUNCION QUE RECIBA UN PCB, ESTABLECIENDO TODAS LAS ESTRUCTURAS
-
-}
 
 void semaforos_destroy() {
 	sem_close(&sem_multiprogramacion);

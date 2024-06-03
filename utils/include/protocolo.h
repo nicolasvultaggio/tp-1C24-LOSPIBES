@@ -200,6 +200,7 @@ typedef enum{
 }op_io_a_kernel;
 
 void empaquetar_pcb(t_paquete* paquete, pcb* PCB,motivo_desalojo MOTIVO);
+int fin_pcb(t_list* lista);
 void empaquetar_recursos(t_paquete* paquete, t_list* lista_de_recursos);
 t_list* desempaquetar_recursos(t_list* paquete, int cantidad);
 t_paquete* crear_paquete(op_code OPERACION);

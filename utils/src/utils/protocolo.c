@@ -116,7 +116,7 @@ recursos_asignados{
 .
 .
 .
-n.3
+n.cantidad de recursos (ejemplo = 3)
 n+1.nombre (recurso 1)
 n+2.instancias_asignadas(recurso1)
 n+3 nombre (recurso2)
@@ -142,7 +142,7 @@ t_list* desempaquetar_recursos(t_list* paquete, int cantidad){
 	int i = cantidad + 1; //ej: cantidad = 3 -> arranca desde 4 porq el 3 seria la cantidad de recursos
 
 //PRIMERA TIRADA
-//	4-3-1 < 6 -> 0 < 6 -> 6, osea, hay 3 recursos (3 nombres + 3 instancias) 
+//	4-3-1 < 6 -> 0 < 6 -> 6, osea, hay 3 recursos (3 nombres + 3 instancias) 0<
 //SEGUNDA
 // 6-4 < 6 -> 2 < 6 -> faltan 2 recursos (2 nombres + 2 instancias)
 
@@ -405,11 +405,11 @@ pcb* recibir_pcb(int socket){
 	t_list* paquete = recibir_paquete(socket);
 	pcb* PCB = malloc(sizeof(PCB));
 
-	int* pid = list_get(paquete, 0);
+	uint32_t* pid = list_get(paquete, 0);
 	PCB->PID = *pid;
 	free(pid);
 
-	uint32_t* program_counter = list_get(paquete, 1);
+	int* program_counter = list_get(paquete, 1);
 	PCB->PC = *program_counter;
 	free(program_counter);
 
@@ -417,54 +417,56 @@ pcb* recibir_pcb(int socket){
 	PCB->QUANTUM = *quantum;
 	free(quantum);
 
-	estadosDeLosProcesos* estado = list_get(paquete, 3);
-	PCB->estado = *estado;
+	motivo_desalojo* motivo_recibido = list_get(paquete,3);
+	PCB->motivo = *motivo_recibido;
+	free(motivo_recibido);
+
+	estadosDeLosProcesos* estado_recibido = list_get(paquete, 4);
+	PCB->estado = *estado_recibido;
 	free(estado);
 
-	uint8_t* ax = list_get(paquete, 4);
+	uint8_t* ax = list_get(paquete, 5);
 	PCB->registros.AX = *ax;
 	free(ax);
 
-	uint8_t* bx = list_get(paquete, 5);
+	uint8_t* bx = list_get(paquete, 6);
 	PCB->registros.BX = *bx; 
 	free(bx);
 
-	uint8_t* cx = list_get(paquete, 6);
+	uint8_t* cx = list_get(paquete, 7);
 	PCB->registros.CX = *cx;
 	free(cx);
 
-	uint8_t* dx = list_get(paquete, 7);
+	uint8_t* dx = list_get(paquete, 8);
 	PCB->registros.DX = *dx;
 	free(dx);
 
-	uint32_t* eax = list_get(paquete, 8);
+	uint32_t* eax = list_get(paquete, 9);
 	PCB->registros.EAX = *eax;
 	free(eax);
 
-	uint32_t* ebx = list_get(paquete, 9);
+	uint32_t* ebx = list_get(paquete, 10);
 	PCB->registros.EBX = *ebx;
 	free(ebx);
 
-	uint32_t* ecx = list_get(paquete, 10);
+	uint32_t* ecx = list_get(paquete, 11);
 	PCB->registros.ECX = *ecx;
 	free(ecx);
 
-	uint32_t* edx = list_get(paquete, 11);
+	uint32_t* edx = list_get(paquete, 12);
 	PCB->registros.EDX = *edx;
 	free(edx);
 
-	uint32_t* si = list_get(paquete, 12);
+	uint32_t* si = list_get(paquete, 13);
 	PCB->registros.SI = *si;
 	free(si);
 
-	uint32_t* di = list_get(paquete, 13);
+	uint32_t* di = list_get(paquete, 14);
 	PCB->registros.DI = *di;
 	free(di);
 
-	t_list* recursos = desempaquetar_recursos(paquete, 14);
+	t_list* recursos = desempaquetar_recursos(paquete, 15);
 	pcb->recursos_asignados = recursos;
-
-	// Y EL MOTIVO??? HABLARLO Y CAMBIAR AL MOTIVO POR 14 Y RECURSOS POR 15
 
 	list_destroy(paquete);
 
@@ -552,54 +554,56 @@ pcb* guardar_datos_del_pcb(t_list* paquete){
 	PCB->QUANTUM = *quantum;
 	free(quantum);
 
-	estadosDeLosProcesos* estado = list_get(paquete, 3);
-	PCB->estado = *estado;
+	motivo_desalojo* motivo_recibido = list_get(paquete,3);
+	PCB->motivo = *motivo_recibido;
+	free(motivo_recibido);
+
+	estadosDeLosProcesos* estado_recibido = list_get(paquete, 4);
+	PCB->estado = *estado_recibido;
 	free(estado);
 
-	uint8_t* ax = list_get(paquete, 4);
+	uint8_t* ax = list_get(paquete, 5);
 	PCB->registros.AX = *ax;
 	free(ax);
 
-	uint8_t* bx = list_get(paquete, 5);
+	uint8_t* bx = list_get(paquete, 6);
 	PCB->registros.BX = *bx; 
 	free(bx);
 
-	uint8_t* cx = list_get(paquete, 6);
+	uint8_t* cx = list_get(paquete, 7);
 	PCB->registros.CX = *cx;
 	free(cx);
 
-	uint8_t* dx = list_get(paquete, 7);
+	uint8_t* dx = list_get(paquete, 8);
 	PCB->registros.DX = *dx;
 	free(dx);
 
-	uint32_t* eax = list_get(paquete, 8);
+	uint32_t* eax = list_get(paquete, 9);
 	PCB->registros.EAX = *eax;
 	free(eax);
 
-	uint32_t* ebx = list_get(paquete, 9);
+	uint32_t* ebx = list_get(paquete, 10);
 	PCB->registros.EBX = *ebx;
 	free(ebx);
 
-	uint32_t* ecx = list_get(paquete, 10);
+	uint32_t* ecx = list_get(paquete, 11);
 	PCB->registros.ECX = *ecx;
 	free(ecx);
 
-	uint32_t* edx = list_get(paquete, 11);
+	uint32_t* edx = list_get(paquete, 12);
 	PCB->registros.EDX = *edx;
 	free(edx);
 
-	uint32_t* si = list_get(paquete, 12);
+	uint32_t* si = list_get(paquete, 13);
 	PCB->registros.SI = *si;
 	free(si);
 
-	uint32_t* di = list_get(paquete, 13);
+	uint32_t* di = list_get(paquete, 14);
 	PCB->registros.DI = *di;
 	free(di);
 
-	t_list* recursos = desempaquetar_recursos(paquete, 14);
+	t_list* recursos = desempaquetar_recursos(paquete, 15);
 	pcb->recursos_asignados = recursos;
-
-	// Y EL MOTIVO??? HABLARLO Y CAMBIAR AL MOTIVO POR 14 Y RECURSOS POR 15
 
 	return PCB;
 }
