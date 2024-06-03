@@ -690,30 +690,7 @@ int* arrayDeStrings_a_arrayDeInts(char** array_de_strings){
 	return numbers;
 }
 
-void liberar_recursos(pcb* proceso) {
-    recurso* recurso_buscado = NULL;
 
-    for (int i = 0; i < list_size(proceso->recursos_asignados); i++) {
-        recurso_asignado* recurso_asignado = list_get(proceso->recursos_asignados, i); // Obtenemos el recurso asignado actual de la lista de recursos asignados del proceso.
-
-        if (recurso_asignado->instancias > 0) {
-            recurso_buscado = buscar_recurso(recurso_asignado->nombreRecurso);
-            recurso_buscado->instancias++; // Incrementamos el número de instancias disponibles del recurso globalmente.
-        }
-    }
-
-    // Si se encontró al menos un recurso que el proceso tenía asignado.
-    if (recurso_buscado != NULL) {
-        pcb* proceso2 = pop_con_mutex(recurso_buscado->cola_block_asignada, &recurso_buscado->mutex_asignado);// Desbloqueamos el primer proceso en la cola de bloqueados del recurso
-        if (proceso2 != NULL) {// Si se sacó un proceso de la cola de bloqueados (es decir, no era NULL).
-            agregar_recurso(recurso_buscado->recurso, proceso2);// Asignamos el recurso al proceso desbloqueado.
-            cambiar_estado(proceso2, READY);
-            sem_wait(&gradoDeMultiprogramacion);
-            proceso_a_ready(proceso2);
-            sem_post(&sem_procesos_ready);
-        }
-    }
-}
 
 
 
