@@ -584,15 +584,16 @@ void atender_vuelta_dispatch(){
 //FALTA UNA BARBARIDAD
 //Podriamos poner un par de loggers para ver como va evolucionando el recurso pero me da mucha paja ABZ
 
+//Estos es la lista de recursos ASIGNADOS que es distintos a los SEMAFOROS QUE SE INICIALIZAN EN inicializar_recursos()
 t_list* iniciar_recursos_en_proceso(){
 	t_list* lista = list_create();
 	int cantidad_recursos = string_array_size(recursos);
 	for(int i = 0; i<cantidad_recursos; i++){
-		char* nombre_obtenido = recursos[i];
-		recurso_asignado* recurso = malloc(sizeof(recurso_asignado));
-		recurso->nombre_recurso = malloc(sizeof(char) * strlen(nombre_obtenido) + 1);
-		strcpy(recurso->nombre_recurso, nombre_obtenido);
-		recurso->instancias = instancias[i];
+		char* nombre_obtenido = recursos[i]; // esta lista de recursos viene del logger
+		recurso_asignado* recurso = malloc(sizeof(recurso_asignado)); 
+		recurso->nombreRecurso = malloc(sizeof(char) * strlen(nombre_obtenido) + 1);
+		strcpy(recurso->nombreRecurso, nombre_obtenido);
+		recurso->instancias = instancias[i]; // esta lista de instancias viene del logger
 		list_add(lista, recurso);
 	}
 	string_array_destroy(recursos);
@@ -604,8 +605,13 @@ t_list* iniciar_recursos_en_proceso(){
 void manejar_wait(pcb* pcb, char* recurso_a_buscar){
     recurso* recurso_buscado = buscar_recurso(recurso_a_buscar); // devuelve o el recurso encontrado o un recurso con ID = -1 que significa que NO EXISTE
 	if(recurso_buscado->id == -1){
+<<<<<<< HEAD
 		pcb->motivo = RECURSO_INVALIDO; // antes era motivo_exit, en vez de motivo
 		procesar_cambio_estado(pcb, EXITT);
+=======
+		pcb->motivo_exit = RECURSO_INVALIDO;
+		cambiar_estado(pcb, EXITT);
+>>>>>>> 6cc78b2 (Sigo avanzando con recursos)
         push_con_mutex(cola_exit,pcb,&mutex_lista_exit); //cuando no existe hay que mandarlo a exit 
 		sem_post(&sem_procesos_exit);
         sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
@@ -614,16 +620,40 @@ void manejar_wait(pcb* pcb, char* recurso_a_buscar){
 		if(recurso_buscado->instancias < 0){ //Obviamente si es < 0 se bloquea 
 			cambiar_estado(pcb, BLOCKED);
             //cada recurso tiene SU cola y SU mutex
-			list_push_con_mutex(recurso_buscado->cola_block_asignada, pcb, &recurso_buscado->mutex_asignado);
+			push_con_mutex(recurso_buscado->cola_block_asignada, pcb, &recurso_buscado->mutex_asignado);
 			sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
 		} else {
-			agregar_recurso(recurso_buscado->recurso, pcb); //Hay que asignarle el recurso usado al pcb AGREGAR LISTA DE RECURSOS A LA ESTRUCTURA PCB
-			queue_push_con_mutex(cola_exec, pcb, &mutex_lista_exec);
-			send_pcb(pcb, fd_conexion_dispatch);
+			agregar_recurso(recurso_buscado->nombreRecurso, pcb); //Hay que asignarle el recurso usado al pcb AGREGAR LISTA DE RECURSOS A LA ESTRUCTURA PCB. Aca es donde me di cuenta que todo se iba a la mierda con el empaquetado
+			push_con_mutex(cola_exec, pcb, &mutex_lista_exec);
+			enviar_pcb(pcb,fd_conexion_dispatch,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
 		}
 	}
 }
 
+recurso *buscar_recurso(recurso* recurso_a_buscar){
+    for (int i = 0; i < list_size(lista_recursos); i++) {
+        recurso* recurso_buscado = list_get(lista_recursos, i);
+        if (strcmp(recurso_buscado->nombreRecurso, recurso) == 0){
+            return recurso_buscado;
+        }
+    }
+    recurso* recurso_no_encontrado = malloc(sizeof(recurso)); // 
+    recurso_no_encontrado->id = -1; 
+    return recurso_no_encontrado;
+}
+
+void agregar_recurso(char* recurso, pcb* pcb){
+	for(int i = 0; i<list_size(pcb->recursos_asignados); i++){
+		recurso_asignado* recurso_asignado = list_get(pcb->recursos_asignados, i);
+		if(strcmp(recurso_asignado->nombreRecurso, recurso) == 0){ //Busca dentro de los recursos del pcb para agregarle 1 instancia
+			pthread_mutex_lock(&mutex_asignacion_recursos);
+			recurso_asignado->instancias ++;
+			pthread_mutex_unlock(&mutex_asignacion_recursos);
+		}
+	}
+}
+
+//Esta funcion nos devuelve la lista de recursos 
 t_list* inicializar_recursos(){
 	t_list* lista = list_create();
 	int* instancias_recursos = arrayDeStrings_a_arrayDeInts(instancias);
@@ -659,6 +689,33 @@ int* arrayDeStrings_a_arrayDeInts(char** array_de_strings){
 
 	return numbers;
 }
+
+void liberar_recursos(pcb* proceso) {
+    recurso* recurso_buscado = NULL;
+
+    for (int i = 0; i < list_size(proceso->recursos_asignados); i++) {
+        recurso_asignado* recurso_asignado = list_get(proceso->recursos_asignados, i); // Obtenemos el recurso asignado actual de la lista de recursos asignados del proceso.
+
+        if (recurso_asignado->instancias > 0) {
+            recurso_buscado = buscar_recurso(recurso_asignado->nombreRecurso);
+            recurso_buscado->instancias++; // Incrementamos el número de instancias disponibles del recurso globalmente.
+        }
+    }
+
+    // Si se encontró al menos un recurso que el proceso tenía asignado.
+    if (recurso_buscado != NULL) {
+        pcb* proceso2 = pop_con_mutex(recurso_buscado->cola_block_asignada, &recurso_buscado->mutex_asignado);// Desbloqueamos el primer proceso en la cola de bloqueados del recurso
+        if (proceso2 != NULL) {// Si se sacó un proceso de la cola de bloqueados (es decir, no era NULL).
+            agregar_recurso(recurso_buscado->recurso, proceso2);// Asignamos el recurso al proceso desbloqueado.
+            cambiar_estado(proceso2, READY);
+            sem_wait(&gradoDeMultiprogramacion);
+            proceso_a_ready(proceso2);
+            sem_post(&sem_procesos_ready);
+        }
+    }
+}
+
+
 
 element_interfaz * interfaz_existe_y_esta_conectada(char * un_nombre){
     bool interfaz_con_nombre(void * una_interfaz){

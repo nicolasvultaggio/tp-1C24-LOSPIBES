@@ -100,6 +100,8 @@ t_list* inicializar_recursos();
 int* arrayDeStrings_a_arrayDeInts(char** array_de_strings);
 t_list* iniciar_recursos_en_proceso();
 void manejar_wait(pcb* pcb, char* recurso_a_buscar);
+recurso *buscar_recurso(recurso* recurso_a_buscar);
+void agregar_recurso(char* recurso, pcb* pcb);
 
 //no sabemos cuales haran falta todavía, pero por las dudas los declaro
 t_log* logger_kernel;

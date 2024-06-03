@@ -99,7 +99,7 @@ typedef struct {
 } pcb;
 
 typedef struct {
-	char* nombre_recurso;
+	char* nombreRecurso;
 	int instancias;
 } recurso_asignado; 
 
