@@ -466,13 +466,15 @@ void atender_vuelta_dispatch(){
                 case RECURSO:
                 switch(pcb_actualizado -> motivo){
                     case: SOLICITAR_WAIT: 
-                    char * recurso = list_get(lista , final_pcb+1);
-                    manejar_wait(pcb_actualizado, recurso);
-				    free(recurso);
-				    break;
+                        char * recurso_wait = list_get(lista , final_pcb+1);
+                        manejar_wait(pcb_actualizado, recurso_wait);
+				        free(recurso_wait);
                     break;
                     case: SOLICITAR_SIGNAL:
-                    break;
+                        char* recurso_signal = list_get(lista, final_pcb+1);
+				        atender_signal(pcb_actualizado, recurso_signal);
+				        free(recurso_signal);
+				break;
                 }
                 break;
                 case INTERFAZ: //aca repito logica como loco pero sucede que me chupa la cabeza de la chota 
@@ -602,16 +604,11 @@ t_list* iniciar_recursos_en_proceso(){
 }
 
 
-void manejar_wait(pcb* pcb, char* recurso_a_buscar){
-    recurso* recurso_buscado = buscar_recurso(recurso_a_buscar); // devuelve o el recurso encontrado o un recurso con ID = -1 que significa que NO EXISTE
+void manejar_wait(pcb* pcb, char* recurso_wait){
+    recurso* recurso_buscado = buscar_recurso(recurso_wait); // devuelve o el recurso encontrado o un recurso con ID = -1 que significa que NO EXISTE
 	if(recurso_buscado->id == -1){
-<<<<<<< HEAD
 		pcb->motivo = RECURSO_INVALIDO; // antes era motivo_exit, en vez de motivo
 		procesar_cambio_estado(pcb, EXITT);
-=======
-		pcb->motivo_exit = RECURSO_INVALIDO;
-		cambiar_estado(pcb, EXITT);
->>>>>>> 6cc78b2 (Sigo avanzando con recursos)
         push_con_mutex(cola_exit,pcb,&mutex_lista_exit); //cuando no existe hay que mandarlo a exit 
 		sem_post(&sem_procesos_exit);
         sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
@@ -628,6 +625,10 @@ void manejar_wait(pcb* pcb, char* recurso_a_buscar){
 			enviar_pcb(pcb,fd_conexion_dispatch,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
 		}
 	}
+}
+
+void atender_signal(pcb* pcb, char* recurso_signal){
+    recurso*
 }
 
 recurso *buscar_recurso(recurso* recurso_a_buscar){
@@ -1004,7 +1005,7 @@ size_t enviar_paquete_io(t_paquete* paquete, int socket_cliente) //modificacion 
     return err;
 }
 
-void procesar_vuelta_blocked_a_ready(void * proceso_a_atender, io_type tipo){ //proceso_a_atender es un pcb_block gen, o pcb_block_stdin o pcb_block stdout, libera la estructura pcb_blocked, pero de los punteros dinamicos que contenga esta, nos encargamos antes
+void procesar_vuelta_blocked_a_ready(void * proceso_a_atender, vuelta_type tipo){ //proceso_a_atender es un pcb_block gen, o pcb_block_stdin o pcb_block stdout, libera la estructura pcb_blocked, pero de los punteros dinamicos que contenga esta, nos encargamos antes
     char * algoritmo = config_get_string_value(config_kernel,"ALGORITMO_PLANIFICACION");
     if(!strcmp(algoritmo, "FIFO") || !strcmp(algoritmo, "RR")) {
     switch(tipo){
@@ -1034,7 +1035,12 @@ void procesar_vuelta_blocked_a_ready(void * proceso_a_atender, io_type tipo){ //
             free(proceso_a_atender_STDOUT->tamanio);
             free(proceso_a_atender_STDOUT);     
             break;
-    }
+        case RECURSO:
+            pcb * pcb_a_ready = (pcb *) proceso_a_atender;
+            cambiar_estado(pcb_a_ready,READY);
+            push_con_mutex(cola_ready,pcb_a_ready,&mutex_lista_ready);
+            sem_post(&sem_procesos_ready);
+        }
 	}else{ //todavía no analizamos VRR
                         
     }
