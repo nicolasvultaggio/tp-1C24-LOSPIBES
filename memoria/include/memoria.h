@@ -4,10 +4,16 @@
 #include <../../utils/include/socket.h>
 #include <../../utils/include/protocolo.h>
 
+typedef struct{
+	size_t nro_pagina;
+	size_t nro_marco;
+}fila_tabla_de_paginas; //las tablas de paginas no son tablas, son listas, es mas facil de manejar
 typedef struct {
 	int pid;
+	t_list* tabla_de_paginas;
 	t_list* instrucciones;
 } t_listaprincipal;//para armar mi lista de procesos en memoria
+
 typedef struct
 {
 	int pid;
@@ -29,17 +35,22 @@ int fd_conexion_io;
 
 void terminar_programa();
 void leer_configuraciones();
+void iniciar_memoria_contigua();
 
 //MUTEX
 void inicializar_semaforos();
 pthread_mutex_t mutex_lista_instrucciones; 
 
+void * user_space;
+t_bitarray * frames_array;
+char * bitmap;
+size_t cant_marcos;
 
 
 //2do checkpoint
 int puerto_escucha;
-int tam_memoria;
-int tam_pagina;
+size_t tam_memoria;
+size_t tam_pagina; //los size_t sirven mas para representar cantidad de bytes
 char* path_instrucciones;
 int retardo_respuesta;
 /**********/
@@ -56,5 +67,6 @@ t_linea_instruccion* buscar_instruccion(int pid, int program_counter, t_list* pr
 void send_proxima_instruccion(int filedescriptor, t_linea_instruccion *instruccion);
 void procesar_pedido_instruuccion(int socket_cpu, t_list* proceso_instrucciones);
 void instruccion_destroyer(t_linea_instruccion* instruccion);
-
+size_t dividir_y_redondear_hacia_arriba(size_t a,size_t b);
+int nro_de_marco_libre();
 #endif
