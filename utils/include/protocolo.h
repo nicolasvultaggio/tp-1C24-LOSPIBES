@@ -6,6 +6,7 @@
 #include<sys/socket.h>
 #include<commons/log.h>
 #include<commons/collections/list.h>
+#include<commons/temporal.h>
 #include<string.h>
 #include<commons/config.h>
 #include<netdb.h>
@@ -73,6 +74,7 @@ typedef struct{
 typedef enum{
     NEW,
     READY,
+	READY_AUX,
     EXECUTE,
     BLOCKED,
     EXITT
@@ -184,8 +186,9 @@ typedef enum{
     GENERICA,
     STDIN,
     STDOUT,
+	RECURSOVT, //agrego el VT al final porque ya hay un enum llamado "RECURSO"
     DIALFS
-}io_type;
+}vuelta_type;
 
 typedef enum{
     INFORMAR_NOMBRE,

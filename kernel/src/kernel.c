@@ -74,6 +74,7 @@ void iniciar_colas_de_estados(){
     generador_pid = 1;
     cola_new = list_create();
     cola_ready = list_create();
+    cola_ready_aux = list_create();
     cola_exit = list_create();
     interfaces_conectadas= list_create();
     cola_exit_liberados = list_create();
@@ -99,6 +100,7 @@ void iniciar_proceso(char *pathPasadoPorConsola){
 }
 
 
+
 pcb* buscar_proceso_para_finalizar(int pid_a_buscar){ 
     pcb* pcbEncontrado;
     int posicionPCB = buscar_posicion_proceso(cola_new, pid_a_buscar);
@@ -110,11 +112,16 @@ pcb* buscar_proceso_para_finalizar(int pid_a_buscar){
         if (posicionPCB != -1) {
             pcbEncontrado = remove_con_mutex(cola_ready, &mutex_lista_ready, posicionPCB);
         } else {
-            posicionPCB = buscar_posicion_proceso(cola_exec, pid_a_buscar);
+            posicionPCB = buscar_posicion_proceso(cola_ready_aux, pid_a_buscar);
             if (posicionPCB != -1) {
-                pcbEncontrado = remove_con_mutex(cola_exec, &mutex_lista_exec, posicionPCB);
+                pcbEncontrado = remove_con_mutex(cola_ready_aux, &mutex_lista_ready, posicionPCB);
             } else {
-                log_info(logger_kernel, "El proceso que busca se encuentra en una IO, espere a que regrese.");
+                posicionPCB = buscar_posicion_proceso(cola_exec, pid_a_buscar);
+                if(posicionPCB != -1){
+                    pcbEncontrado = remove_con_mutex(cola_exec, &mutex_lista_exec, posicionPCB);
+                } else{
+                    log_info(logger_kernel, "El proceso que busca se encuentra en una IO, espere a que regrese.");
+                }
             }
         }
     }
@@ -122,6 +129,8 @@ pcb* buscar_proceso_para_finalizar(int pid_a_buscar){
     return pcbEncontrado;
     
 }
+
+
 
 void finalizar_proceso(char* PID){
     int pid_busado = atoi(PID);
@@ -452,8 +461,9 @@ void atender_vuelta_dispatch(){
                 case PCB_ACTUALIZADO:
 		        switch(pcb_actualizado -> motivo){
 		            case FIN_QUANTUM: //No sabemos el nombre pero me imagino que se va a llamar asi 
-		        	    cambiar_estado(pcb_actualizado, READY); 
-		            	push_con_mutex(cola_ready, pcb_actualizado, &mutex_lista_ready);// No importa si es RR o VRR ya que ambos actuan igual ante el FIN DE QUANTUM, solo encolan el proceso en READY. Lo que cambia es cuando va a blockeado, en VRR hay q fijarse cuanto q le quedo
+		        	    cambiar_estado(pcb_actualizado, READY);
+                        pcb_actualizado->QUANTUM = atoi(quantum);//no importa el algoritmo, siempre si se interrumpe x fin de quantum el q del pcb = 0
+		            	push_con_mutex(cola_ready, pcb_actualizado, &mutex_lista_ready);
                     	sem_post(&sem_procesos_ready);
                         break;
 		            case EXITO:
@@ -466,16 +476,21 @@ void atender_vuelta_dispatch(){
                 case RECURSO:
                 switch(pcb_actualizado -> motivo){
                     case: SOLICITAR_WAIT: 
-                    char * recurso = list_get(lista , final_pcb+1);
-                    manejar_wait(pcb_actualizado, recurso);
-				    free(recurso);
-				    break;
+                        char * recurso_wait = list_get(lista , final_pcb+1);
+                        manejar_wait(pcb_actualizado, recurso_wait);
+				        free(recurso_wait);
                     break;
                     case: SOLICITAR_SIGNAL:
-                    break;
+                        char* recurso_signal = list_get(lista, final_pcb+1);
+				        atender_signal(pcb_actualizado, recurso_signal);
+				        free(recurso_signal);
+				break;
                 }
                 break;
                 case INTERFAZ: //aca repito logica como loco pero sucede que me chupa la cabeza de la chota 
+                if(tiempo_transcurrido_en_cpu < atoi(quantum)){
+                    pcb_actualizado->QUANTUM = atoi(quantum) - tiempo_transcurrido_en_cpu;
+                }
                 switch(pcb_actualizado->motivo){
                     case SOLICITAR_INTERFAZ_GENERICA: 
                         char * instruccion_gen = list_get(lista,final_pcb+1); //devuelve el puntero al dato del elemento de la lista original // FIJATE QUE LA POSICION 14 CREO Q ES EL REGISTRO DI
@@ -602,16 +617,11 @@ t_list* iniciar_recursos_en_proceso(){
 }
 
 
-void manejar_wait(pcb* pcb, char* recurso_a_buscar){
-    recurso* recurso_buscado = buscar_recurso(recurso_a_buscar); // devuelve o el recurso encontrado o un recurso con ID = -1 que significa que NO EXISTE
+void manejar_wait(pcb* pcb, char* recurso_wait){
+    recurso* recurso_buscado = buscar_recurso(recurso_wait); // devuelve o el recurso encontrado o un recurso con ID = -1 que significa que NO EXISTE
 	if(recurso_buscado->id == -1){
-<<<<<<< HEAD
-		pcb->motivo = RECURSO_INVALIDO; // antes era motivo_exit, en vez de motivo
-		procesar_cambio_estado(pcb, EXITT);
-=======
 		pcb->motivo_exit = RECURSO_INVALIDO;
 		cambiar_estado(pcb, EXITT);
->>>>>>> 6cc78b2 (Sigo avanzando con recursos)
         push_con_mutex(cola_exit,pcb,&mutex_lista_exit); //cuando no existe hay que mandarlo a exit 
 		sem_post(&sem_procesos_exit);
         sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
@@ -628,6 +638,10 @@ void manejar_wait(pcb* pcb, char* recurso_a_buscar){
 			enviar_pcb(pcb,fd_conexion_dispatch,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
 		}
 	}
+}
+
+void atender_signal(pcb* pcb, char* recurso_signal){
+    recurso*
 }
 
 recurso *buscar_recurso(recurso* recurso_a_buscar){
@@ -722,31 +736,39 @@ void despachador(){
         while(leer_debe_planificar_con_mutex()){
             sem_wait(&sem_despachar); //espera a que NO haya un proceso ejecutandose : la cola exec siempre tiene un solo proceso
             sem_wait(&sem_procesos_ready); //espera a que haya al menos un proceso en ready para ponerse a planificar
-            pcb * pcb_a_enviar = obtener_pcb_segun_algoritmo(algoritmo_de_planificacion); // obtiene un pcb de la cola de ready
+            pcb_a_enviar = obtener_pcb_segun_algoritmo(algoritmo_de_planificacion); // obtiene un pcb de la cola de ready
             cambiar_estado(pcb_a_enviar,EXECUTE);
             push_con_mutex(cola_exec,pcb_a_enviar,&mutex_lista_exec); // uso con mutex porque posiblemente varios hilos agregen a exec
-            enviar_pcb(pcb_a_enviar, fd_conexion_dispatch,CODE_PCB,,NULL,NULL,NULL,NULL,NULL);//falta motivo de desalojo
+            enviar_pcb(pcb_a_enviar, fd_conexion_dispatch,CODE_PCB,NULL,NULL,NULL,NULL,NULL,NULL);//falta motivo de desalojo
+            enviar_pcb();
             sem_post(&sem_atender_rta);//signal para indicar que se despacho? no se si hace falta
             if(!strcmp(algoritmo_de_planificacion,"RR")){
-                manejar_quantum(pcb_a_enviar->PID);
+                manejar_quantum_RR(pcb_a_enviar->PID);
+            }else if(!strcmp(algoritmo_de_planificacion,"VRR")){
+                manejar_quantum_VRR(pcb_a_enviar->PID);
             }
         }
     }
 }
 
+
+bool colaVacia(t_list* colaDeEstado) {
+    return colaDeEstado->head == NULL;
+}
+
+
 pcb * obtener_pcb_segun_algoritmo(char * algoritmo){
     pcb * un_pcb;
-    if(!strcmp(algoritmo, "FIFO")) {
+    if((!strcmp(algoritmo, "FIFO")) || (!strcmp(algoritmo, "RR")) || ((!strcmp(algoritmo, "VRR")) && colaVacia(cola_ready_aux))) {
         un_pcb = pop_con_mutex(cola_ready, &mutex_lista_ready ); 
-		return un_pcb; //                                        tanto FIFO como RR elijen el primero de la cola ready
-	}else if(!strcmp(algoritmo, "RR")){
-        un_pcb = pop_con_mutex(cola_ready, &mutex_lista_ready); 
-		return un_pcb;
-    }else{ //en teoria no debería acceder aca pero bueno
+		return un_pcb; //                                        tanto FIFO, RR y VRR (si cola aux vacia) elijen el primero de la cola ready
+    }else if(!strcmp(algoritmo, "VRR")){
+        un_pcb = pop_con_mutex(cola_ready_aux, &mutex_lista_ready );
+		return un_pcb; //
+	}else{ //en teoria no debería acceder aca pero bueno
         return NULL;
     }
 }
-
 
 void cambiar_estado(pcb * un_pcb , estadosDeLosProcesos estado){
     char* nuevo_estado = strdup(string_de_estado(estado)); // obtiene el string del numerito del estado, y STRDUP lo guarda en memoria dinamica
@@ -765,6 +787,9 @@ char* string_de_estado(estadosDeLosProcesos estado){
 		case READY:
 			return "READY";
 			break;
+		case READY_AUX:
+			return "READY_AUX";
+			break;
 		case EXECUTE:
 			return "EXEC";
 			break;
@@ -779,18 +804,18 @@ char* string_de_estado(estadosDeLosProcesos estado){
 		}
 }
 
-void manejar_quantum(int pid){
+void manejar_quantum_RR(int pid){
     //como debe realizarse paralelamente a la ejecucion del proceso, tenemos que delegarlo a un hilo
-    pthread_t hilo_manejo_quantum;
-	pthread_create(&hilo_manejo_quantum, NULL, (void*) reducir_quantum, (void*)(intptr_t) pid); //necesita PID para manejarle el quantum a ese proceso
-	pthread_detach(hilo_manejo_quantum);//                                 (void*) porque si o si debe recibir ese tipo de dato
+    pthread_t hilo_manejo_quantum_RR;
+	pthread_create(&hilo_manejo_quantum_RR, NULL, (void*) reducir_quantum, (void*)(intptr_t) pid); //necesita PID para manejarle el quantum a ese proceso
+	pthread_detach(hilo_manejo_quantum_RR);//                                 (void*) porque si o si debe recibir ese tipo de dato
     //                                                                     (intptr_) para hacer que pid (un int) empiece a ocupar una cantidad de bytes necesaria para ser un puntero
 }//                                                                        gracias CHATGPT                                 
 
 void reducir_quantum(void *ppid){ // como todo hilo, es esa su especificacion
     int pid = (int)(intptr_t)ppid; // casteo de nuevo, puntero gen -> intptr_t -> int
     int quantum_como_int = atoi(quantum); // paso el numero quantum (char) a entero
-    usleep(quantum_como_int); //probablemente no dure nada así
+    usleep(quantum_como_int*1000);//microsegundo * 1000 = milisegundo
     if(!list_is_empty(cola_exec)){ // entra al if si SE SIGUE EJECTUANDO EL PROCESO
         pthread_mutex_lock(&mutex_lista_exec); // con mutex porque es caso de lectura y escritura
         pcb * pcb_retirado_de_exec = list_get(cola_exec,0); // obtiene el pcb, sin removerlo de exec
@@ -800,6 +825,15 @@ void reducir_quantum(void *ppid){ // como todo hilo, es esa su especificacion
         }
     }
 }
+
+void manejar_quantum_VRR(int pid){
+    cronometro = temporal_create();
+    manejar_quantum_RR(pid);
+    temporal_stop(cronometro);
+    tiempo_transcurrido_en_cpu = temporal_gettime(cronometro);
+    temporal_destroy(cronometro);
+}                             
+
 
 void enviar_interrupcion(motivo_desalojo motivo){
     t_paquete* paquete = crear_paquete(INTERR);
@@ -836,7 +870,6 @@ void semaforos_destroy() {
 
 
 void terminar_programa(){
-
     config_destroy(config_kernel);
     log_destroy(logger_kernel);   
     log_destroy(logger_obligatorio);
@@ -883,7 +916,7 @@ void procesar_conexion_interfaz(void * arg){
     element_interfaz * datos_interfaz = malloc(sizeof(element_interfaz));//falta liberar, posiblemente cuando se desconecte la interfaz
     datos_interfaz->fd_conexion_con_interfaz = fd_conexion_io;//otra a referencia al mismo malloc recibido por parametro, usar para liberar / liberado
     datos_interfaz->nombre = preguntar_nombre_interfaz((*fd_conexion_io)); //falta liberar, posiblemente cuando se desconecte interfaz, ¿Por qué es dinámico? porque en principio, no se sabe el tamaño que ocupara el nombre / liberado
-    datos_interfaz->tipo = (io_type) preguntar_tipo_interfaz((*fd_conexion_io));
+    datos_interfaz->tipo = (vuelta_type) preguntar_tipo_interfaz((*fd_conexion_io));
     datos_interfaz->cola_bloqueados=list_create();  //pcbs_bloqueados es una lista de pcb_block
     sem_init((datos_interfaz->sem_procesos_blocked),0,0); 
     pthread_mutex_init((datos_interfaz->mutex_procesos_blocked),NULL);
@@ -1004,39 +1037,73 @@ size_t enviar_paquete_io(t_paquete* paquete, int socket_cliente) //modificacion 
     return err;
 }
 
-void procesar_vuelta_blocked_a_ready(void * proceso_a_atender, io_type tipo){ //proceso_a_atender es un pcb_block gen, o pcb_block_stdin o pcb_block stdout, libera la estructura pcb_blocked, pero de los punteros dinamicos que contenga esta, nos encargamos antes
+void procesar_vuelta_blocked_a_ready(void * proceso_a_atender, vuelta_type tipo){ //proceso_a_atender es un pcb_block gen, o pcb_block_stdin o pcb_block stdout, libera la estructura pcb_blocked, pero de los punteros dinamicos que contenga esta, nos encargamos antes
     char * algoritmo = config_get_string_value(config_kernel,"ALGORITMO_PLANIFICACION");
-    if(!strcmp(algoritmo, "FIFO") || !strcmp(algoritmo, "RR")) {
     switch(tipo){
         case GENERICA:
             pcb_block_gen * proceso_a_atender_gen = (pcb_block_gen *) proceso_a_atender;
-            cambiar_estado(proceso_a_atender_gen->el_pcb,READY);
-            push_con_mutex(cola_ready,proceso_a_atender_gen->el_pcb,&mutex_lista_ready);
-            sem_post(&sem_procesos_ready);
-            free(proceso_a_atender_gen->unidad_de_tiempo);
-            free(proceso_a_atender_gen);    
+            if((!strcmp(algoritmo, "FIFO")) || (!strcmp(algoritmo, "RR")) || ((!strcmp(algoritmo, "VRR")) && proceso_a_atender_gen->el_pcb->QUANTUM >= atoi(quantum)) ){//para dejar en claro que en el caso else el quantum del pcb es menor que el global
+                cambiar_estado(proceso_a_atender_gen->el_pcb,READY);
+                push_con_mutex(cola_ready,proceso_a_atender_gen->el_pcb,&mutex_lista_ready);
+                sem_post(&sem_procesos_ready);
+                free(proceso_a_atender_gen->unidad_de_tiempo);
+                free(proceso_a_atender_gen);
+            }else{
+                cambiar_estado(proceso_a_atender_gen->el_pcb,READY_AUX);
+                push_con_mutex(cola_ready_aux,proceso_a_atender_gen->el_pcb,&mutex_lista_ready);
+                sem_post(&sem_procesos_ready);//el mismo semaforo de procesos porque en si, el proceso esta listo para ejecutarse
+                free(proceso_a_atender_gen->unidad_de_tiempo);
+                free(proceso_a_atender_gen);
+            }
             break;
         case STDIN:
             pcb_block_STDIN * proceso_a_atender_STDIN = (pcb_block_STDIN *) proceso_a_atender;
-            cambiar_estado(proceso_a_atender_STDIN->el_pcb,READY);
-            push_con_mutex(cola_ready,proceso_a_atender_STDIN->el_pcb,&mutex_lista_ready);
-            sem_post(&sem_procesos_ready);
-            free(proceso_a_atender_STDIN->direccion_fisica);
-            free(proceso_a_atender_STDIN->tamanio);
-            free(proceso_a_atender_STDIN);    
+            if((!strcmp(algoritmo, "FIFO")) || (!strcmp(algoritmo, "RR")) || ((!strcmp(algoritmo, "VRR")) && proceso_a_atender_gen->el_pcb->QUANTUM >= atoi(quantum)) ){//para dejar en claro que en el caso else el quantum del pcb es menor que el global
+                cambiar_estado(proceso_a_atender_STDIN->el_pcb,READY);
+                push_con_mutex(cola_ready,proceso_a_atender_STDIN->el_pcb,&mutex_lista_ready);
+                sem_post(&sem_procesos_ready);
+                free(proceso_a_atender_STDIN->direccion_fisica);
+                free(proceso_a_atender_STDIN->tamanio);
+                free(proceso_a_atender_STDIN);  
+            }else{
+                cambiar_estado(proceso_a_atender_STDIN->el_pcb,READY_AUX);
+                push_con_mutex(cola_ready_aux,proceso_a_atender_STDIN->el_pcb,&mutex_lista_ready);
+                sem_post(&sem_procesos_ready);//el mismo semaforo de procesos porque en si, el proceso esta listo para ejecutarse
+                free(proceso_a_atender_STDIN->direccion_fisica);
+                free(proceso_a_atender_STDIN->tamanio);
+                free(proceso_a_atender_STDIN);  
+            }
             break;
         case STDOUT:
             pcb_block_STDOUT * proceso_a_atender_STDOUT = (pcb_block_STDOUT *) proceso_a_atender;
-            cambiar_estado(proceso_a_atender_STDOUT->el_pcb,READY);
-            push_con_mutex(cola_ready,proceso_a_atender_STDOUT->el_pcb,&mutex_lista_ready);
-            sem_post(&sem_procesos_ready);
-            free(proceso_a_atender_STDOUT->direccion_fisica);
-            free(proceso_a_atender_STDOUT->tamanio);
-            free(proceso_a_atender_STDOUT);     
+            if((!strcmp(algoritmo, "FIFO")) || (!strcmp(algoritmo, "RR")) || ((!strcmp(algoritmo, "VRR")) && proceso_a_atender_gen->el_pcb->QUANTUM >= atoi(quantum)) ){//para dejar en claro que en el caso else el quantum del pcb es menor que el global
+                cambiar_estado(proceso_a_atender_STDOUT->el_pcb,READY);
+                push_con_mutex(cola_ready,proceso_a_atender_STDOUT->el_pcb,&mutex_lista_ready);
+                sem_post(&sem_procesos_ready);
+                free(proceso_a_atender_STDOUT->direccion_fisica);
+                free(proceso_a_atender_STDOUT->tamanio);
+                free(proceso_a_atender_STDOUT); 
+            }else{
+                cambiar_estado(proceso_a_atender_STDOUT->el_pcb,READY_AUX);
+                push_con_mutex(cola_ready_aux,proceso_a_atender_STDOUT->el_pcb,&mutex_lista_ready);
+                sem_post(&sem_procesos_ready);
+                free(proceso_a_atender_STDOUT->direccion_fisica);
+                free(proceso_a_atender_STDOUT->tamanio);
+                free(proceso_a_atender_STDOUT); 
+            }
             break;
-    }
-	}else{ //todavía no analizamos VRR
-                        
+        case RECURSOVT:
+            pcb * pcb_a_ready = (pcb *) proceso_a_atender;
+            if((!strcmp(algoritmo, "FIFO")) || (!strcmp(algoritmo, "RR")) || ((!strcmp(algoritmo, "VRR")) && proceso_a_atender_gen->el_pcb->QUANTUM >= atoi(quantum)) ){//para dejar en claro que en el caso else el quantum del pcb es menor que el global
+                cambiar_estado(pcb_a_ready,READY);
+                push_con_mutex(cola_ready_aux,pcb_a_ready,&mutex_lista_ready);
+                sem_post(&sem_procesos_ready);
+            }else{
+                cambiar_estado(pcb_a_ready,READY_AUX);
+                push_con_mutex(cola_ready_aux,pcb_a_ready,&mutex_lista_ready);
+                sem_post(&sem_procesos_ready);
+            }
+            break;
     }
 }
 

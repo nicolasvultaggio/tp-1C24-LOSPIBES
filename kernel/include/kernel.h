@@ -14,7 +14,7 @@
 typedef struct {
     int * fd_conexion_con_interfaz; // puntero a ese fd (otra referencia a ese fd)
     char * nombre;
-    io_type tipo;
+    vuelta_type tipo;
     t_list * cola_bloqueados;
     sem_t  * sem_procesos_blocked; //es mas facil su manejo si su valor lo manejamos desde distintas referencias
     pthread_mutex_t * mutex_procesos_blocked; // para mutua exclusion de la cola bloqueados
@@ -66,6 +66,7 @@ char ** recursos;
 char ** instancias;
 
 t_list* cola_ready;
+t_list* cola_ready_aux;
 t_list* cola_exec;
 t_list* cola_new;
 t_list* cola_block_io;
@@ -77,7 +78,7 @@ int generador_pid = 0;
 
 sem_t sem_multiprogramacion; 
 sem_t sem_procesos_new; // semaforo que marca procesos disponibles en new
-sem_t sem_procesos_ready; // semaforo que marca procesos disponibles en ready
+sem_t sem_procesos_ready; // semaforo que marca procesos disponibles en ready (y ready_aux)
 sem_t sem_despachar;
 sem_t sem_procesos_exit;
 sem_t sem_atender_rta;
@@ -86,7 +87,7 @@ sem_t sem_vuelta_recursos;
 
 
 pthread_mutex_t mutex_pid; 
-pthread_mutex_t mutex_lista_ready; 
+pthread_mutex_t mutex_lista_ready;
 pthread_mutex_t mutex_lista_new; 
 pthread_mutex_t mutex_lista_exec; 
 pthread_mutex_t mutex_lista_interfaces; 
@@ -94,6 +95,8 @@ pthread_mutex_t mutex_lista_exit;
 pthread_mutex_t mutex_debe_planificar;
 pthread_mutex_t mutex_envio_memoria;
 pthread_mutex_t mutex_asignacion_recursos;
+
+pcb * pcb_a_enviar ;
 
 //MANEJO DE RECURSOS
 t_list* inicializar_recursos();
@@ -149,9 +152,13 @@ void iniciar_planificacion_corto_plazo();
 void despachador();
 void atender_vuelta_dispatch();
 pcb * obtener_pcb_segun_algoritmo(char * algoritmo);
+bool colaVacia(t_list* colaDeEstado);
 void cambiar_estado(pcb * un_pcb , estadosDeLosProcesos estado);
 char* string_de_estado(estadosDeLosProcesos estado);
-void manejar_quantum(int pid);
+void manejar_quantum_RR(int pid);
+void manejar_quantum_VRR(int pid);
+t_temporal* cronometro;
+int tiempo_transcurrido_en_cpu;
 void reducir_quantum(void *args);
 
 
@@ -169,7 +176,7 @@ char * preguntar_nombre_interfaz(int un_fd);
 void atender_interfaz_generica(element_interfaz * datos_interfaz);
 void atender_interfaz_STDIN(element_interfaz * datos_interfaz);
 void atender_interfaz_STDOUT(element_interfaz * datos_interfaz);
-void procesar_vuelta_blocked_a_ready(void * proceso_a_atender,io_type tipo);
+void procesar_vuelta_blocked_a_ready(void * proceso_a_atender,vuelta_type tipo);
 size_t enviar_paquete_io(t_paquete* paquete, int socket_cliente);
 void liberar_pcb_block_gen(void * pcb_bloqueado);
 void liberar_pcb_block_STDIN(void * pcb_bloqueado);
