@@ -620,8 +620,8 @@ t_list* iniciar_recursos_en_proceso(){
 void manejar_wait(pcb* pcb, char* recurso_wait){
     recurso* recurso_buscado = buscar_recurso(recurso_wait); // devuelve o el recurso encontrado o un recurso con ID = -1 que significa que NO EXISTE
 	if(recurso_buscado->id == -1){
-		pcb->motivo_exit = RECURSO_INVALIDO;
-		cambiar_estado(pcb, EXITT);
+		pcb->motivo = RECURSO_INVALIDO; // antes era motivo_exit, en vez de motivo
+		procesar_cambio_estado(pcb, EXITT);
         push_con_mutex(cola_exit,pcb,&mutex_lista_exit); //cuando no existe hay que mandarlo a exit 
 		sem_post(&sem_procesos_exit);
         sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
