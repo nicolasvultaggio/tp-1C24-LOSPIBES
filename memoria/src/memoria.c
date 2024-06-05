@@ -12,7 +12,7 @@ int main() {
     
     log_info(logger_memoria, "Puerto de memoria habilitado para sus clientes");
 
-
+	iniciar_memoria_contigua();
     //***************************CHECKPOINT 2*************************+
     
     // Iniciar conexiones y esperar y creo lista de procesos
@@ -25,6 +25,30 @@ int main() {
     
 }
 
+void iniciar_memoria_contigua(){
+	user_space = malloc(tam_memoria); //casteo porque size_t representa numeros de bytes mejor
+	cant_marcos = tam_memoria / tam_pagina;//siempre devuelve un numero entero, porque tam_memoria = tam_pagina * cant_marcos, por hipotesis del tp
+	bitmap=malloc(dividir_y_redondear_hacia_arriba(cant_marcos,8)); //el tamaño del bitmap es la cantidad de bits que ocupará expresada en bytes
+	frames_array = bitarray_create_with_mode(bitmap,dividir_y_redondear_hacia_arriba( cant_marcos , 8), LSB_FIRST); // simplemente apunto al bitmap como si fuera un array de bits
+	//solo utilizar cant_marcos, user_space, frames_array
+} //IMPORTANTE, la cantidad de elementos del bitarray a veces no termina siendo igual a la cantidad de marcos, redondeando para arriba nos aseguramos de que esta no sea menor
+
+int nro_de_marco_libre(){
+	for(int i=0; i<cant_marcos; i++){
+		if(bitarray_test_bit(frames_array, (off_t) i))
+			return i;
+	}
+	return -1; //simbolizamos el -1 como que no hay marcos disponibles ----> acá devolver OUT OF MEMORY
+}
+
+size_t dividir_y_redondear_hacia_arriba(size_t a,size_t b){
+	size_t resultado = a / b ;
+	if (a % b == 0){
+		return resultado;
+	}
+	return ( resultado + 1);
+}
+
 void inicializar_semaforos(){
 	//pthread_mutex_init(&mutex_lista_new, NULL);
 	pthread_mutex_init(&mutex_lista_instrucciones, NULL);
@@ -33,8 +57,8 @@ void inicializar_semaforos(){
 //Esta pensado para que en un futuro lea mas de una configuracion. 
 void leer_configuraciones(){
     puerto_propio = config_get_string_value(config_memoria,"PUERTO_PROPIO");
-     tam_memoria=config_get_int_value(config_memoria, "TAM_MEMORIA");
-    tam_pagina= config_get_int_value(config_memoria,"TAM_PAGINA");
+    tam_memoria= (size_t) config_get_int_value(config_memoria, "TAM_MEMORIA");
+    tam_pagina= (size_t) config_get_int_value(config_memoria,"TAM_PAGINA");
     path_instrucciones=config_get_string_value(config_memoria,"PATH_INSTRUCCIONES");
     retardo_respuesta= config_get_int_value(config_memoria,"RETARDO_RESPUESTA");
 }
@@ -240,7 +264,7 @@ void iniciar_memoria_apedidodeKernel(char* path, int pid, int socket_kernel) {
     t_listaprincipal* proceso_instr = malloc(sizeof(t_listaprincipal));
     proceso_instr->pid = pid;
     proceso_instr->instrucciones = instrucciones;
-
+	proceso_instr->tabla_de_paginas=list_create(); //solo crea la lista, pero arranca sin elementos ya que no tiene marcos asignados, se le agregan elementos del tipo fila_tabla_de_paginas
 	push_con_mutex(proceso_instrucciones, proceso_instr, &mutex_lista_instrucciones);
 }
 
@@ -299,4 +323,5 @@ void procesar_pedido_instruuccion(int socket_cpu, t_list* proceso_instrucciones)
 	usleep(retardo_respuesta*1000);//preguntar 
 	send_proxima_instruccion(socket_cpu, instruccion_a_enviar);
 }
+
 
