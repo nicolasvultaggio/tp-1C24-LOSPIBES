@@ -723,7 +723,7 @@ void despachador(){
         while(leer_debe_planificar_con_mutex()){
             sem_wait(&sem_despachar); //espera a que NO haya un proceso ejecutandose : la cola exec siempre tiene un solo proceso
             sem_wait(&sem_procesos_ready); //espera a que haya al menos un proceso en ready para ponerse a planificar
-            pcb * pcb_a_enviar = obtener_pcb_segun_algoritmo(algoritmo_de_planificacion); // obtiene un pcb de la cola de ready
+            pcb_a_enviar = obtener_pcb_segun_algoritmo(algoritmo_de_planificacion); // obtiene un pcb de la cola de ready
             cambiar_estado(pcb_a_enviar,EXECUTE);
             push_con_mutex(cola_exec,pcb_a_enviar,&mutex_lista_exec); // uso con mutex porque posiblemente varios hilos agregen a exec
             enviar_pcb(pcb_a_enviar, fd_conexion_dispatch,CODE_PCB,,NULL,NULL,NULL,NULL,NULL);//falta motivo de desalojo
@@ -884,7 +884,7 @@ void procesar_conexion_interfaz(void * arg){
     element_interfaz * datos_interfaz = malloc(sizeof(element_interfaz));//falta liberar, posiblemente cuando se desconecte la interfaz
     datos_interfaz->fd_conexion_con_interfaz = fd_conexion_io;//otra a referencia al mismo malloc recibido por parametro, usar para liberar / liberado
     datos_interfaz->nombre = preguntar_nombre_interfaz((*fd_conexion_io)); //falta liberar, posiblemente cuando se desconecte interfaz, ¿Por qué es dinámico? porque en principio, no se sabe el tamaño que ocupara el nombre / liberado
-    datos_interfaz->tipo = (io_type) preguntar_tipo_interfaz((*fd_conexion_io));
+    datos_interfaz->tipo = (vuelta_type) preguntar_tipo_interfaz((*fd_conexion_io));
     datos_interfaz->cola_bloqueados=list_create();  //pcbs_bloqueados es una lista de pcb_block
     sem_init((datos_interfaz->sem_procesos_blocked),0,0); 
     pthread_mutex_init((datos_interfaz->mutex_procesos_blocked),NULL);
@@ -1035,7 +1035,7 @@ void procesar_vuelta_blocked_a_ready(void * proceso_a_atender, vuelta_type tipo)
             free(proceso_a_atender_STDOUT->tamanio);
             free(proceso_a_atender_STDOUT);     
             break;
-        case RECURSO:
+        case RECURSOVT:
             pcb * pcb_a_ready = (pcb *) proceso_a_atender;
             cambiar_estado(pcb_a_ready,READY);
             push_con_mutex(cola_ready,pcb_a_ready,&mutex_lista_ready);

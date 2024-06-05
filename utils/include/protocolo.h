@@ -184,8 +184,9 @@ typedef enum{
     GENERICA,
     STDIN,
     STDOUT,
+	RECURSOVT, //agrego el VT al final porque ya hay un enum llamado "RECURSO"
     DIALFS
-}io_type;
+}vuelta_type;
 
 typedef enum{
     INFORMAR_NOMBRE,

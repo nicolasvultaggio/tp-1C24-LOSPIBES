@@ -14,7 +14,7 @@
 typedef struct {
     int * fd_conexion_con_interfaz; // puntero a ese fd (otra referencia a ese fd)
     char * nombre;
-    io_type tipo;
+    vuelta_type tipo;
     t_list * cola_bloqueados;
     sem_t  * sem_procesos_blocked; //es mas facil su manejo si su valor lo manejamos desde distintas referencias
     pthread_mutex_t * mutex_procesos_blocked; // para mutua exclusion de la cola bloqueados
@@ -95,6 +95,8 @@ pthread_mutex_t mutex_debe_planificar;
 pthread_mutex_t mutex_envio_memoria;
 pthread_mutex_t mutex_asignacion_recursos;
 
+pcb * pcb_a_enviar ;
+
 //MANEJO DE RECURSOS
 t_list* inicializar_recursos();
 int* arrayDeStrings_a_arrayDeInts(char** array_de_strings);
@@ -169,7 +171,7 @@ char * preguntar_nombre_interfaz(int un_fd);
 void atender_interfaz_generica(element_interfaz * datos_interfaz);
 void atender_interfaz_STDIN(element_interfaz * datos_interfaz);
 void atender_interfaz_STDOUT(element_interfaz * datos_interfaz);
-void procesar_vuelta_blocked_a_ready(void * proceso_a_atender,io_type tipo);
+void procesar_vuelta_blocked_a_ready(void * proceso_a_atender,vuelta_type tipo);
 size_t enviar_paquete_io(t_paquete* paquete, int socket_cliente);
 void liberar_pcb_block_gen(void * pcb_bloqueado);
 void liberar_pcb_block_STDIN(void * pcb_bloqueado);
