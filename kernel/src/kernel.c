@@ -482,7 +482,7 @@ void atender_vuelta_dispatch(){
                     break;
                     case: SOLICITAR_SIGNAL:
                         char* recurso_signal = list_get(lista, final_pcb+1);
-				        atender_signal(pcb_actualizado, recurso_signal);
+				        manejar_signal(pcb_actualizado, recurso_signal);
 				        free(recurso_signal);
 				break;
                 }
@@ -617,31 +617,51 @@ t_list* iniciar_recursos_en_proceso(){
 }
 
 
-void manejar_wait(pcb* pcb, char* recurso_wait){
+void manejar_wait(pcb* proceso, char* recurso_wait){
     recurso* recurso_buscado = buscar_recurso(recurso_wait); // devuelve o el recurso encontrado o un recurso con ID = -1 que significa que NO EXISTE
 	if(recurso_buscado->id == -1){
-		pcb->motivo = RECURSO_INVALIDO; // antes era motivo_exit, en vez de motivo
-		procesar_cambio_estado(pcb, EXITT);
-        push_con_mutex(cola_exit,pcb,&mutex_lista_exit); //cuando no existe hay que mandarlo a exit 
+        log_error(logger_kernel, "El recurso %s no existe", recurso_wait);
+		proceso->motivo = RECURSO_INVALIDO; // antes era motivo_exit, en vez de motivo
+		cambiar_estado(proceso, EXITT);
+        push_con_mutex(cola_exit,proceso,&mutex_lista_exit); //cuando no existe hay que mandarlo a exit 
 		sem_post(&sem_procesos_exit);
         sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
 	} else {
 		recurso_buscado->instancias --;
 		if(recurso_buscado->instancias < 0){ //Obviamente si es < 0 se bloquea 
-			cambiar_estado(pcb, BLOCKED);
+			cambiar_estado(proceso, BLOCKED);
             //cada recurso tiene SU cola y SU mutex
-			push_con_mutex(recurso_buscado->cola_block_asignada, pcb, &recurso_buscado->mutex_asignado);
+			push_con_mutex(recurso_buscado->cola_block_asignada, proceso, &recurso_buscado->mutex_asignado);
 			sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
 		} else {
-			agregar_recurso(recurso_buscado->nombreRecurso, pcb); //Hay que asignarle el recurso usado al pcb AGREGAR LISTA DE RECURSOS A LA ESTRUCTURA PCB. Aca es donde me di cuenta que todo se iba a la mierda con el empaquetado
-			push_con_mutex(cola_exec, pcb, &mutex_lista_exec);
-			enviar_pcb(pcb,fd_conexion_dispatch,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+			agregar_recurso(recurso_buscado->nombreRecurso, proceso); //Hay que asignarle el recurso usado al pcb AGREGAR LISTA DE RECURSOS A LA ESTRUCTURA PCB. Aca es donde me di cuenta que todo se iba a la mierda con el empaquetado
+			push_con_mutex(cola_exec, proceso, &mutex_lista_exec);
+			enviar_pcb(proceso,fd_conexion_dispatch,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
 		}
 	}
 }
 
-void atender_signal(pcb* pcb, char* recurso_signal){
-    recurso*
+void manejar_signal(pcb* proceso, char* recurso_signal){
+	recurso* recurso_buscado = buscar_recurso(recurso_signal);
+	if(recurso_buscado->id == -1){
+		log_error(logger_kernel, "El recurso %s no existe", recurso_signal);
+		proceso->motivo_exit = RECURSO_INVALIDO;
+		cambiar_estado(proceso, EXITT);
+		push_con_mutex(cola_exit,proceso,&mutex_lista_exit); //cuando no existe hay que mandarlo a exit 
+		sem_post(&sem_procesos_exit);
+        sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
+	} else {
+		recurso_buscado->instancias ++;
+		quitar_recurso(recurso_buscado->recurso, proceso); // FALTA IMPLEMENTAR
+		if(recurso_buscado->instancias <= 0){
+			pcb* proceso_desbloqueado = pop_con_mutex(recurso_buscado->cola_block_asignada, &recurso_buscado->mutex_asignado);
+			agregar_recurso(recurso_buscado->recurso, proceso_desbloqueado);
+			procesar_vuelta_blocked_a_ready(proceso_desbloqueado, RECURSO);
+			sem_post(&sem_procesos_ready);//???? Hay que ver si hay un semaforo para la cola aux
+		}
+		push_con_mutex(cola_exec, proceso, &mutex_lista_exec);
+		enviar_pcb(proceso,fd_conexion_dispatch,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+	}
 }
 
 recurso *buscar_recurso(recurso* recurso_a_buscar){

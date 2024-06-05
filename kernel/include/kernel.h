@@ -105,6 +105,7 @@ t_list* iniciar_recursos_en_proceso();
 void manejar_wait(pcb* pcb, char* recurso_a_buscar);
 recurso *buscar_recurso(recurso* recurso_a_buscar);
 void agregar_recurso(char* recurso, pcb* pcb);
+void manejar_signal(pcb* proceso, char* recurso_signal);
 
 //no sabemos cuales haran falta todavía, pero por las dudas los declaro
 t_log* logger_kernel;
