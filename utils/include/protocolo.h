@@ -15,6 +15,7 @@
 #include<unistd.h>
 #include<stdbool.h>
 #include<readline/readline.h>
+#include<commons/bitarray.h>
 /* DESALOJO */
 typedef enum {
 	EXITO, //finalizacion normal
