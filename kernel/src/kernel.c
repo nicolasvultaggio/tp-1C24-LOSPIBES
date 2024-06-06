@@ -339,15 +339,41 @@ void procesos_en_exit(){
         char* motivo_del_desalojo = motivo_a_string(pcbFinalizado->motivo);
         log_info(logger_obligatorio, "Finaliza el proceso: %d - Motivo: %s", pcbFinalizado->PID, motivo_del_desalojo);
         sem_post(&sem_multiprogramacion); // +1 a la multiprogramacion ya que hay 1 proceso menos en READY-EXEC-BLOCK
-
+        list_add(cola_exit_liberados,pcbFinalizado); //ESTAR ATENTO A SI EN UN FUTURO NECESITA MUTEX
         pthread_mutex_lock(&mutex_envio_memoria);
         enviar_liberar_proceso(pcbFinalizado, fd_conexion_memoria); //mando el fd para ponerlo en protocolo con todos los sends
         recv(fd_conexion_memoria,&rta_memoria,sizeof(int),MSG_WAITALL);
         pthread_mutex_unlock(&mutex_envio_memoria);
+        liberar_recursos(pcbFinalizado); // Esta es para que los procesos bloqueados en los recursos que tenia el pcbFinalizado se desbloqueen
+        pcb_destroy(pcbFinalizado); // esta destruye todo el pcb pa la mierda 
         }
-        list_add(cola_exit_liberados,pcbFinalizado); //ESTAR ATENTO A SI EN UN FUTURO NECESITA MUTEX
         //}
     }
+
+
+void liberar_recursos(pcb* proceso){
+    recurso* recurso_buscado = NULL;
+
+    for(int i = 0; i<list_size(lista_recursos); i++){
+        recurso_asignado* recurso_asignado = list_get(proceso->recursos_asignados, i);
+        //Si el recurso asignado tiene instancias le aumenta la instancia dentro de la lista de recursos disponibles para todos los procesos
+        if(recurso_asignado->instancias > 0){
+            recurso_buscado = buscar_recurso(recurso_asignado->nombre_recurso);
+            recurso_buscado->instancias ++;
+            
+            // Desbloqueo de procesos, como aumentamos 1 se desbloquea el proceso que estaba bloqueado
+            if(recurso_buscado != NULL){
+                pcb* pcb2 = pop_con_mutex(recurso_buscado->cola_block_asignada, &recurso_buscado->mutex_asignado);
+                agregar_recurso(recurso_buscado->recurso, pcb2);
+                procesar_vuelta_blocked_a_ready(pcb2, RECURSOVT);
+                sem_post(&sem_procesos_ready);
+            }
+        }
+    }
+}
+
+	
+
 
 char* motivo_a_string(motivo_desalojo motivo){
     switch (motivo)
@@ -380,8 +406,21 @@ char* motivo_a_string(motivo_desalojo motivo){
 //SEGUIR DESAROLLANDO
 
 void pcb_destroy(pcb* pcb){
+    for (int i = 0; i < list_size(proceso->recursos_asignados); i++)
+    {
+        recurso* recurso_asignado = list_get(proceso->recursos_asignados, i);
+        recurso_destroy(recurso_asignado);
+    }
+    list_destroy(proceso->recursos_asignados);
     free(pcb);
 }
+void recurso_destroy(recurso* recurso) {
+    free(recurso->recurso);
+    list_destroy_and_destroy_elements(recurso->cola_block_asignada, free);
+    pthread_mutex_destroy(&recurso->mutex_asignado);
+    free(recurso);
+}
+
 
 void planificacion_procesos_ready(){
     //while(1){
@@ -656,8 +695,7 @@ void manejar_signal(pcb* proceso, char* recurso_signal){
 		if(recurso_buscado->instancias <= 0){
 			pcb* proceso_desbloqueado = pop_con_mutex(recurso_buscado->cola_block_asignada, &recurso_buscado->mutex_asignado);
 			agregar_recurso(recurso_buscado->recurso, proceso_desbloqueado);
-			procesar_vuelta_blocked_a_ready(proceso_desbloqueado, RECURSO);
-			sem_post(&sem_procesos_ready);//???? Hay que ver si hay un semaforo para la cola aux
+			procesar_vuelta_blocked_a_ready(proceso_desbloqueado, RECURSOVT);
 		}
 		push_con_mutex(cola_exec, proceso, &mutex_lista_exec);
 		enviar_pcb(proceso,fd_conexion_dispatch,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
@@ -682,6 +720,17 @@ void agregar_recurso(char* recurso, pcb* pcb){
 		if(strcmp(recurso_asignado->nombreRecurso, recurso) == 0){ //Busca dentro de los recursos del pcb para agregarle 1 instancia
 			pthread_mutex_lock(&mutex_asignacion_recursos);
 			recurso_asignado->instancias ++;
+			pthread_mutex_unlock(&mutex_asignacion_recursos);
+		}
+	}
+}
+
+void quitar_recurso(char* recurso_a_sacar, pcb* pcb){
+	for(int i = 0; i<list_size(pcb->recursos_asignados); i++){
+		recurso_asignado* recurso_asignado = list_get(pcb->recursos_asignados, i);
+		if(strcmp(recurso_asignado->nombre_recurso, recurso_a_sacar) == 0){
+			pthread_mutex_lock(&mutex_asignacion_recursos);
+			recurso_asignado->instancias --;
 			pthread_mutex_unlock(&mutex_asignacion_recursos);
 		}
 	}
