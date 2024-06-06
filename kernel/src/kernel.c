@@ -339,13 +339,11 @@ void procesos_en_exit(){
         char* motivo_del_desalojo = motivo_a_string(pcbFinalizado->motivo);
         log_info(logger_obligatorio, "Finaliza el proceso: %d - Motivo: %s", pcbFinalizado->PID, motivo_del_desalojo);
         sem_post(&sem_multiprogramacion); // +1 a la multiprogramacion ya que hay 1 proceso menos en READY-EXEC-BLOCK
-        list_add(cola_exit_liberados,pcbFinalizado); //ESTAR ATENTO A SI EN UN FUTURO NECESITA MUTEX
         pthread_mutex_lock(&mutex_envio_memoria);
         enviar_liberar_proceso(pcbFinalizado, fd_conexion_memoria); //mando el fd para ponerlo en protocolo con todos los sends
         recv(fd_conexion_memoria,&rta_memoria,sizeof(int),MSG_WAITALL);
         pthread_mutex_unlock(&mutex_envio_memoria);
-        liberar_recursos(pcbFinalizado); // Esta es para que los procesos bloqueados en los recursos que tenia el pcbFinalizado se desbloqueen
-        pcb_destroy(pcbFinalizado); // esta destruye todo el pcb pa la mierda 
+        list_add(cola_exit_liberados,pcbFinalizado); //ESTAR ATENTO A SI EN UN FUTURO NECESITA MUTEX
         }
         //}
     }
@@ -943,6 +941,10 @@ void terminar_programa(){
     log_destroy(logger_kernel);   
     log_destroy(logger_obligatorio);
     liberar_conexion(fd_escucha_kernel);
+
+    // HAY QUE HACER UN FOR PARA CADA PROCESO QUE ESTE EN cola_exit_liberados, FALTA IMPLEMENTAR
+    liberar_recursos(pcbFinalizado); // Esta es para que los procesos bloqueados en los recursos que tenia el pcbFinalizado se desbloqueen
+    pcb_destroy(pcbFinalizado); // esta destruye todo el pcb pa la mierda 
 }
 
 /*
