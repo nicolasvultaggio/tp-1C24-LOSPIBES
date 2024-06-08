@@ -259,7 +259,7 @@ void atender_instruccion_valida(char* leido){
     }else if(strcmp(comando_consola[0] , "MULTIPROGRAMACION") == 0){
         cambiar_multiprogramacion(comando_consola[1]);
     }else if(strcmp(comando_consola[0] , "PROCESO_ESTADO") == 0){
-        // falta
+        enlistar_procesos();
     }else{
         log_error(logger_kernel, "Nunca tendria que llegar aca por el filtro, pero si llega lo aviso por las dudas. FILTRO MAL HECHO");
         exit(EXIT_FAILURE);
@@ -310,6 +310,29 @@ void cambiar_multiprogramacion(char* nuevoGrado){
             sem_wait(&sem_multiprogramacion);
         }
     }
+}
+
+//LISTAS: EXIT
+void enlistar_procesos(){
+    t_list* lista_pids_new = obtener_lista_pid(cola_new);
+    char* lista_new = de_lista_a_string(lista_pids_new);
+
+    t_list* lista_pids_ready = obtener_lista_pid(cola_ready);
+    char* lista_ready = de_lista_a_string(lista_pids_ready);
+    t_list* lista_pids_ready_prioridad = obtener_lista_pid(cola_ready_aux);
+    char* lista_ready_aux = de_lista_a_string(lista_pids_ready_prioridad);
+    list_add_all(lista_ready, lista_ready_aux); //AGREGA TODOS LOS ELEMENTOS DE LA LISTA DE AUX A LA DE READY
+
+    t_list* lista_pids_exec = obtener_lista_pid(cola_exec);
+    char* lista_exec = de_lista_a_string(lista_pids_exec);
+
+    t_list* lista_pids_block = obtener_lista_pid(cola_block);//IMPLEMENTAR ESTA LISTA 
+    char* lista_block = de_lista_a_string(lista_pids_block);
+
+    t_list* lista_pids_exit = obtener_lista_pid(cola_exit);
+    char* lista_exit = de_lista_a_string(lista_pids_exit);
+
+    log_info(logger_obligatorio, "Estados en: \n -NEW: [%s] \n -READY: [%s] \n -EXEC: [%s] \n -BLOCK: [%s] \n -EXIT: [%s]");
 }
 
 void planificar_largo_plazo(){
@@ -483,8 +506,8 @@ void atender_vuelta_dispatch(){
     while(1){
         while(leer_debe_planificar_con_mutex()){
             sem_wait(&sem_atender_rta);//esperar a que se haya despachado un pcb
-            op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");//ponerse a escuchar el fd_dispatch
-            t_list * lista = recibir_paquete(fd_conexion_dispatch); //Esto me parece que tendria que ir arriba del SWITCH ya que en todos los casos vamos a tomar un pcb y actualizarlo.
+            op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");/
+            t_list * lista = recibir_paquete(fd_conexion_dispatch); 
             pcb* pcb_actualizado = guardar_datos_del_pcb(lista);
             int final_pcb = fin_pcb(lista); //Te devuelve el numero del elemento de la lista donde esta el ultimo osea del final del pcb
             switch(codop){
@@ -681,7 +704,7 @@ void manejar_signal(pcb* proceso, char* recurso_signal){
         sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
 	} else {
 		recurso_buscado->instancias ++;
-		quitar_recurso(recurso_buscado->recurso, proceso); // FALTA IMPLEMENTAR
+		quitar_recurso(recurso_buscado->recurso, proceso);
 		if(recurso_buscado->instancias <= 0){
 			pcb* proceso_desbloqueado = pop_con_mutex(recurso_buscado->cola_block_asignada, &recurso_buscado->mutex_asignado);
 			agregar_recurso(recurso_buscado->recurso, proceso_desbloqueado);

@@ -140,6 +140,7 @@ void iniciar_proceso(char* pathPasadoPorConsola);
 void iniciar_planificacion();
 void detener_planificacion();
 void cambiar_multiprogramacion(char* nuevoGrado);
+void enlistar_procesos();
 
 
 void planificar_largo_plazo();
