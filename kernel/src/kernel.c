@@ -89,9 +89,9 @@ void iniciar_proceso(char *pathPasadoPorConsola){
 
     pcb* proceso_nuevo = crear_pcb();
     
-    pthread_mutex_lock(&mutex_envio_memoria);
+    pthread_mutex_lock(&mutex_envio_memoria); // MUTEX para que no se envie nada a memoria mientras q memoria este atendiendo otras cosas de KERNEL
     enviar_datos_proceso(path, proceso_nuevo->PID, fd_conexion_memoria); // ENVIO PATH Y PID PARA QUE CUANDO CPU PIDA MANDE PID Y PC, Y AHI MEMORIA TENGA EL PID PARA IDENTIFICAR
-    recv(fd_conexion_memoria,&rta_memoria,sizeof(int),MSG_WAITALL);
+    recv(fd_conexion_memoria,&rta_memoria,sizeof(int),MSG_WAITALL); //(SE BLOQUEA EL HILO DE CONSOLA, HAY QUE VER QUE TAN BUENO ESTA ESO)
     pthread_mutex_unlock(&mutex_envio_memoria);
     
     push_con_mutex(cola_new,proceso_nuevo,&mutex_lista_new);
@@ -100,7 +100,7 @@ void iniciar_proceso(char *pathPasadoPorConsola){
 }
 
 
-
+//Segun el foro no hay que bsucar los procesos que esten bloqueados.
 pcb* buscar_proceso_para_finalizar(int pid_a_buscar){ 
     pcb* pcbEncontrado;
     int posicionPCB = buscar_posicion_proceso(cola_new, pid_a_buscar);
@@ -151,7 +151,7 @@ pcb *crear_pcb(){
     
     pcb *un_pcb;
     un_pcb->PID = asignar_pid();
-    un_pcb->PC = 1; // porque todo proceso arranca en la instruccion 0
+    un_pcb->PC = 1; 
     un_pcb->QUANTUM = atoi(quantum);
     un_pcb->motivo = PROCESO_ACTIVO; 
     un_pcb->estado = NEW;
@@ -168,12 +168,7 @@ pcb *crear_pcb(){
     un_pcb->registros.SI = 0;
     un_pcb->registros.DI = 0;
 
-    //pcb->motivo_exit = PROCESO_ACTIVO;
     un_pcb->recursos_asignados = iniciar_recursos_en_proceso();
-
-    
-    // ojo, cuando hagamos planificador a largo plazo puede haber semaforos
-
 
     return un_pcb;
 }
@@ -306,7 +301,6 @@ void cambiar_multiprogramacion(char* nuevoGrado){
     int nuevoGradoMultiprogramacion = atoi (nuevoGrado);
     int antiguoGradoMultiprogramacion = atoi(gradoDeMultiprogramacion);
     
-    //No se si habria q implementar un if que se fije si es igual el nuevo al antiguo. Creeria q si, HAY QUE IMPLEMENTAR.
     if(nuevoGradoMultiprogramacion  > antiguoGradoMultiprogramacion){
         for(int i=antiguoGradoMultiprogramacion ; i<nuevoGradoMultiprogramacion ; i++){
             sem_post(&sem_multiprogramacion);
@@ -343,6 +337,7 @@ void procesos_en_exit(){
         enviar_liberar_proceso(pcbFinalizado, fd_conexion_memoria); //mando el fd para ponerlo en protocolo con todos los sends
         recv(fd_conexion_memoria,&rta_memoria,sizeof(int),MSG_WAITALL);
         pthread_mutex_unlock(&mutex_envio_memoria);
+        liberar_recursos(pcbFinalizado); // Esta es para que los procesos bloqueados en los recursos que tenia el pcbFinalizado se desbloqueen
         list_add(cola_exit_liberados,pcbFinalizado); //ESTAR ATENTO A SI EN UN FUTURO NECESITA MUTEX
         }
         //}
@@ -382,15 +377,15 @@ char* motivo_a_string(motivo_desalojo motivo){
     case EXIT_CONSOLA:
         return "INTERRUPTED_BY_USER";
         break;
-    //case RECURSO_INVALIDO:
-    //return "INVALID_RESOURCE";
-    //break;
-    //case INTERFAZ_INVALIDA
-    //return "INVALID_INTERFACE";
-    //break;
+    case RECURSO_INVALIDO:
+        return "INVALID_RESOURCE";
+        break;
+    //case INTERFAZ_INVALIDA:
+    //    return "INVALID_INTERFACE";
+    //    break;
     //case SIN_MEMORIA
-    //return "OUT_OF_MEMORY";
-    //break
+    //    return "OUT_OF_MEMORY";
+    //    break;
 
 
     //TODAS COMENTADAS PORQ TODAVIA NO LAS IMPLEMENTARON
@@ -421,8 +416,7 @@ void recurso_destroy(recurso* recurso) {
 
 
 void planificacion_procesos_ready(){
-    //while(1){
-    while (esta_planificando) //no debería estar dentro de otro while(1)? no debería ser esta_planificando, debe ser leer_debe_planificar_con_mutex(), ojo con las condiciones de carrera, esta_planificando solo sirve para iniciar_planificacion
+    while (1)
     {
         sem_wait(&sem_procesos_new); // Cantidad de proceso en NEW
         pcb* pcb = pop_con_mutex(cola_new, &mutex_lista_new); //Agarramos el primero de la lista de NEW
@@ -430,10 +424,9 @@ void planificacion_procesos_ready(){
         proceso_a_ready(pcb); // Mandamos el proceso a ready
         sem_post(&sem_procesos_ready); // +1 a la cantidad de procesos en ready 
     }
-    //}
 }
 
-void proceso_a_ready(pcb* pcb){ //ojo se se habilita el mutex dos veces analicenlo porque esta como el culo // respeta gordo trolo
+void proceso_a_ready(pcb* pcb){ 
     pthread_mutex_lock(&mutex_lista_ready);
     list_add(cola_ready, pcb);
     logger_cola_ready(); //Logger obligatorio para romper las pelotillas
@@ -633,8 +626,7 @@ void atender_vuelta_dispatch(){
     }
 }
 
-//FALTA UNA BARBARIDAD
-//Podriamos poner un par de loggers para ver como va evolucionando el recurso pero me da mucha paja ABZ
+
 
 //Estos es la lista de recursos ASIGNADOS que es distintos a los SEMAFOROS QUE SE INICIALIZAN EN inicializar_recursos()
 t_list* iniciar_recursos_en_proceso(){
@@ -943,7 +935,6 @@ void terminar_programa(){
     liberar_conexion(fd_escucha_kernel);
 
     // HAY QUE HACER UN FOR PARA CADA PROCESO QUE ESTE EN cola_exit_liberados, FALTA IMPLEMENTAR
-    liberar_recursos(pcbFinalizado); // Esta es para que los procesos bloqueados en los recursos que tenia el pcbFinalizado se desbloqueen
     pcb_destroy(pcbFinalizado); // esta destruye todo el pcb pa la mierda 
 }
 
