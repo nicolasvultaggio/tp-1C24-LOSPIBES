@@ -322,7 +322,9 @@ void enlistar_procesos(){
     char* lista_ready = de_lista_a_string(lista_pids_ready);
     t_list* lista_pids_ready_prioridad = obtener_lista_pid(cola_ready_aux);
     char* lista_ready_aux = de_lista_a_string(lista_pids_ready_prioridad);
+
     list_add_all(lista_ready, lista_ready_aux); //AGREGA TODOS LOS ELEMENTOS DE LA LISTA DE AUX A LA DE READY
+    char* lista_ready_completa = de_lista_a_string(lista_ready); // Segun el chamaco CHAT GPT hay que volver a pasarla a strings
 
     t_list* lista_pids_exec = obtener_lista_pid(cola_exec);
     char* lista_exec = de_lista_a_string(lista_pids_exec);
@@ -333,7 +335,7 @@ void enlistar_procesos(){
     t_list* lista_pids_exit = obtener_lista_pid(cola_exit);
     char* lista_exit = de_lista_a_string(lista_pids_exit);
 
-    log_info(logger_obligatorio, "Estados en: \n -NEW: [%s] \n -READY: [%s] \n -EXEC: [%s] \n -BLOCK: [%s] \n -EXIT: [%s]");
+    log_info(logger_obligatorio, "Estados en: \n -NEW: [%s] \n -READY: [%s] \n -EXEC: [%s] \n -BLOCK: [%s] \n -EXIT: [%s]", lista_new, lista_ready, lista_exec, lista_block, lista_exit);
 
     
     free(lista_new);
