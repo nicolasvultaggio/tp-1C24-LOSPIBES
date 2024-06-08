@@ -127,7 +127,7 @@ n+4 instancias_asignadas(recurso2)
 */
 
 int fin_pcb(t_list* lista){
-    int cantidad_de_recursos = *list_get(lista,15);
+    int cantidad_de_recursos = list_get(lista,15);
     int cantidad_de_atributos_recursos = cantidad_de_recursos * 2;
 
     return cantidad_de_recursos + cantidad_de_atributos_recursos;
@@ -138,7 +138,7 @@ void empaquetar_recursos(t_paquete* paquete, t_list* lista_de_recursos){
 	agregar_a_paquete(paquete, &(cantidad_recursos), sizeof(int));//Agregamos la CANTIDAD de RECURSOS
 	for(int i = 0; i<cantidad_recursos; i++){
 		recurso_asignado* recurso_asignado = list_get(lista_de_recursos, i);
-		agregar_a_paquete(paquete, recurso_asignado->nombre_recurso, strlen(recurso_asignado->nombre_recurso) + 1);
+		agregar_a_paquete(paquete, recurso_asignado->nombreRecurso, strlen(recurso_asignado->nombreRecurso) + 1);
 		agregar_a_paquete(paquete, &(recurso_asignado->instancias), sizeof(int));
 	}
 }
@@ -156,8 +156,8 @@ t_list* desempaquetar_recursos(t_list* paquete, int cantidad){
 	while(i - cantidad - 1 < (*cantidad_recursos* 2)){
 		recurso_asignado* recurso_asignado = malloc(sizeof(recurso_asignado));
 		char* nombre = list_get(paquete, i); //nombe del primero
-		recurso_asignado->nombre_recurso = malloc(strlen(nombre) + 1);
-		strcpy(recurso_asignado->nombre_recurso, nombre);
+		recurso_asignado->nombreRecurso = malloc(strlen(nombre) + 1);
+		strcpy(recurso_asignado->nombreRecurso, nombre);
 		//free(nombre);           esto creo que tiene que estar porque ya se copio el valor a otro puntero
 		i++; // para pasar a las instancias
 

@@ -29,7 +29,8 @@ typedef enum {
 	SOLICITAR_STDOUT,
 	SOLICITAR_WAIT,
 	SOLICITAR_SIGNAL,
-	RECURSO_INVALIDO
+	RECURSO_INVALIDO,
+	VACIO
 } motivo_desalojo; //motivos de desalojo del proceso
 
 /* INSTRUCCIONES */
@@ -145,6 +146,7 @@ typedef enum {
 	LEER_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
 
 	INTERR, //UNICO codigo de operacion de la conexion interrupt
+	VACIOO
 }op_code; //codigos de operacion entre modulos, sirven para establecer que tipos de datos recibe el paquete
 
 

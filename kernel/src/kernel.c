@@ -393,13 +393,13 @@ void liberar_recursos(pcb* proceso){
         recurso_asignado* recurso_asignado = list_get(proceso->recursos_asignados, i);
         //Si el recurso asignado tiene instancias le aumenta la instancia dentro de la lista de recursos disponibles para todos los procesos
         if(recurso_asignado->instancias > 0){
-            recurso_buscado = buscar_recurso(recurso_asignado->nombre_recurso);
+            recurso_buscado = buscar_recurso(recurso_asignado->nombreRecurso);
             recurso_buscado->instancias ++;
             
             // Desbloqueo de procesos, como aumentamos 1 se desbloquea el proceso que estaba bloqueado
             if(recurso_buscado != NULL){
                 pcb* pcb2 = pop_con_mutex(recurso_buscado->cola_block_asignada, &recurso_buscado->mutex_asignado);
-                agregar_recurso(recurso_buscado->recurso, pcb2);
+                agregar_recurso(recurso_buscado->nombreRecurso, pcb2);
                 procesar_vuelta_blocked_a_ready(pcb2, RECURSOVT);
                 sem_post(&sem_procesos_ready);
             }
@@ -441,16 +441,16 @@ char* motivo_a_string(motivo_desalojo motivo){
 //SEGUIR DESAROLLANDO
 
 void pcb_destroy(pcb* pcb){
-    for (int i = 0; i < list_size(proceso->recursos_asignados); i++)
+    for (int i = 0; i < list_size(pcb->recursos_asignados); i++)
     {
-        recurso* recurso_asignado = list_get(proceso->recursos_asignados, i);
+        recurso* recurso_asignado = list_get(pcb->recursos_asignados, i);
         recurso_destroy(recurso_asignado);
     }
-    list_destroy(proceso->recursos_asignados);
+    list_destroy(pcb->recursos_asignados);
     free(pcb);
 }
 void recurso_destroy(recurso* recurso) {
-    free(recurso->recurso);
+    free(recurso->nombreRecurso);
     list_destroy_and_destroy_elements(recurso->cola_block_asignada, free);
     pthread_mutex_destroy(&recurso->mutex_asignado);
     free(recurso);
@@ -525,7 +525,7 @@ void atender_vuelta_dispatch(){
     while(1){
         while(leer_debe_planificar_con_mutex()){
             sem_wait(&sem_atender_rta);//esperar a que se haya despachado un pcb
-            op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");/
+            op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");
             t_list * lista = recibir_paquete(fd_conexion_dispatch); 
             pcb* pcb_actualizado = guardar_datos_del_pcb(lista);
             int final_pcb = fin_pcb(lista); //Te devuelve el numero del elemento de la lista donde esta el ultimo osea del final del pcb
@@ -547,12 +547,12 @@ void atender_vuelta_dispatch(){
                	break;
                 case RECURSO:
                 switch(pcb_actualizado -> motivo){
-                    case: SOLICITAR_WAIT: 
+                    case SOLICITAR_WAIT:
                         char * recurso_wait = list_get(lista , final_pcb+1);
                         manejar_wait(pcb_actualizado, recurso_wait);
 				        free(recurso_wait);
                     break;
-                    case: SOLICITAR_SIGNAL:
+                    case SOLICITAR_SIGNAL:
                         char* recurso_signal = list_get(lista, final_pcb+1);
 				        manejar_signal(pcb_actualizado, recurso_signal);
 				        free(recurso_signal);
@@ -711,7 +711,7 @@ void manejar_wait(pcb* proceso, char* recurso_wait){
 		} else {
 			agregar_recurso(recurso_buscado->nombreRecurso, proceso); //Hay que asignarle el recurso usado al pcb AGREGAR LISTA DE RECURSOS A LA ESTRUCTURA PCB. Aca es donde me di cuenta que todo se iba a la mierda con el empaquetado
 			push_con_mutex(cola_exec, proceso, &mutex_lista_exec);
-			enviar_pcb(proceso,fd_conexion_dispatch,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+			enviar_pcb(proceso,fd_conexion_dispatch,VACIOO,VACIO,NULL,NULL,NULL,NULL,NULL);
 		}
 	}
 }
@@ -720,28 +720,28 @@ void manejar_signal(pcb* proceso, char* recurso_signal){
 	recurso* recurso_buscado = buscar_recurso(recurso_signal);
 	if(recurso_buscado->id == -1){
 		log_error(logger_kernel, "El recurso %s no existe", recurso_signal);
-		proceso->motivo_exit = RECURSO_INVALIDO;
+		proceso->motivo = RECURSO_INVALIDO;
 		cambiar_estado(proceso, EXITT);
 		push_con_mutex(cola_exit,proceso,&mutex_lista_exit); //cuando no existe hay que mandarlo a exit 
 		sem_post(&sem_procesos_exit);
         sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
 	} else {
 		recurso_buscado->instancias ++;
-		quitar_recurso(recurso_buscado->recurso, proceso);
+		quitar_recurso(recurso_buscado->nombreRecurso, proceso);
 		if(recurso_buscado->instancias <= 0){
 			pcb* proceso_desbloqueado = pop_con_mutex(recurso_buscado->cola_block_asignada, &recurso_buscado->mutex_asignado);
-			agregar_recurso(recurso_buscado->recurso, proceso_desbloqueado);
+			agregar_recurso(recurso_buscado->nombreRecurso, proceso_desbloqueado);
 			procesar_vuelta_blocked_a_ready(proceso_desbloqueado, RECURSOVT);
 		}
 		push_con_mutex(cola_exec, proceso, &mutex_lista_exec);
-		enviar_pcb(proceso,fd_conexion_dispatch,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+		enviar_pcb(proceso,fd_conexion_dispatch,VACIOO,VACIO,NULL,NULL,NULL,NULL,NULL);
 	}
 }
 
 recurso *buscar_recurso(recurso* recurso_a_buscar){
     for (int i = 0; i < list_size(lista_recursos); i++) {
         recurso* recurso_buscado = list_get(lista_recursos, i);
-        if (strcmp(recurso_buscado->nombreRecurso, recurso) == 0){
+        if (strcmp(recurso_buscado->nombreRecurso, recurso_buscado) == 0){
             return recurso_buscado;
         }
     }
@@ -764,7 +764,7 @@ void agregar_recurso(char* recurso, pcb* pcb){
 void quitar_recurso(char* recurso_a_sacar, pcb* pcb){
 	for(int i = 0; i<list_size(pcb->recursos_asignados); i++){
 		recurso_asignado* recurso_asignado = list_get(pcb->recursos_asignados, i);
-		if(strcmp(recurso_asignado->nombre_recurso, recurso_a_sacar) == 0){
+		if(strcmp(recurso_asignado->nombreRecurso, recurso_a_sacar) == 0){
 			pthread_mutex_lock(&mutex_asignacion_recursos);
 			recurso_asignado->instancias --;
 			pthread_mutex_unlock(&mutex_asignacion_recursos);
@@ -844,8 +844,7 @@ void despachador(){
             pcb_a_enviar = obtener_pcb_segun_algoritmo(algoritmo_de_planificacion); // obtiene un pcb de la cola de ready
             cambiar_estado(pcb_a_enviar,EXECUTE);
             push_con_mutex(cola_exec,pcb_a_enviar,&mutex_lista_exec); // uso con mutex porque posiblemente varios hilos agregen a exec
-            enviar_pcb(pcb_a_enviar, fd_conexion_dispatch,CODE_PCB,NULL,NULL,NULL,NULL,NULL,NULL);//falta motivo de desalojo
-            enviar_pcb();
+            enviar_pcb(pcb_a_enviar, fd_conexion_dispatch,CODE_PCB,VACIO,NULL,NULL,NULL,NULL,NULL);//falta motivo de desalojo
             sem_post(&sem_atender_rta);//signal para indicar que se despacho? no se si hace falta
             if(!strcmp(algoritmo_de_planificacion,"RR")){
                 manejar_quantum_RR(pcb_a_enviar->PID);
@@ -981,7 +980,7 @@ void terminar_programa(){
     liberar_conexion(fd_escucha_kernel);
 
     // HAY QUE HACER UN FOR PARA CADA PROCESO QUE ESTE EN cola_exit_liberados, FALTA IMPLEMENTAR
-    pcb_destroy(pcbFinalizado); // esta destruye todo el pcb pa la mierda 
+    //pcb_destroy(pcbFinalizado); // esta destruye todo el pcb pa la mierda 
 }
 
 /*
