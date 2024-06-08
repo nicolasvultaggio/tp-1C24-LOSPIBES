@@ -78,6 +78,7 @@ void iniciar_colas_de_estados(){
     cola_exit = list_create();
     interfaces_conectadas= list_create();
     cola_exit_liberados = list_create();
+    cola_block = list_create();
 
     //ya se que la de recursos no tendria que ir aca pero fue, me sopla las bolas
     lista_recursos = inicializar_recursos();
@@ -333,7 +334,23 @@ void enlistar_procesos(){
     char* lista_exit = de_lista_a_string(lista_pids_exit);
 
     log_info(logger_obligatorio, "Estados en: \n -NEW: [%s] \n -READY: [%s] \n -EXEC: [%s] \n -BLOCK: [%s] \n -EXIT: [%s]");
+
+    
+    free(lista_new);
+    free(lista_ready);
+    free(lista_ready_aux);
+    free(lista_exec);
+    free(lista_block);
+    free(lista_exit);
+
+    list_destroy(lista_pids_new);
+    list_destroy(lista_pids_ready);
+    list_destroy(lista_pids_ready_prioridad);
+    list_destroy(lista_pids_exec);
+    list_destroy(lista_pids_block);
+    list_destroy(lista_pids_exit);
 }
+
 
 void planificar_largo_plazo(){
     pthread_t hilo_ready;
@@ -561,6 +578,7 @@ void atender_vuelta_dispatch(){
                                 info_de_bloqueo->unidad_de_tiempo= tiempo_a_esperar; //simplemente otra referencia
                                 cambiar_estado(pcb_actualizado,BLOCKED);
                                 push_con_mutex(interfaz_gen->cola_bloqueados,info_de_bloqueo,interfaz_gen->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                list_add(pcb_actualizado,cola_block); //No es con mutex porque no me preocupa la condicion de carrera 
                                 sem_post(interfaz_gen->sem_procesos_blocked); 
                                 break;
                             }
@@ -592,6 +610,7 @@ void atender_vuelta_dispatch(){
                                 info_de_bloqueo->tamanio=registro_tamanio_STDIN;
                                 cambiar_estado(pcb_actualizado,BLOCKED);
                                 push_con_mutex(interfaz_STDIN->cola_bloqueados,info_de_bloqueo,interfaz_STDIN->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                list_add(pcb_actualizado,cola_block); //No es con mutex porque no me preocupa la condicion de carrera
                                 sem_post(interfaz_STDIN->sem_procesos_blocked); 
                                 break;
                             }
@@ -624,6 +643,7 @@ void atender_vuelta_dispatch(){
                                 info_de_bloqueo->tamanio=registro_tamanio_STDOUT;
                                 cambiar_estado(pcb_actualizado,BLOCKED);
                                 push_con_mutex(interfaz_STDOUT->cola_bloqueados,info_de_bloqueo,interfaz_STDOUT->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                list_add(pcb_actualizado,cola_block); //No es con mutex porque no me preocupa la condicion de carrera
                                 sem_post(interfaz_STDOUT->sem_procesos_blocked); 
                                 break;
                             }
@@ -684,6 +704,7 @@ void manejar_wait(pcb* proceso, char* recurso_wait){
 			cambiar_estado(proceso, BLOCKED);
             //cada recurso tiene SU cola y SU mutex
 			push_con_mutex(recurso_buscado->cola_block_asignada, proceso, &recurso_buscado->mutex_asignado);
+            list_add(proceso,cola_block); //No es con mutex porque no me preocupa la condicion de carrera
 			sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
 		} else {
 			agregar_recurso(recurso_buscado->nombreRecurso, proceso); //Hay que asignarle el recurso usado al pcb AGREGAR LISTA DE RECURSOS A LA ESTRUCTURA PCB. Aca es donde me di cuenta que todo se iba a la mierda con el empaquetado
