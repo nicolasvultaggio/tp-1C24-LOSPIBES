@@ -711,7 +711,7 @@ void manejar_wait(pcb* proceso, char* recurso_wait){
 		} else {
 			agregar_recurso(recurso_buscado->nombreRecurso, proceso); //Hay que asignarle el recurso usado al pcb AGREGAR LISTA DE RECURSOS A LA ESTRUCTURA PCB. Aca es donde me di cuenta que todo se iba a la mierda con el empaquetado
 			push_con_mutex(cola_exec, proceso, &mutex_lista_exec);
-			enviar_pcb(proceso,fd_conexion_dispatch,VACIOO,VACIO,NULL,NULL,NULL,NULL,NULL);
+			enviar_pcb(proceso,fd_conexion_dispatch,PCBBITO,VACIO,NULL,NULL,NULL,NULL,NULL);
 		}
 	}
 }
@@ -734,7 +734,7 @@ void manejar_signal(pcb* proceso, char* recurso_signal){
 			procesar_vuelta_blocked_a_ready(proceso_desbloqueado, RECURSOVT);
 		}
 		push_con_mutex(cola_exec, proceso, &mutex_lista_exec);
-		enviar_pcb(proceso,fd_conexion_dispatch,VACIOO,VACIO,NULL,NULL,NULL,NULL,NULL);
+		enviar_pcb(proceso,fd_conexion_dispatch,PCBBITO,VACIO,NULL,NULL,NULL,NULL,NULL);
 	}
 }
 
