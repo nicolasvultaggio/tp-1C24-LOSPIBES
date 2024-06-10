@@ -817,7 +817,7 @@ element_interfaz * interfaz_existe_y_esta_conectada(char * un_nombre){
     bool interfaz_con_nombre(void * una_interfaz){
 	element_interfaz * una_interfaz_casteada = (element_interfaz*) una_interfaz; //no importa que este en blanco, es solo por un tema del editor de texto, en teoría debería compilarlo bien
         return (!strcmp(una_interfaz_casteada->nombre,un_nombre)); //no importa que este en blanco, es solo por un tema del editor de texto, en teoría debería compilarlo bien
-    };
+    }; //¿por que se declara aca? porque la funcion que le pasamos a list_find tien que recibir solo un parametro, y de tipo void*
     pthread_mutex_lock(&mutex_lista_interfaces); 
     element_interfaz * interfaz  = list_find(interfaces_conectadas,(void*)interfaz_con_nombre); 
     pthread_mutex_unlock(&mutex_lista_interfaces);

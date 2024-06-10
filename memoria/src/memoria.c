@@ -51,7 +51,8 @@ size_t dividir_y_redondear_hacia_arriba(size_t a,size_t b){
 
 void inicializar_semaforos(){
 	//pthread_mutex_init(&mutex_lista_new, NULL);
-	pthread_mutex_init(&mutex_lista_instrucciones, NULL);
+	pthread_mutex_init(&mutex_lista_procesos, NULL);
+	pthread_mutex_init(&mutex_frames_array, NULL);
 }
 
 //Esta pensado para que en un futuro lea mas de una configuracion. 
@@ -177,25 +178,30 @@ static void procesar_clientes(void* void_args){
 			return;
 		}
 		switch (cop) {
-		case MENSAJE:
-			recibir_mensaje(logger_memoria, cliente_socket);
-			break;
-		case PAQUETE:
-			t_list *paquete_recibido = recibir_paquete(cliente_socket);
-			log_info(logger_memoria, "Recibí un paquete con los siguientes valores: ");
-			list_iterate(paquete_recibido, (void*) iterator);
-			break;	
-		case DATOS_PROCESO: // este codigo SOLO LO ENVIA EL KERNEL
+		case DATOS_PROCESO: // CREAR PROCESO: este codigo SOLO LO ENVIA EL KERNEL 
 				t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);// por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
-				iniciar_memoria_apedidodeKernel(datos_proceso->path, datos_proceso->pid, cliente_socket);//el parametro size sera usado en el 3er check,"datos_proceso->size"
+				iniciar_proceso_a_pedido_de_Kernel(datos_proceso->path, datos_proceso->pid, cliente_socket);//el parametro size sera usado en el 3er check,"datos_proceso->size"
 				free(datos_proceso->path);
 				free(datos_proceso);
 			break;
 		case SOLICITAR_INSTRUCCION:// ESTE CODIGO SOLO LO ENVÍA CPU
 				log_info(logger_memoria, "Solicitud de instruccion recibida");
-				procesar_pedido_instruuccion(cliente_socket, proceso_instrucciones);
+				procesar_pedido_instruccion(cliente_socket);
 				break;
-		
+		case NRO_MARCO:
+				log_info(logger_memoria, "Solicitud de marco"); //cuando sergio haga send_pedido_de_marco o como se iame
+				//recibir el paquete (si o si un pid y un numero de pagina)
+				//invocar una funcion que busque un proceso por su pid, acceda a su tabla de paginas y devuelva el numero de marco asociado a un numero de pagina enviado por parametro
+				break;
+		case LECTURA_MEMORIA:
+				//de una interfaz o de la cpu
+				break;
+		case ESCRITURA_MEMORIA:
+				//de una interfaz o de la cpu
+				break;
+		case REAJUSTAR_TAMANIO_PROCESO:
+				//de la cpu, aumentar o diminuir
+				break;
 		default:
 				log_error(logger_memoria, "Codigo de operacion no reconocido en memoria");
 				return;
@@ -252,7 +258,7 @@ cod_instruccion instruccion_to_enum(char* instruccion){
 	}
 	return EXIT_FAILURE;
 }
-void iniciar_memoria_apedidodeKernel(char* path, int pid, int socket_kernel) {
+void iniciar_proceso_a_pedido_de_Kernel(char* path, int pid, int socket_kernel) {
     // Construir la ruta completa del archivo  
     char* rutaCompleta = string_from_format("%s%s.txt",path_instrucciones ,path);
 
@@ -261,11 +267,38 @@ void iniciar_memoria_apedidodeKernel(char* path, int pid, int socket_kernel) {
     free(rutaCompleta);
 
     // Crear el objeto de proceso_instrucciones
-    t_listaprincipal* proceso_instr = malloc(sizeof(t_listaprincipal));
-    proceso_instr->pid = pid;
-    proceso_instr->instrucciones = instrucciones;
-	proceso_instr->tabla_de_paginas=list_create(); //solo crea la lista, pero arranca sin elementos ya que no tiene marcos asignados, se le agregan elementos del tipo fila_tabla_de_paginas
-	push_con_mutex(proceso_instrucciones, proceso_instr, &mutex_lista_instrucciones);
+    t_proceso* proceso_nuevo = malloc(sizeof(t_proceso));
+    proceso_nuevo->pid = pid;
+    proceso_nuevo->instrucciones = instrucciones;
+	proceso_nuevo->tabla_de_paginas=list_create(); //solo crea la lista, pero arranca sin elementos ya que no tiene marcos asignados, se le agregan elementos del tipo fila_tabla_de_paginas
+	push_con_mutex(lista_de_procesos, proceso_nuevo, &mutex_lista_procesos);
+}
+
+
+void finalizar_proceso_a_pedido_de_kernel(int un_pid){
+	bool es_proceso_con_pid(void * un_proceso){
+		t_proceso * un_proceso_c = (t_proceso *) un_proceso;
+		return un_proceso_c->pid == un_pid;
+	};//no importa que esta en blanco es un tema del editor de texto, el compilador lo va a poder compilar
+	pthread_mutex_lock(&mutex_lista_procesos);
+	t_proceso * proceso_a_finalizar = list_find(lista_de_procesos, (void*)es_proceso_con_pid);
+	pthread_mutex_unlock(&mutex_lista_procesos);
+
+	pthread_mutex_lock(&mutex_lista_procesos);
+	bool b=list_remove_element(lista_de_procesos,(void*) proceso_a_finalizar); //lo removemos de la lista
+	pthread_mutex_unlock(&mutex_lista_procesos);
+	
+	void liberar_fila_paginas(void * fila){
+		fila_tabla_de_paginas * fila_c = (fila_tabla_de_paginas*) fila;
+		size_t marco = fila_c->nro_marco;
+		pthread_mutex_lock(&mutex_frames_array);
+		bitarray_clean_bit(frames_array, (off_t) marco); //marcamos cada marco como libre en el bitarray
+		pthread_mutex_unlock(&mutex_frames_array);
+		free(fila_c);
+	};
+
+	list_destroy_and_destroy_elements(proceso_a_finalizar->tabla_de_paginas, (void*) liberar_fila_paginas );
+	list_destroy_and_destroy_elements(proceso_a_finalizar->instrucciones, (void*) instruccion_destroyer);
 }
 
 t_solicitud_instruccion* recv_solicitar_instruccion(int fd){
@@ -283,22 +316,28 @@ t_solicitud_instruccion* recv_solicitar_instruccion(int fd){
 	list_destroy(paquete);
 	return solicitud_instruccion_recibida;
 }// RECIBE EL PEDIDO DE CPU, PID Y PROGRAM COUNTER
-t_linea_instruccion* buscar_instruccion(int pid, int program_counter, t_list* proceso_instrucciones){
+
+t_linea_instruccion* buscar_instruccion(int pid, int program_counter){ //no tiene sentido que lo pasees por parametro 
+	
 	int i = 0;
 	
-	pthread_mutex_lock(&proceso_instrucciones);
-	t_listaprincipal* proceso_instr = list_get(proceso_instrucciones, i);
-	pthread_mutex_unlock(&proceso_instrucciones);
+	pthread_mutex_lock(&mutex_lista_procesos);
+	t_proceso* proceso_instr = list_get(lista_de_procesos, i);
+	pthread_mutex_unlock(&mutex_lista_procesos);
 
 	while(pid != proceso_instr->pid){
 		i++;
-		pthread_mutex_lock(&proceso_instrucciones);
-		proceso_instr = list_get(proceso_instrucciones, i);
-		pthread_mutex_unlock(&proceso_instrucciones);
+		pthread_mutex_lock(&mutex_lista_procesos);
+		proceso_instr = list_get(lista_de_procesos, i);
+		pthread_mutex_unlock(&mutex_lista_procesos);
 	}
+	//tenias una funcion de la commons que te ahorraba todo este trabajo igual, se llama list_find, fijate en la funcion finalizar_proceso_a_pedido_de_kernel
 
 	return list_get(proceso_instr->instrucciones, program_counter);
 }//BUSCA LA INSTRUCCION EN LA LISTA QUE CREAMOS CUANDO KERNEL PIDIO INCIAR PROCESO, YA ESTA CREADA EN UNA VARIABLE GLOBAL
+
+
+
 void send_proxima_instruccion(int filedescriptor, t_linea_instruccion* instruccion){
 	t_paquete* paquete = crear_paquete(PROXIMA_INSTRUCCION);
 
@@ -313,12 +352,12 @@ void send_proxima_instruccion(int filedescriptor, t_linea_instruccion* instrucci
 	eliminar_paquete(paquete);
 }//envia la instruccion pedida a CPU serializado
 
-void procesar_pedido_instruuccion(int socket_cpu, t_list* proceso_instrucciones){
+void procesar_pedido_instruccion(int socket_cpu){ //la lista de procesos es una variable global, no hace falta que la pases por parametro
 
 	int retardo_respuesta = config_get_long_value(config_memoria, "RETARDO_RESPUESTA");
 	t_solicitud_instruccion* solicitud_instruccion = recv_solicitar_instruccion(socket_cpu);
 
-	t_linea_instruccion* instruccion_a_enviar = buscar_instruccion(solicitud_instruccion->pid, solicitud_instruccion->program_counter - 1, proceso_instrucciones);//es -1 xq como se va a llamar varias veces una vez que 
+	t_linea_instruccion* instruccion_a_enviar = buscar_instruccion(solicitud_instruccion->pid, solicitud_instruccion->program_counter - 1);//es -1 xq como se va a llamar varias veces una vez que 
 	free(solicitud_instruccion);
 	usleep(retardo_respuesta*1000);//preguntar 
 	send_proxima_instruccion(socket_cpu, instruccion_a_enviar);

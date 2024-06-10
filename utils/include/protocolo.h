@@ -142,9 +142,11 @@ typedef enum {
 	/* MEMORIA - CPU / CPU - MEMORIA */
 	SOLICITAR_INSTRUCCION,
 	PROXIMA_INSTRUCCION,
-	ESCRIBIR_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
-	LEER_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
-
+	NRO_MARCO,
+	LECTURA_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
+	ESCRITURA_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
+	REAJUSTAR_TAMANIO_PROCESO,//puede ser reducir o ampliar
+	
 	INTERR //UNICO codigo de operacion de la conexion interrupt
 }op_code; //codigos de operacion entre modulos, sirven para establecer que tipos de datos recibe el paquete
 
