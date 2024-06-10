@@ -74,23 +74,25 @@ int buscar_posicion_proceso(t_list* lista, int pid){
 }
 
 
-void empaquetar_pcb(t_paquete* paquete, pcb* PCB, motivo_desalojo MOTIVO){
+void empaquetar_pcb(t_paquete* paquete, pcb* un_PCB, motivo_desalojo MOTIVO){
 
-	agregar_a_paquete(paquete, &(PCB->PID), sizeof(int));
-	agregar_a_paquete(paquete, &(PCB->PC), sizeof(uint32_t));
-	agregar_a_paquete(paquete, &(PCB->QUANTUM), sizeof(int));
-	agregar_a_paquete(paquete, &(PCB->motivo), sizeof(int));
-	agregar_a_paquete(paquete, &(PCB->estado), sizeof(int));
-	agregar_a_paquete(paquete, &(PCB->registros.AX), sizeof(uint8_t));
-	agregar_a_paquete(paquete, &(PCB->registros.BX), sizeof(uint8_t));
-	agregar_a_paquete(paquete, &(PCB->registros.CX), sizeof(uint8_t));
-	agregar_a_paquete(paquete, &(PCB->registros.DX), sizeof(uint8_t));
-	agregar_a_paquete(paquete, &(PCB->registros.EAX), sizeof(uint32_t));
-	agregar_a_paquete(paquete, &(PCB->registros.EBX), sizeof(uint32_t));
-	agregar_a_paquete(paquete, &(PCB->registros.ECX), sizeof(uint32_t));
-	agregar_a_paquete(paquete, &(PCB->registros.EDX), sizeof(uint32_t));
-	agregar_a_paquete(paquete, &(PCB->registros.SI), sizeof(uint32_t));
-	agregar_a_paquete(paquete, &(PCB->registros.DI), sizeof(uint32_t));
+	un_PCB->motivo = MOTIVO ; //faltaba esto no? si no el motivo se pasa al pedo por parametro
+
+	agregar_a_paquete(paquete, &(un_PCB->PID), sizeof(int));
+	agregar_a_paquete(paquete, &(un_PCB->PC), sizeof(uint32_t));
+	agregar_a_paquete(paquete, &(un_PCB->QUANTUM), sizeof(int));
+	agregar_a_paquete(paquete, &(un_PCB->motivo), sizeof(int));
+	agregar_a_paquete(paquete, &(un_PCB->estado), sizeof(int));
+	agregar_a_paquete(paquete, &(un_PCB->registros.AX), sizeof(uint8_t));
+	agregar_a_paquete(paquete, &(un_PCB->registros.BX), sizeof(uint8_t));
+	agregar_a_paquete(paquete, &(un_PCB->registros.CX), sizeof(uint8_t));
+	agregar_a_paquete(paquete, &(un_PCB->registros.DX), sizeof(uint8_t));
+	agregar_a_paquete(paquete, &(un_PCB->registros.EAX), sizeof(uint32_t));
+	agregar_a_paquete(paquete, &(un_PCB->registros.EBX), sizeof(uint32_t));
+	agregar_a_paquete(paquete, &(un_PCB->registros.ECX), sizeof(uint32_t));
+	agregar_a_paquete(paquete, &(un_PCB->registros.EDX), sizeof(uint32_t));
+	agregar_a_paquete(paquete, &(un_PCB->registros.SI), sizeof(uint32_t));
+	agregar_a_paquete(paquete, &(un_PCB->registros.DI), sizeof(uint32_t));
 
 
 }

@@ -16,7 +16,7 @@ bool hay_interrupcion;
 int MAX_TLB_ENTRY;
 int ENTRADAS_ACTUAL;
 t_list* translation_lookaside_buffer;
-pthread_mutex_t mutex_tlb
+pthread_mutex_t mutex_tlb;
 /* SEMAFOROS */
 sem_t sem_recibir_pcb;
 sem_t sem_execute;
@@ -31,6 +31,8 @@ char* puerto_memoria;
 char* cantidad_entradas_tlb;
 char* algoritmo_tlb;
 
+/*Puntero para atender interrupciones*/
+motivo_desalojo* interrupcion_actual;
 
 /* VARIABLES DE CONEXION */
 int fd_conexion_memoria;
@@ -38,6 +40,17 @@ int fd_escucha_dispatch;
 int fd_escucha_interrupt;
 int fd_cpu_dispatch;
 int fd_cpu_interrupt;
+
+/*FLAGS PARA MANEJO DE INTERRUPCION*/
+
+//todas estas flags tendran que actualizarse cada vez que se ejecuta una intstruccion
+bool es_exit; //siempre mofificar
+bool es_bloqueante; //modificar siempre que es_exit = false
+bool error_memoria; // modificar solo en mov in y mov out
+bool es_wait; //modificar si se pone a bloqueante = true
+bool cambio_proceso_wait; // modificar si se pone a es_wait = true
+bool es_resize; //modificar si se pone bloqueante = true
+bool resize_desalojo_outofmemory; //modificar si se pone es_resize = true
 
 /* REGISTROS */
 typedef struct{

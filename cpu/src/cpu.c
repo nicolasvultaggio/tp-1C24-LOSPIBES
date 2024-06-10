@@ -124,9 +124,11 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			break;
 		case MOV_IN:
 			ejecutar_mov_in(PCB, instruccion->parametro1, instruccion->parametro2);
+			check_interrupt();
 			break;
 		case MOV_OUT:
 			ejecutar_mov_out(PCB, instruccion->parametro1, instruccion->parametro2);
+			check_interrupt();
 			break;
 		case SUM:
 			ejecutar_sum(PCB, instruccion->parametro1, instruccion->parametro2);
@@ -148,12 +150,15 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			break;
 		case WAIT:
 			ejecutar_wait(PCB, instruccion->parametro1);
+			check_interrupt();
 			break;
 		case SIGNAL:
 			ejecutar_signal(PCB, instruccion->parametro1);
+			check_interrupt();
 			break;
 		case IO_GEN_SLEEP:
 			ejecutar_io_gen_sleep(PCB, "IO_GEN_SLEEP", instruccion->parametro1, instruccion->parametro2);
+			check_interrupt();
 			break;
 		case IO_STDIN_READ:
 			//ejecutar_io_stdin_read();
@@ -178,6 +183,7 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			break;
 		case EXIT:
 			ejecutar_exit(PCB);
+			check_interrupt();
 			break;
 		default:
 			ejecutar_error(PCB);
@@ -195,35 +201,63 @@ void ejecutar_set(pcb* PCB, char* registro, char* valor){
 		uint32_t valor32 = strtoul(valor, NULL, 10);
 		setear_registro32(PCB, registro, valor32);
 	}
+	es_exit =false; //poner en true 
+	es_bloqueante=false; //modificar siempre que es_exit = false
 	return;
 }
 
 void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 
-log_info(logger, "PID: %d - Ejecutando: %s - [%s, %s]", pcb->pid, "MOV IN", param1, param2);
-	
-	
+log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", pcb->pid, "MOV IN", param1, param2);
 	
 	int direccion_logica = atoi(DIRECCION);
 	int direccion_fisica = solicitar_direccion_fisica(pcb, direccion_logica);
-	if(direccion_fisica == -1){
+	if(direccion_fisica == -1){ //al final esto no existe, la mmu siempre devuelve una direccion traducida (nunca te va a devolver -1), despues vos le pedis a la memoria hacer lo q tengas que hacer, y esta te dice si pudo hacerlo, si no pudo hacerlo vos tenes que desalojar el proceso
 		//pcb->program_counter -= 1;
 		return;
+	}
+	//eliminar este if
 
-}
+	//¿como es la secuencia despues de obtener la direccion fisica?
+
+	// pedis la escritura o lectura a memoria (esta parte hablala con Marce)
+	// te quedas esperando su respuesta   (esta parte hablala con Marce)
+	// si salio bien (pudo escribir donde le pediste), perfecto no haces nada mas en esta funcion, pasas a check interrupt
+	// si no salio bien (le pediste una direccion invalida -> le desalojas el pcb con motivo de desalojo fallo o error, para que kernel pueda finalizar el proceso) y haces check interrupt
+	//esta misma logica la tendran que implementar las interfaces stdin y stdout, porque tambien le piden escribir o leer a memoria
+	//atenti a los flags que hay que modificar en cada instruccion, fijate en el .h, sobre todo el que se llama error_memoria
+
+	es_exit=false;  //siempre modificar
+	es_bloqueante=false; //modificar siempre que es_exit = false
+	//error_memoria; se pone true o false segun respuesta de memoria 
+	
 }
 
 void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
-	log_info(logger, "PID: %d - Ejecutando: %s - [%s, %s]", pcb->pid, "MOV OUT", param1, param2);
+	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", PCB->pid, "MOV OUT", param1, param2);
 		
-	int direccion_fisica = MMU(pcb, DIRECCION);
+	int direccion_fisica = MMU(PCB, DIRECCION); // ojo estas 
 	
-	if(direccion_fisica == -1){
+	if(direccion_fisica == -1){ //al final esto no existe, la mmu siempre devuelve una direccion traducida (nunca te va a devolver -1), despues vos le pedis a la memoria hacer lo q tengas que hacer, y esta te dice si pudo hacerlo, si no pudo hacerlo vos tenes que desalojar el proceso
 		//pcb->program_counter -= 1;
 		return;
+	}
+	//eliminar este if
 
+	//¿como es la secuencia despues de obtener la direccion fisica?
 
-}}
+	// pedis la escritura o lectura a memoria (esta parte hablala con Marce)
+	// te quedas esperando su respuesta   (esta parte hablala con Marce)
+	// si salio bien (pudo escribir donde le pediste), perfecto no haces nada mas en esta funcion, pasas a check interrupt
+	// si no salio bien (le pediste una direccion invalida -> le desalojas el pcb con motivo de desalojo fallo o error, para que kernel pueda finalizar el proceso) y haces check interrupt
+	//esta misma logica la tendran que implementar las interfaces stdin y stdout, porque tambien le piden escribir o leer a memoria
+	//atenti a los flags que hay que modificar en cada instruccion, fijate en el .h, sobre todo el que se llama error_memoria
+
+	es_exit=false;  //siempre modificar
+	es_bloqueante=false; //modificar siempre que es_exit = false
+	//error_memoria; se pone true o false segun respuesta de memoria 
+
+}
 
 
 void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
@@ -248,7 +282,8 @@ void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
 	}else{//																	//ojo, aca no hay mas referencia a origen ni destino, solo 
 		setear_registro32(PCB, destinoregistro, destino32 + (uint32_t) origen32);
 	}
-		
+	es_exit = false;  
+	es_bloqueante = false; 
 	return;
 }
 
@@ -273,6 +308,8 @@ void ejecutar_sub(pcb* PCB, char* destinoregistro, char* origenregistro){
 		setear_registro32(PCB, destinoregistro, destino + origen32);
 	}
 		
+	es_exit =false;  //siempre modificar
+	es_bloqueante=false; //modificar siempre que es_exit = false
 	return;
 }
 
@@ -285,6 +322,8 @@ void ejecutar_jnz(pcb* PCB, char* registro, char* valor){
 		if(capturar_registro32(PCB, registro) != 0)
 			PCB->PC = program_counter_actualizado;
 	}
+	es_exit=false;  //siempre modificar
+	es_bloqueante=false; //modificar siempre que es_exit = false
 	return;
 }
 
@@ -295,6 +334,8 @@ void ejecutar_wait(pcb* PCB, char* registro){
 	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_WAIT,NULL,NULL,NULL,NULL,NULL);
 	free(recurso);
 	sem_post(&sem_recibir_pcb);
+	es_exit=false;  //siempre modificar
+	es_bloqueante=false; //modificar siempre que es_exit = false
 }
 
 void ejecutar_signal(pcb* PCB, char* registro){
@@ -303,25 +344,32 @@ void ejecutar_signal(pcb* PCB, char* registro){
 	strcpy(recurso, registro);
 	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_SIGNAL,NULL,NULL,NULL,NULL,NULL);
 	free(recurso);
-	sem_post(&sem_execute);
+	//aca te falta esperar la respuesta del kernel
+	es_exit = false;  //siempre modificar
+	es_bloqueante=false; //modificar siempre que es_exit = false
 }
 
 void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* unidad_de_tiempo){
 	enviar_pcb(PCB, fd_escucha_dispatch, INTERFAZ, SOLICITAR_INTERFAZ_GENERICA, instruccion, interfaz, unidad_de_tiempo,NULL,NULL);
-	sem_post(&sem_execute);
+	sem_post(&sem_recibir_pcb);
+	es_exit=false;  //siempre modificar
+	es_bloqueante=true; //modificar siempre que es_exit = false
+	es_wait = false;  //modificar si se pone a bloqueante = true
+	es_resize = false; //modificar si se pone bloqueante = true
 	return;
 }
 
 void ejecutar_exit(pcb* PCB){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
 	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXITO,NULL,NULL,NULL,NULL,NULL);
-	sem_post(&sem_execute);
+	sem_post(&sem_recibir_pcb);
+	es_exit=true;  //siempre modificar
 }
 
-void ejecutar_error(pcb* PCB){
+void ejecutar_error(pcb* PCB){ //se usa esta en algun momento?
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
 	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXIT_CONSOLA,NULL,NULL,NULL,NULL,NULL);
-	sem_post(&sem_execute);
+	sem_post(&sem_recibir_pcb);
 }
 
 
@@ -403,11 +451,11 @@ uint32_t capturar_registro32(pcb* PCB, char* registro){
 
 /* TRADUCCION LOGICA A FISICA */
 
-int MMU(pcb* PCB, char* DIRECCION){
+int MMU(pcb* PCB, char* DIRECCION){ //que la direccion fisica sea un size_t, fijate que las interfaces y todo lo que es direcciones de memoria ya implementado es con size_t
 	int direccion_fisica;
 	int marco;
 	int direccion_logica = atoi(DIRECCION);
-	int numero_pagina = floor(direccion_logica / TAM_PAGINA);
+	int numero_pagina = floor(direccion_logica / TAM_PAGINA); // tam_pagina no existe
 	int desplazamiento =  direccion_logica - numero_pagina * TAM_PAGINA;
 
 	switch (MAX_TLB_ENTRY)
@@ -428,14 +476,14 @@ int MMU(pcb* PCB, char* DIRECCION){
 	if(marco == -1){
 		//log_info(logger, "Page Fault PID: %d - Pagina: %d", pcb->pid, numero_pagina); //log ob
 		//iniciar acciones page fault
-		//send_pcb(pcb, dispatch_cliente_fd);
+		//send_pcb(pcb, dispatch_cliente_fd); ojo sergio, creo que cambio la funcion para enviar un pcb, preguntale a tomi
 		//send_pcb_pf(numero_pagina, desplazamiento, dispatch_cliente_fd);
-		//sem_post(&sem_nuevo_proceso);
+		//sem_post(&sem_nuevo_proceso); 
 		//return marco;
 	}
-	log_info(logger,  "PID: %d - OBTENER MARCO - Página: %d - Marco: %d", pcb->pid, numero_pagina, marco); //log ob
-	//int direccion_fisica = marco*tam_pagina + desplazamiento;
-	return direccion_fisica;
+	log_info(logger_cpu,  "PID: %d - OBTENER MARCO - Página: %d - Marco: %d", pcb->pid, numero_pagina, marco); 
+	//int direccion_fisica = marco*tam_pagina + desplazamiento;        //aca  ^^^ no podes poner pcb->pid, es PCB->pid, pcb en minusculas es el tipo de dato, no un puntero -> DEBUGGEEN ESTAS COSAS PORQUE ESTOS ERRORES SE ACUMULAN
+	return direccion_fisica; //direccion fisica tiene que ser un size_t, no un int, fijate como esta en todo el tp, los size_t se usan para representar numeros de bytes, no los int
 }
 
 
@@ -451,8 +499,9 @@ void* interrupcion(void *arg) {
 		int codigo_operacion = recibir_operacion(fd_escucha_interrupt, logger_cpu, "Kernel (interrupt)");
 		switch (codigo_operacion) {
 		case INTERR:
-			detectar_motivo_desalojo();
-			sem_post(&sem_recibir_pcb);
+			motivo_desalojo motivo = recibir_motiv_desalojo(fd_escucha_interrupt);
+			interrupcion_actual = malloc(sizeof(motivo_desalojo));
+			(*interrupcion_actual) = motivo;
 			break;
 		case -1:
 			log_error(logger_cpu, "El cliente se desconecto.");
@@ -465,32 +514,134 @@ void* interrupcion(void *arg) {
 	}
 }
 
-void detectar_motivo_desalojo(){
-	motivo_desalojo motivo = recibir_motiv_desalojo(fd_escucha_interrupt);
-	hay_interrupcion = true;//OJO, variable que leen y escriben muchos hilos, posible mutex
-	sem_wait(&sem_interrupcion);
-	switch (motivo)	{
-		case INTERRUPCION:
-			log_info(logger_cpu, "Interrupcion: Finalizar proceso.");
-			PCB->motivo = INTERRUPCION;
-			enviar_pcb(PCB, fd_escucha_dispatch, INTERR, INTERRUPCION,NULL,NULL,NULL,NULL,NULL); 
-			break;
-
-		case FIN_QUANTUM:
-			log_info(logger_cpu, "Interrupcion: Fin de Quantum.");
-			PCB->motivo = FIN_QUANTUM;
-			enviar_pcb(PCB, fd_escucha_dispatch, INTERR, FIN_QUANTUM,NULL,NULL,NULL,NULL,NULL);
-			break;
+// yo se que es un quilombo de if y else, pero posta que si no mostras que hacer en todos los casos es un quilombo entenderlo
+void check_interrupt (){
+	if(interrupcion_actual!=NULL){
+		if (!es_exit){
+			if(*interrupcion_actual == FIN_QUANTUM){ //si la interrupcion es por desalojo de quantum
+				if(!es_bloqueante){ // se sabe que no se desalojo al proceso previamente
+					if(error_memoria){ //
+						log_info(logger_cpu,"Como hubo un error de escritura del proceso %d, ignoramos interrupcion de fin de quantum",PCB->PID);
+						liberar_interrupcion_actual(); // no atendemos interrupcion ni ponemos ningun semaforo porque mov in y mov out ya desalojan y ponen a escuchar otro pcb
+					}else{ // se sabe que no se desalojo al proceso previamente
+						log_info(logger_cpu,"Interrupcion: Fin de Quantum para el proceso: %d",PCB->PID);
+						enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,FIN_QUANTUM,NULL,NULL, NULL, NULL, NULL);
+						sem_post(&sem_recibir_pcb);
+						liberar_interrupcion_actual();
+					}
+					
+				}else{ //pudo haberse desalojado al proceso
+					if(es_wait){
+						if(cambio_proceso_wait){
+							log_info(logger_cpu,"Cambio el PCB POR WAIT, ahora es del proceso %d, ignoramos interrupcion por FIN DE QUANTUM",PCB->PID);
+							sem_post(&sem_execute); //el pcb cambiado ya lo recibimos, tenemos que simplemente ponernos a ejecutar otro ciclo de instruccion
+							liberar_interrupcion_actual();
+						}else{
+							log_info(logger_cpu,"Interrupcion: Fin de Quantum para el proceso: %d",PCB->PID);
+							enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,FIN_QUANTUM,NULL,NULL, NULL, NULL, NULL);
+							sem_post(&sem_recibir_pcb);
+							liberar_interrupcion_actual();
+						}
+					}else{//no es wait, puede ser una syscall bloqueante o resize
+						if(es_resize){ 
+							if(resize_desalojo_outofmemory){
+								log_info(logger_cpu,"Resize ya había desalojado al proceso, ignoramos interrupcion por FIN DE QUANTUM");
+								liberar_interrupcion_actual(); // syscall bloqueante ya se encargo de poner a escuchar por otro pcb
+							}else{
+								log_info(logger_cpu,"Interrupcion: Fin de Quantum para el proceso: %d",PCB->PID);
+								enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,FIN_QUANTUM,NULL,NULL, NULL, NULL, NULL);
+								sem_post(&sem_recibir_pcb);
+								liberar_interrupcion_actual();
+							}
+						}else{ //este caso es las syscalls bloqueantes, ni resize ni wait
+							log_info(logger_cpu,"Syscall bloqueante ya había desalojado al proceso %d, ignoramos interrupcion por FIN DE QUANTUM",PCB->PID);
+							liberar_interrupcion_actual();// syscall bloqueante ya se encargo de poner a escuchar por otro pcb
+						}	
+					}
+				}
+			}else{//fin de proceso
+				if(!es_bloqueante){ // se sabe que no se desalojo al proceso previamente
+					if(error_memoria){ //
+						log_info(logger_cpu,"Como hubo un error de escritura del proceso %d, ignoramos el pedido de finalizacion porque ya va a finalizar por este error de escritura",PCB->PID);
+						liberar_interrupcion_actual(); // no atendemos interrupcion ni ponemos ningun semaforo porque mov in y mov out ya desalojan y ponen a escuchar otro pcb
+					}else{ // se sabe que no se desalojo al proceso previamente
+						log_info(logger_cpu,"Interrupcion: Fin de Quantum para el proceso: %d",PCB->PID);
+						enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,FIN_QUANTUM,NULL,NULL, NULL, NULL, NULL);
+						sem_post(&sem_recibir_pcb);
+						liberar_interrupcion_actual();
+					}
+				}else{ //pudo haberse desalojado al proceso
+					if(es_wait){
+						if(cambio_proceso_wait){ //se desalojo el proceso
+							//avisarle a kernel del desalojo?
+							liberar_interrupcion_actual();
+							sem_post(&sem_execute);
+						}else{ //no se desalojo el proceso
+							log_info(logger_cpu,"Interrupcion: Finalizacion del proceso: %d",PCB->PID);
+							enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,EXITO,NULL,NULL, NULL, NULL, NULL);
+							sem_post(&sem_recibir_pcb);
+							liberar_interrupcion_actual();
+						}
+					}else{//no es wait, puede ser una syscall bloqueante o resize
+						if(es_resize){ 
+							if(resize_desalojo_outofmemory){
+								//avisarle a kernel del desalojo?na, ya lo va a finalizar solito
+								liberar_interrupcion_actual();
+							}else{//resize no desalojo al proceso, atender interrupcion
+								log_info(logger_cpu,"Interrupcion: Finalizacion del proceso: %d",PCB->PID);
+								enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,EXITO,NULL,NULL, NULL, NULL, NULL);
+								sem_post(&sem_recibir_pcb);
+								liberar_interrupcion_actual();
+							}
+						}else{ //este caso es las syscalls bloqueantes, ni resize ni wait
+							//avisarle a kernel del desalojo?
+							liberar_interrupcion_actual();
+						}	
+					}
+				}
+			}
+		}else{//es exit
+			log_info(logger_cpu,"Instruccion ejecutada: EXIT. Proceso  ya había sido desalojado Entonces ignoramos la interrupcion");
+			liberar_interrupcion_actual();
+		}
+	}else{//no hubo una interrupcion
+		if(!es_exit){
+			if(!es_bloqueante){ // se sabe que no se desalojo al proceso previamente
+				if(error_memoria){
+					//no hacer nada porque se supone que mov in o mov out ya se pusieron a escuchar otro pcb
+				}else{// se sabe que no se desalojo al proceso previamente
+					sem_post(&sem_execute);
+				}
+			}else{ //pudo haberse desalojado al proceso
+				if(es_wait){
+					if(cambio_proceso_wait){
+						sem_post(&sem_execute);
+					}else{
+						sem_post(&sem_execute);	
+					}
+				}else{//no es wait, puede ser una syscall bloqueante o resize
+					if(es_resize){ 
+						if(resize_desalojo_outofmemory){
+						//no hacer nada porque la resize ya pone a escuchar otro pcb despues de desalojar ya se había encargado de poner a escuchar otro pcb
+						}else{
+						sem_post(&sem_execute);
+						}
+					}else{ //este caso es las syscalls bloqueantes, ni resize ni wait
+					//no hacer nada porque la syscall bloqueante ya se había encargado de poner a escuchar otro pcb
+					}	
+				}
+			}
+		}else{
+			//no hacer nada porque exit ya directamente pone a escuchar otro pcb
+		}
+		
 	}
-	return;
 }
 
-void check_interrupt (){
-	if(hay_interrupcion) {
-		sem_post(&sem_interrupcion);
-	} else {
-		sem_post(&sem_execute);
-	}
+void liberar_interrupcion_actual(){
+	free(interrupcion_actual);
+	interrupcion_actual = NULL;
+	return;
 }
 
 
