@@ -12,6 +12,11 @@ t_config* config_cpu;
 pcb* PCB;
 bool hay_interrupcion;
 
+/* TLB */
+int MAX_TLB_ENTRY;
+int ENTRADAS_ACTUAL;
+t_list* translation_lookaside_buffer;
+pthread_mutex_t mutex_tlb
 /* SEMAFOROS */
 sem_t sem_recibir_pcb;
 sem_t sem_execute;
@@ -23,6 +28,9 @@ char* puerto_cpu_dispatch;
 char* puerto_cpu_interrupt; 
 char* ip_memoria;
 char* puerto_memoria;
+char* cantidad_entradas_tlb;
+char* algoritmo_tlb;
+
 
 /* VARIABLES DE CONEXION */
 int fd_conexion_memoria;

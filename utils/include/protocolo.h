@@ -204,6 +204,22 @@ typedef enum{
     INSTRUCCION_REALIZADA
 }op_io_a_kernel;
 
+/* TLB */
+
+typedef struct{
+	int pid;
+	int numero_pagina;
+	int marco;
+} valores_tlb;
+
+typedef struct{
+	valores_tlb* valor;
+	struct snodo* siguiente;
+} nodo_tlb;
+
+/******************************/
+
+
 void empaquetar_pcb(t_paquete* paquete, pcb* PCB,motivo_desalojo MOTIVO);
 int fin_pcb(t_list* lista);
 void empaquetar_recursos(t_paquete* paquete, t_list* lista_de_recursos);

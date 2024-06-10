@@ -18,6 +18,8 @@ int main(int argc, char* argv[]){
 	snd_handshake(fd_conexion_memoria);
 	log_info(logger_cpu, "Handshake a MEMORIA realizado");
 	
+	inicializar_tlb();
+
 	/* COMENZAMOS CON LA LOCURA DE HILOS */
 	pthread_t *hilo_dispatch = malloc(sizeof(pthread_t));
 	pthread_t *hilo_interrupt = malloc(sizeof(pthread_t));
@@ -38,19 +40,24 @@ int main(int argc, char* argv[]){
 
 /* OBTENER PARAMETROS DE .CONFIG */
 void leer__configuraciones(){
-    
     ip_memoria = config_get_string_value(config_cpu,"IP_MEMORIA");
     puerto_memoria = config_get_string_value(config_cpu,"PUERTO_MEMORIA");
     puerto_cpu_dispatch = config_get_string_value(config_cpu,"PUERTO_ESCUCHA_DISPATCH");
     puerto_cpu_interrupt = config_get_string_value(config_cpu,"PUERTO_ESCUCHA_INTERRUPT");
-
+	cantidad_entradas_tlb = config_get_string_value(config_cpu,"CANTIDAD_ENTRADAS_TLB");
+	algoritmo_tlb = config_get_string_value(config_cpu,"ALGORITMO_TLB");
 }
 
 /* Inicializo SEMAFOROS */
 void inicializar_semaforos(){
+
+	pthread_mutex_init(&mutex_tlb, NULL);
+
 	sem_init(&sem_recibir_pcb, 0, 1);
 	sem_init(&sem_execute, 0, 0);
 	sem_init(&sem_interrupcion, 0, 0);
+
+	
 }
 
 void dispatch(void *arg){
@@ -96,17 +103,16 @@ void fetch (void *arg){
 t_linea_instruccion* prox_instruccion(int pid, int program_counter){
 	
 	t_linea_instruccion* instruccion_recibida = malloc(sizeof(t_linea_instruccion*));
+	
 	//enviar_solicitud_de_instruccion(fd_conexion_memoria, pid, program_counter);
 	
-	while (1) {
-		int codigo_operacion = recibir_operacion(fd_conexion_memoria, logger_cpu, "Memoria");
+	int codigo_operacion = recibir_operacion(fd_conexion_memoria, logger_cpu, "Memoria");
 		switch (codigo_operacion) {
 			case PROXIMA_INSTRUCCION:
 				instruccion_recibida = recibir_proxima_instruccion(fd_conexion_memoria);
 				break;
 		}
 		return instruccion_recibida;
-	}
 }
 
 /* DECODE interpreto las intrucciones y las mando a ejecutar */
@@ -117,10 +123,10 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			check_interrupt();
 			break;
 		case MOV_IN:
-			//ejecutar_mov_in();
+			ejecutar_mov_in(PCB, instruccion->parametro1, instruccion->parametro2);
 			break;
 		case MOV_OUT:
-			//ejecutar_mov_out();
+			ejecutar_mov_out(PCB, instruccion->parametro1, instruccion->parametro2);
 			break;
 		case SUM:
 			ejecutar_sum(PCB, instruccion->parametro1, instruccion->parametro2);
@@ -192,6 +198,34 @@ void ejecutar_set(pcb* PCB, char* registro, char* valor){
 	return;
 }
 
+void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
+
+log_info(logger, "PID: %d - Ejecutando: %s - [%s, %s]", pcb->pid, "MOV IN", param1, param2);
+	
+	
+	
+	int direccion_logica = atoi(DIRECCION);
+	int direccion_fisica = solicitar_direccion_fisica(pcb, direccion_logica);
+	if(direccion_fisica == -1){
+		//pcb->program_counter -= 1;
+		return;
+
+}
+}
+
+void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
+	log_info(logger, "PID: %d - Ejecutando: %s - [%s, %s]", pcb->pid, "MOV OUT", param1, param2);
+		
+	int direccion_fisica = MMU(pcb, DIRECCION);
+	
+	if(direccion_fisica == -1){
+		//pcb->program_counter -= 1;
+		return;
+
+
+}}
+
+
 void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
 	uint8_t destino8;
 	uint8_t origen8;
@@ -253,6 +287,45 @@ void ejecutar_jnz(pcb* PCB, char* registro, char* valor){
 	}
 	return;
 }
+
+void ejecutar_wait(pcb* PCB, char* registro){
+	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "WAIT", registro);
+	char* recurso = malloc(strlen(registro) + 1);
+	strcpy(recurso, registro);
+	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_WAIT,NULL,NULL,NULL,NULL,NULL);
+	free(recurso);
+	sem_post(&sem_recibir_pcb);
+}
+
+void ejecutar_signal(pcb* PCB, char* registro){
+	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "SIGNAL", registro);
+	char* recurso = malloc(strlen(registro) + 1);
+	strcpy(recurso, registro);
+	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_SIGNAL,NULL,NULL,NULL,NULL,NULL);
+	free(recurso);
+	sem_post(&sem_execute);
+}
+
+void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* unidad_de_tiempo){
+	enviar_pcb(PCB, fd_escucha_dispatch, INTERFAZ, SOLICITAR_INTERFAZ_GENERICA, instruccion, interfaz, unidad_de_tiempo,NULL,NULL);
+	sem_post(&sem_execute);
+	return;
+}
+
+void ejecutar_exit(pcb* PCB){
+	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
+	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXITO,NULL,NULL,NULL,NULL,NULL);
+	sem_post(&sem_execute);
+}
+
+void ejecutar_error(pcb* PCB){
+	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
+	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXIT_CONSOLA,NULL,NULL,NULL,NULL,NULL);
+	sem_post(&sem_execute);
+}
+
+
+/* FUNCIONES PARA EL CALCULO ARITMETICOLOGICO */
 
 bool medir_registro(char* registro){
 	if(strcmp(registro, "AX") == 0){
@@ -326,41 +399,45 @@ uint32_t capturar_registro32(pcb* PCB, char* registro){
 	}
 }
 
-void ejecutar_wait(pcb* PCB, char* registro){
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "WAIT", registro);
-	char* recurso = malloc(strlen(registro) + 1);
-	strcpy(recurso, registro);
-	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_WAIT,NULL,NULL,NULL,NULL,NULL);
-	free(recurso);
-	sem_post(&sem_recibir_pcb);
+/*****************************************************/
+
+/* TRADUCCION LOGICA A FISICA */
+
+int MMU(pcb* PCB, char* DIRECCION){
+	int direccion_fisica;
+	int marco;
+	int direccion_logica = atoi(DIRECCION);
+	int numero_pagina = floor(direccion_logica / TAM_PAGINA);
+	int desplazamiento =  direccion_logica - numero_pagina * TAM_PAGINA;
+
+	switch (MAX_TLB_ENTRY)
+	{
+	case 0:
+		enviar_solicitud_marco(fd_conexion_memoria, PCB->PID, numero_pagina);
+		marco = recibir_marco();
+		break;
+	default:
+		marco = consultar_tlb(PCB->PID, numero_pagina);
+		break;
+	}
+
+
+	
+	send_solicitud_marco(fd_memoria, pcb->pid, numero_pagina);
+	int marco = recibir_marco();
+	if(marco == -1){
+		//log_info(logger, "Page Fault PID: %d - Pagina: %d", pcb->pid, numero_pagina); //log ob
+		//iniciar acciones page fault
+		//send_pcb(pcb, dispatch_cliente_fd);
+		//send_pcb_pf(numero_pagina, desplazamiento, dispatch_cliente_fd);
+		//sem_post(&sem_nuevo_proceso);
+		//return marco;
+	}
+	log_info(logger,  "PID: %d - OBTENER MARCO - Página: %d - Marco: %d", pcb->pid, numero_pagina, marco); //log ob
+	//int direccion_fisica = marco*tam_pagina + desplazamiento;
+	return direccion_fisica;
 }
 
-void ejecutar_signal(pcb* PCB, char* registro){
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "SIGNAL", registro);
-	char* recurso = malloc(strlen(registro) + 1);
-	strcpy(recurso, registro);
-	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_SIGNAL,NULL,NULL,NULL,NULL,NULL);
-	free(recurso);
-	sem_post(&sem_execute);
-}
-
-void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* unidad_de_tiempo){
-	enviar_pcb(PCB, fd_escucha_dispatch, INTERFAZ, SOLICITAR_INTERFAZ_GENERICA, instruccion, interfaz, unidad_de_tiempo,NULL,NULL);
-	sem_post(&sem_execute);
-	return;
-}
-
-void ejecutar_exit(pcb* PCB){
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
-	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXITO,NULL,NULL,NULL,NULL,NULL);
-	sem_post(&sem_execute);
-}
-
-void ejecutar_error(pcb* PCB){
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
-	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXIT_CONSOLA,NULL,NULL,NULL,NULL,NULL);
-	sem_post(&sem_execute);
-}
 
 
 /* CHECK INTERRUPT */
@@ -415,6 +492,99 @@ void check_interrupt (){
 		sem_post(&sem_execute);
 	}
 }
+
+
+/* TLB */
+
+void inicializar_tlb(){
+
+	translation_lookaside_buffer = list_create();
+	MAX_TLB_ENTRY = atoi (cantidad_entradas_tlb);
+
+}
+
+int solicitar_info_memory(int PID){
+
+	enviar_solicitud_marco(fd_conexion_memoria, PCB->PID, numero_pagina);
+	return recibir_marco();
+}
+
+void agregar_entrada_tlb(t_list* TLB, nodo_tlb * info_proceso_memoria, pthread_mutex_t* mutex, int PID, int numero_pagina, int marco){
+
+	info_proceso_memoria->valor->pid = PID;
+	info_proceso_memoria->valor->numero_pagina = numero_pagina;
+	info_proceso_memoria->valor->marco = marco;
+
+	push_con_mutex(TLB, info_proceso_memoria, &mutex_tlb);
+
+}
+
+void eliminar_entrada_tlb(t_list* TLB, pthread_mutex_t* mutex, int posicion){
+
+	remove_con_mutex(TLB, mutex, posicion);
+	
+} 
+
+void verificar_tamanio_tlb(t_list* TLB, pthread_mutex_t* mutex){
+
+	if((list_size(TLB)/MAX_TLB_ENTRY) =! 1){
+		return;
+	}
+	pop_con_mutex(TLB, mutex);
+}
+
+int consultar_tlb(int PID, int numero_pagina){
+	
+	int marco;
+
+	nodo_tlb * info_proceso_memoria;
+
+	if(list_is_empty(translation_lookaside_buffer)){
+		marco = solicitar_info_memory(PID, numero_pagina);
+		agregar_entrada_tlb(translation_lookaside_buffer, info_proceso_memoria, &mutex_tlb, PID, numero_pagina, marco);
+		return info_proceso_memoria->valor->marco;
+	}
+	
+	info_proceso_memoria = list_find(translation_lookaside_buffer,(void*)PCB->PID);
+
+	if(info_proceso_memoria = NULL){
+		marco = solicitar_info_memory(PID, numero_pagina);
+		agregar_entrada_tlb(translation_lookaside_buffer, info_proceso_memoria, &mutex_tlb, PID, numero_pagina, marco);
+	}
+
+	marco = info_proceso_memoria->valor->marco;
+
+	administrar_tlb(translation_lookaside_buffer, info_proceso_memoria);
+
+	return marco;
+}
+
+int posicion_nodo_tlb(t_list* TLB, nodo_tlb * info_proceso_memoria){
+	for(int i = 0; i<list_size(TLB); i++){
+		nodo_tlb * NODO = list_get(TLB, i);
+		if(NODO->valor->pid == info_proceso_memoria->valor->pid){
+			return i;
+		}
+}
+}
+
+void administrar_tlb(t_list* TLB, nodo_tlb * info_proceso_memoria){
+
+	if(algoritmo_tlb == "FIFO"){
+		return;
+	}
+
+	verificar_tamanio_tlb(TLB &mutex_tlb);
+
+	int posicion_nodo_buscado = posicion_nodo_tlb(TLB, info_proceso_memoria);
+
+	agregar_entrada_tlb(TLB, info_proceso_memoria, &mutex_tlb, info_proceso_memoria->valor->pid, info_proceso_memoria->valor->numero_pagina, info_proceso_memoria->valor->marco);
+	
+	eliminar_entrada_tlb(TLB, &mutex_tlb, posicion_nodo_buscado);
+
+	return;
+}
+
 
 /* LIBERAR MEMORIA USADA POR CPU */
 void terminar_programa(){
