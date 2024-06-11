@@ -96,6 +96,7 @@ pthread_mutex_t mutex_lista_exit;
 pthread_mutex_t mutex_debe_planificar;
 pthread_mutex_t mutex_envio_memoria;
 pthread_mutex_t mutex_asignacion_recursos;
+pthread_mutex_t mutex_cola_block; 
 
 pcb * pcb_a_enviar ;
 
@@ -142,6 +143,7 @@ void iniciar_planificacion();
 void detener_planificacion();
 void cambiar_multiprogramacion(char* nuevoGrado);
 void enlistar_procesos();
+void ejecutar_script(char* pathPasadoPorConsola);
 
 
 void planificar_largo_plazo();

@@ -47,6 +47,7 @@ void inicializar_semaforos(){
     pthread_mutex_init(&mutex_lista_interfaces, NULL);
     pthread_mutex_init(&mutex_debe_planificar, NULL);
     pthread_mutex_init(&mutex_asignacion_recursos, NULL);
+    pthread_mutex_init(&mutex_cola_block, NULL);
 
     sem_init(&sem_asignacion_recursos, 0, 0);
     sem_init(&sem_vuelta_recursos, 0, 0);
@@ -101,7 +102,6 @@ void iniciar_proceso(char *pathPasadoPorConsola){
 }
 
 
-//Segun el foro no hay que bsucar los procesos que esten bloqueados.
 pcb* buscar_proceso_para_finalizar(int pid_a_buscar){ 
     pcb* pcbEncontrado;
     int posicionPCB = buscar_posicion_proceso(cola_new, pid_a_buscar);
@@ -121,8 +121,15 @@ pcb* buscar_proceso_para_finalizar(int pid_a_buscar){
                 if(posicionPCB != -1){
                     pcbEncontrado = remove_con_mutex(cola_exec, &mutex_lista_exec, posicionPCB);
                 } else{
-                    log_info(logger_kernel, "El proceso que busca se encuentra en una IO, espere a que regrese.");
+                posicionPCB = buscar_posicion_proceso(cola_block, pid_a_buscar);
+                    if(posicionPCB != -1){
+                        pcbEncontrado = remove_con_mutex(cola_block, &mutex_cola_block, posicionPCB);
+                    }
+                    else{
+                        log_info(logger_kernel, "NO se encontro el proceso");
+                    }
                 }
+
             }
         }
     }
@@ -268,6 +275,39 @@ void atender_instruccion_valida(char* leido){
     
     string_array_destroy(comando_consola);
 };
+
+//ejecutar_script y atender_instruccion_valida son PRACTICAMENTE IGUALES pero uno lee de consola y el otro de un archivo
+void ejecutar_script(char* pathPasadoPorConsola){
+    FILE *f = fopen(pathPasadoPorConsola, "r"); // El PATH lo vamos a tener que completar
+    if (f == NULL){
+        log_info(logger_kernel,"Error al abrir el archivo de EJECUTAR_SCRIPT");
+        return;
+    }
+
+    char buffer[256]; // Se pordia hacer con un malloc pero como se sabe que lo que se va a ingresar son los comandos por consola, nunca se va a superar este NUMERIN
+    while(fgets(buffer, sizeof(buffer), f)){
+        char** comandoSeparado = string_split(buffer," ");
+        
+        if(strcmp(comandoSeparado[0], "INICIAR_PROCESO") == 0){
+            iniciar_proceso(comandoSeparado[1]);
+        }else if(strcmp(comandoSeparado[0], "FINALIZAR_PROCESO") == 0){
+            finalizar_proceso(comandoSeparado[1]);
+        }else if(strcmp(comandoSeparado[0], "DETENER_PLANIFICACION") == 0){
+            detener_planificacion();
+        }else if(strcmp(comandoSeparado[0], "INICIAR_PLANIFICACION") == 0){
+            iniciar_planificacion();
+        }else if(strcmp(comandoSeparado[0], "MULTIPROGRAMACION") == 0){
+            cambiar_multiprogramacion(comandoSeparado[1]);
+        }else if(strcmp(comandoSeparado[0], "PROCESO_ESTADO") == 0){
+            enlistar_procesos(comandoSeparado[1]);
+        }else if(strcmp(comandoSeparado[0], "EJECUTAR_SCRIPT") == 0){ // NO creo q dentro del script venga un ejecutar script pero qcy todo puede pasar vite
+            ejecutar_script(comandoSeparado[1]);
+        }
+        
+        string_array_destroy(comandoSeparado);
+    }
+    fclose(f);
+}
 
 void iniciar_planificacion(){
     log_info(logger_kernel,"Planificaciones iniciadas");
@@ -422,12 +462,12 @@ char* motivo_a_string(motivo_desalojo motivo){
     case RECURSO_INVALIDO:
         return "INVALID_RESOURCE";
         break;
-    //case INTERFAZ_INVALIDA:
-    //    return "INVALID_INTERFACE";
-    //    break;
-    //case SIN_MEMORIA
-    //    return "OUT_OF_MEMORY";
-    //    break;
+    case INTERFAZ_INVALIDA:
+        return "INVALID_INTERFACE";
+        break;
+    case SIN_MEMORIA
+        return "OUT_OF_MEMORY";
+        break;
 
 
     //TODAS COMENTADAS PORQ TODAVIA NO LAS IMPLEMENTARON
@@ -543,6 +583,10 @@ void atender_vuelta_dispatch(){
                     	push_con_mutex(cola_exit, pcb_actualizado, &mutex_lista_exit);
                     	sem_post(&sem_procesos_exit);
                         break;
+                    case SIN_MEMORIA: // Sergio tiene q poner este mismo motivo
+                        cambiar_estado(pcb_actualizado, EXITT);
+                        push_con_mutex(cola_exit, pcb_actualizado, &mutex_lista_exit);
+                        sem_post(&sem_procesos_exit);
 			    }
                	break;
                 case RECURSO:
@@ -580,7 +624,7 @@ void atender_vuelta_dispatch(){
                                 info_de_bloqueo->unidad_de_tiempo= tiempo_a_esperar; //simplemente otra referencia
                                 cambiar_estado(pcb_actualizado,BLOCKED);
                                 push_con_mutex(interfaz_gen->cola_bloqueados,info_de_bloqueo,interfaz_gen->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
-                                list_add(pcb_actualizado,cola_block); //No es con mutex porque no me preocupa la condicion de carrera 
+                                push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block); 
                                 sem_post(interfaz_gen->sem_procesos_blocked); 
                                 break;
                             }
@@ -591,6 +635,7 @@ void atender_vuelta_dispatch(){
                         free(tiempo_a_esperar); //ya no me importa el tiempo a esperar
                         list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
                         cambiar_estado(pcb_actualizado,EXITT);
+                        pcb_actualizado->motivo = INTERFAZ_INVALIDA; // Asi notificamos porq verga finalizo
                         push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
                         sem_post(&sem_procesos_exit);
                         //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
@@ -612,7 +657,7 @@ void atender_vuelta_dispatch(){
                                 info_de_bloqueo->tamanio=registro_tamanio_STDIN;
                                 cambiar_estado(pcb_actualizado,BLOCKED);
                                 push_con_mutex(interfaz_STDIN->cola_bloqueados,info_de_bloqueo,interfaz_STDIN->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
-                                list_add(pcb_actualizado,cola_block); //No es con mutex porque no me preocupa la condicion de carrera
+                                push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block)
                                 sem_post(interfaz_STDIN->sem_procesos_blocked); 
                                 break;
                             }
@@ -624,6 +669,7 @@ void atender_vuelta_dispatch(){
                         free(registro_tamanio_STDIN);
                         list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
                         cambiar_estado(pcb_actualizado,EXITT);
+                        pcb_actualizado->motivo = INTERFAZ_INVALIDA; // Asi notificamos porq verga finalizo
                         push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
                         sem_post(&sem_procesos_exit);
                         //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
@@ -645,7 +691,7 @@ void atender_vuelta_dispatch(){
                                 info_de_bloqueo->tamanio=registro_tamanio_STDOUT;
                                 cambiar_estado(pcb_actualizado,BLOCKED);
                                 push_con_mutex(interfaz_STDOUT->cola_bloqueados,info_de_bloqueo,interfaz_STDOUT->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
-                                list_add(pcb_actualizado,cola_block); //No es con mutex porque no me preocupa la condicion de carrera
+                                push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block);
                                 sem_post(interfaz_STDOUT->sem_procesos_blocked); 
                                 break;
                             }
@@ -657,6 +703,7 @@ void atender_vuelta_dispatch(){
                         free(registro_tamanio_STDOUT);
                         list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
                         cambiar_estado(pcb_actualizado,EXITT);
+                        pcb_actualizado->motivo = INTERFAZ_INVALIDA; // Asi notificamos porq verga finalizo
                         push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
                         sem_post(&sem_procesos_exit);
                         //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
@@ -706,7 +753,7 @@ void manejar_wait(pcb* proceso, char* recurso_wait){
 			cambiar_estado(proceso, BLOCKED);
             //cada recurso tiene SU cola y SU mutex
 			push_con_mutex(recurso_buscado->cola_block_asignada, proceso, &recurso_buscado->mutex_asignado);
-            list_add(proceso,cola_block); //No es con mutex porque no me preocupa la condicion de carrera
+            push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block)
 			sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
 		} else {
 			agregar_recurso(recurso_buscado->nombreRecurso, proceso); //Hay que asignarle el recurso usado al pcb AGREGAR LISTA DE RECURSOS A LA ESTRUCTURA PCB. Aca es donde me di cuenta que todo se iba a la mierda con el empaquetado
@@ -817,7 +864,7 @@ element_interfaz * interfaz_existe_y_esta_conectada(char * un_nombre){
     bool interfaz_con_nombre(void * una_interfaz){
 	element_interfaz * una_interfaz_casteada = (element_interfaz*) una_interfaz; //no importa que este en blanco, es solo por un tema del editor de texto, en teoría debería compilarlo bien
         return (!strcmp(una_interfaz_casteada->nombre,un_nombre)); //no importa que este en blanco, es solo por un tema del editor de texto, en teoría debería compilarlo bien
-    }; //¿por que se declara aca? porque la funcion que le pasamos a list_find tien que recibir solo un parametro, y de tipo void*
+    };
     pthread_mutex_lock(&mutex_lista_interfaces); 
     element_interfaz * interfaz  = list_find(interfaces_conectadas,(void*)interfaz_con_nombre); 
     pthread_mutex_unlock(&mutex_lista_interfaces);
@@ -979,8 +1026,12 @@ void terminar_programa(){
     log_destroy(logger_obligatorio);
     liberar_conexion(fd_escucha_kernel);
 
-    // HAY QUE HACER UN FOR PARA CADA PROCESO QUE ESTE EN cola_exit_liberados, FALTA IMPLEMENTAR
-    //pcb_destroy(pcbFinalizado); // esta destruye todo el pcb pa la mierda 
+    int i;
+    for (i = list_size(cola_exit) - 1; i >= 0; i--){
+        pcb* pcb_a_finalizar = remove_con_mutex(cola_exit, &mutex_cola_block, i);
+        pcb_destroy(pcb_a_finalizar);
+    }
+    
 }
 
 /*

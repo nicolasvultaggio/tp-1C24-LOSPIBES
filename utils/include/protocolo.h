@@ -30,6 +30,8 @@ typedef enum {
 	SOLICITAR_WAIT,
 	SOLICITAR_SIGNAL,
 	RECURSO_INVALIDO,
+	SIN_MEMORIA,
+	INTERFAZ_INVALIDA,
 	VACIO
 } motivo_desalojo; //motivos de desalojo del proceso
 
