@@ -255,7 +255,7 @@ void atender_instruccion_valida(char* leido){
 
     //A TODOS LES FALTA IMPLEMENTAR LA LOGICA, PERO DEJO EL ESQUELETO ARMADO
     if(strcmp(comando_consola[0] , "EJECUTAR_SCRIPT") == 0){
-        // falta
+        ejecutar_script(comando_consola[1]);
     }else if(strcmp(comando_consola[0], "INICIAR_PROCESO") == 0){
         iniciar_proceso(comando_consola[1]);
     }else if(strcmp(comando_consola[0], "FINALIZAR_PROCESO") == 0){
@@ -465,7 +465,7 @@ char* motivo_a_string(motivo_desalojo motivo){
     case INTERFAZ_INVALIDA:
         return "INVALID_INTERFACE";
         break;
-    case SIN_MEMORIA
+    case SIN_MEMORIA:
         return "OUT_OF_MEMORY";
         break;
 
@@ -657,7 +657,7 @@ void atender_vuelta_dispatch(){
                                 info_de_bloqueo->tamanio=registro_tamanio_STDIN;
                                 cambiar_estado(pcb_actualizado,BLOCKED);
                                 push_con_mutex(interfaz_STDIN->cola_bloqueados,info_de_bloqueo,interfaz_STDIN->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
-                                push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block)
+                                push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block);
                                 sem_post(interfaz_STDIN->sem_procesos_blocked); 
                                 break;
                             }
@@ -753,7 +753,7 @@ void manejar_wait(pcb* proceso, char* recurso_wait){
 			cambiar_estado(proceso, BLOCKED);
             //cada recurso tiene SU cola y SU mutex
 			push_con_mutex(recurso_buscado->cola_block_asignada, proceso, &recurso_buscado->mutex_asignado);
-            push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block)
+            push_con_mutex(cola_block, proceso, &mutex_cola_block);
 			sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
 		} else {
 			agregar_recurso(recurso_buscado->nombreRecurso, proceso); //Hay que asignarle el recurso usado al pcb AGREGAR LISTA DE RECURSOS A LA ESTRUCTURA PCB. Aca es donde me di cuenta que todo se iba a la mierda con el empaquetado
@@ -1027,7 +1027,7 @@ void terminar_programa(){
     liberar_conexion(fd_escucha_kernel);
 
     int i;
-    for (i = list_size(cola_exit) - 1; i >= 0; i--){
+    for (i = list_size(cola_exit) - 1; i >= 0; i--){ 
         pcb* pcb_a_finalizar = remove_con_mutex(cola_exit, &mutex_cola_block, i);
         pcb_destroy(pcb_a_finalizar);
     }
