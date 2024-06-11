@@ -14,7 +14,7 @@ bool hay_interrupcion;
 
 /* TLB */
 int MAX_TLB_ENTRY;
-int ENTRADAS_ACTUAL;
+int TAM_PAGINA;
 t_list* translation_lookaside_buffer;
 pthread_mutex_t mutex_tlb;
 /* SEMAFOROS */

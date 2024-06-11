@@ -100,19 +100,21 @@ void fetch (void *arg){
 	}
 }
 
-t_linea_instruccion* prox_instruccion(int pid, int program_counter){
+t_linea_instruccion* prox_instruccion(int pid, uint32_t program_counter){
 	
 	t_linea_instruccion* instruccion_recibida = malloc(sizeof(t_linea_instruccion*));
 	
 	//enviar_solicitud_de_instruccion(fd_conexion_memoria, pid, program_counter);
 	
 	int codigo_operacion = recibir_operacion(fd_conexion_memoria, logger_cpu, "Memoria");
+		
 		switch (codigo_operacion) {
 			case PROXIMA_INSTRUCCION:
 				instruccion_recibida = recibir_proxima_instruccion(fd_conexion_memoria);
-				break;
+				break;		
 		}
-		return instruccion_recibida;
+	
+	return instruccion_recibida;
 }
 
 /* DECODE interpreto las intrucciones y las mando a ejecutar */
@@ -208,57 +210,66 @@ void ejecutar_set(pcb* PCB, char* registro, char* valor){
 
 void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 
-log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", pcb->pid, "MOV IN", param1, param2);
-	
+	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", pcb->pid, "MOV IN", param1, param2);
+
 	int direccion_logica = atoi(DIRECCION);
 	int direccion_fisica = solicitar_direccion_fisica(pcb, direccion_logica);
-	if(direccion_fisica == -1){ //al final esto no existe, la mmu siempre devuelve una direccion traducida (nunca te va a devolver -1), despues vos le pedis a la memoria hacer lo q tengas que hacer, y esta te dice si pudo hacerlo, si no pudo hacerlo vos tenes que desalojar el proceso
-		//pcb->program_counter -= 1;
+	if(direccion_fisica == -1){
 		return;
 	}
-	//eliminar este if
 
-	//¿como es la secuencia despues de obtener la direccion fisica?
+	enviar_solicitud_lectura_memoria(direccion_fisica, PCB->pid, fd_conexion_memoria);
+	uint32_t valor = recibir_valor_leido();
+	log_info(logger_cpu, "PID: %d - Accion: LEER - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
+	ejecutar_set(PCB, DATOS, valor);
 
-	// pedis la escritura o lectura a memoria (esta parte hablala con Marce)
-	// te quedas esperando su respuesta   (esta parte hablala con Marce)
-	// si salio bien (pudo escribir donde le pediste), perfecto no haces nada mas en esta funcion, pasas a check interrupt
-	// si no salio bien (le pediste una direccion invalida -> le desalojas el pcb con motivo de desalojo fallo o error, para que kernel pueda finalizar el proceso) y haces check interrupt
-	//esta misma logica la tendran que implementar las interfaces stdin y stdout, porque tambien le piden escribir o leer a memoria
-	//atenti a los flags que hay que modificar en cada instruccion, fijate en el .h, sobre todo el que se llama error_memoria
 
-	es_exit=false;  //siempre modificar
-	es_bloqueante=false; //modificar siempre que es_exit = false
-	//error_memoria; se pone true o false segun respuesta de memoria 
-	
+
+
+
+
+
+
+
+
+
+
+
+
 }
+
 
 void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", PCB->pid, "MOV OUT", param1, param2);
-		
-	int direccion_fisica = MMU(PCB, DIRECCION); // ojo estas 
 	
-	if(direccion_fisica == -1){ //al final esto no existe, la mmu siempre devuelve una direccion traducida (nunca te va a devolver -1), despues vos le pedis a la memoria hacer lo q tengas que hacer, y esta te dice si pudo hacerlo, si no pudo hacerlo vos tenes que desalojar el proceso
-		//pcb->program_counter -= 1;
+	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", pcb->pid, "MOV OUT", param1, param2);
+
+	int direccion_logica = atoi(DIRECCION);
+	int direccion_fisica = solicitar_direccion_fisica(pcb, direccion_logica);
+	if(direccion_fisica == -1){
 		return;
 	}
-	//eliminar este if
 
-	//¿como es la secuencia despues de obtener la direccion fisica?
+	uint32_t valor32;
 
-	// pedis la escritura o lectura a memoria (esta parte hablala con Marce)
-	// te quedas esperando su respuesta   (esta parte hablala con Marce)
-	// si salio bien (pudo escribir donde le pediste), perfecto no haces nada mas en esta funcion, pasas a check interrupt
-	// si no salio bien (le pediste una direccion invalida -> le desalojas el pcb con motivo de desalojo fallo o error, para que kernel pueda finalizar el proceso) y haces check interrupt
-	//esta misma logica la tendran que implementar las interfaces stdin y stdout, porque tambien le piden escribir o leer a memoria
-	//atenti a los flags que hay que modificar en cada instruccion, fijate en el .h, sobre todo el que se llama error_memoria
-
-	es_exit=false;  //siempre modificar
-	es_bloqueante=false; //modificar siempre que es_exit = false
-	//error_memoria; se pone true o false segun respuesta de memoria 
-
+	/*if(strcmp(registro, "AX") == 0){
+		valor32 = PCB->registros.AX;
+	} else if(strcmp(registro, "BX") == 0){
+		valor32 = PCB->registros.BX;
+	} else if(strcmp(registro, "CX") == 0){
+		valor32 = PCB->registros.CX;
+	} else if(strcmp(registro, "DX") == 0){
+		valor32 = PCB->registros.DX;
+	}
+*/
+	int numero_pagina = floor(direccion_logica/TAM_PAGINA);
+	valores_tlb* valores = malloc(sizeof(valores_tlb));
+	valores->numero_pagina = numero_pagina;
+	valores->pid = PCB->pid;
+	send_solicitud_escritura_memoria(direccion_fisica, valor32, valores, fd_conexion_memoria);
+	log_info(logger_cpu, "PID: %d - Accion: ESCRIBIR - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
+	check_interrupt();
+	free(pyn);
 }
-
 
 void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
 	uint8_t destino8;
@@ -447,9 +458,16 @@ uint32_t capturar_registro32(pcb* PCB, char* registro){
 	}
 }
 
-/*****************************************************/
+/* FUNCIONES MOVEIN MOVEOUT */
 
-/* TRADUCCION LOGICA A FISICA */
+uint32_t recibir_valor_leido(){
+	uint32_t valor;
+	int cod_op = recibir_operacion(fd_conexion_memoria);
+		switch (cod_op) {
+			case VALOR_LEIDO:
+				valor = recibir_valor_leido_memoria(fd_conexion_memoria);
+				break;
+			}
 
 int MMU(pcb* PCB, char* DIRECCION){ //que la direccion fisica sea un size_t, fijate que las interfaces y todo lo que es direcciones de memoria ya implementado es con size_t
 	int direccion_fisica;
@@ -485,8 +503,6 @@ int MMU(pcb* PCB, char* DIRECCION){ //que la direccion fisica sea un size_t, fij
 	//int direccion_fisica = marco*tam_pagina + desplazamiento;        //aca  ^^^ no podes poner pcb->pid, es PCB->pid, pcb en minusculas es el tipo de dato, no un puntero -> DEBUGGEEN ESTAS COSAS PORQUE ESTOS ERRORES SE ACUMULAN
 	return direccion_fisica; //direccion fisica tiene que ser un size_t, no un int, fijate como esta en todo el tp, los size_t se usan para representar numeros de bytes, no los int
 }
-
-
 
 /* CHECK INTERRUPT */
 void* interrupcion(void *arg) {
@@ -647,24 +663,73 @@ void liberar_interrupcion_actual(){
 
 /* TLB */
 
+/* TRADUCCION LOGICA A FISICA */
+
+int MMU(pcb* PCB, char* DIRECCION){
+	int direccion_fisica;
+	int marco;
+	int direccion_logica = atoi(DIRECCION);
+	int numero_pagina = floor(direccion_logica / TAM_PAGINA);
+	int desplazamiento =  direccion_logica - numero_pagina * TAM_PAGINA;
+
+	switch (MAX_TLB_ENTRY)
+	{
+	case 0:
+		enviar_solicitud_marco(fd_conexion_memoria, PCB->PID, numero_pagina);
+		marco = recibir_marco(fd_conexion_memoria);
+		break;
+	default:
+		marco = consultar_tlb(PCB->PID, numero_pagina);
+		break;
+	}
+
+	if(marco == -1){
+		log_info(logger_cpu, "Page Fault PID: %d - Pagina: %d", PCB->pid, numero_pagina); //log ob
+		//iniciar acciones page fault
+		//send_pcb(pcb, dispatch_cliente_fd);
+		//send_pcb_pf(numero_pagina, desplazamiento, dispatch_cliente_fd);
+		//sem_post(&sem_nuevo_proceso);
+		return marco;
+	}
+	log_info(logger_cpu,  "PID: %d - OBTENER MARCO - Página: %d - Marco: %d", PCB->pid, numero_pagina, marco); //log ob
+	int direccion_fisica = marco*TAM_PAGINA + desplazamiento;
+	return direccion_fisica;
+}
+
+
+
 void inicializar_tlb(){
 
 	translation_lookaside_buffer = list_create();
 	MAX_TLB_ENTRY = atoi (cantidad_entradas_tlb);
+	TAM_PAGINA = solicitar_tamanio_pagina();
 
+}
+
+int solicitar_tamanio_pagina(){
+	int tamanio;
+	int codigo_operacion = recibir_operacion(fd_conexion_memoria);
+	switch (codigo_operacion){
+		case SIZE_PAGE:
+			TAM_PAGINA = recibir_tamanio_pagina(fd_conexion_memoria);
+			break;
+	}		
+	
+	return tamanio;
 }
 
 int solicitar_info_memory(int PID){
 
 	enviar_solicitud_marco(fd_conexion_memoria, PCB->PID, numero_pagina);
 	return recibir_marco();
+
 }
 
 void agregar_entrada_tlb(t_list* TLB, nodo_tlb * info_proceso_memoria, pthread_mutex_t* mutex, int PID, int numero_pagina, int marco){
 
 	info_proceso_memoria->valor->pid = PID;
 	info_proceso_memoria->valor->numero_pagina = numero_pagina;
-	info_proceso_memoria->valor->marco = marco;
+	info_proceso_memoria->marco = marco;
 
 	push_con_mutex(TLB, info_proceso_memoria, &mutex_tlb);
 
@@ -687,53 +752,63 @@ void verificar_tamanio_tlb(t_list* TLB, pthread_mutex_t* mutex){
 int consultar_tlb(int PID, int numero_pagina){
 	
 	int marco;
-
+	int posicion_elemento_buscado;
 	nodo_tlb * info_proceso_memoria;
-
+	
 	if(list_is_empty(translation_lookaside_buffer)){
 		marco = solicitar_info_memory(PID, numero_pagina);
 		agregar_entrada_tlb(translation_lookaside_buffer, info_proceso_memoria, &mutex_tlb, PID, numero_pagina, marco);
-		return info_proceso_memoria->valor->marco;
+		return marco;
 	}
 	
 	info_proceso_memoria = list_find(translation_lookaside_buffer,(void*)PCB->PID);
 
-	if(info_proceso_memoria = NULL){
+	if(info_proceso_memoria == NULL){
 		marco = solicitar_info_memory(PID, numero_pagina);
-		agregar_entrada_tlb(translation_lookaside_buffer, info_proceso_memoria, &mutex_tlb, PID, numero_pagina, marco);
+		info_proceso_memoria = administrar_tlb(translation_lookaside_buffer, info_proceso_memoria, PID, numero_pagina, marco);
 	}
 
-	marco = info_proceso_memoria->valor->marco;
+	t_list * lista_auxiliar = list_create();
+	posicion_elemento_buscado = posicion_elemento_tlb(translation_lookaside_buffer, info_proceso_memoria);
+	lista_auxiliar = list_duplicate(translation_lookaside_buffer);
+	eliminar_entrada_tlb(translation_lookaside_buffer, &mutex_tlb, posicion_elemento_buscado);
+	info_proceso_memoria = list_get(lista_auxiliar,posicion_elemento_buscado);
+	push_con_mutex(translation_lookaside_buffer, info_proceso_memoria, &mutex_tlb);
+	info_proceso_memoria = list_get(translation_lookaside_buffer, 0);
+	list_clean(lista_auxiliar);
 
-	administrar_tlb(translation_lookaside_buffer, info_proceso_memoria);
-
-	return marco;
+	return info_proceso_memoria->marco;
 }
 
-int posicion_nodo_tlb(t_list* TLB, nodo_tlb * info_proceso_memoria){
+int posicion_elemento_tlb(t_list* TLB, nodo_tlb * info_proceso_memoria){
 	for(int i = 0; i<list_size(TLB); i++){
 		nodo_tlb * NODO = list_get(TLB, i);
 		if(NODO->valor->pid == info_proceso_memoria->valor->pid){
-			return i;
+			if(NODO->valor->numero_pagina == info_proceso_memoria->valor->numero_pagina){
+				return i;
+			}
 		}
-}
+	}
 }
 
-void administrar_tlb(t_list* TLB, nodo_tlb * info_proceso_memoria){
+nodo_tlb * administrar_tlb(t_list* TLB, nodo_tlb * info_proceso_memoria, int PID, int numero_pagina, int marco){
 
-	if(algoritmo_tlb == "FIFO"){
-		return;
+	nodo_tlb * elemento_buscado_segun_marco = list_find(TLB, (void*)marco);
+	verificar_tamanio_tlb(TLB, &mutex_tlb);
+
+	if(elemento_buscado_segun_marco == NULL){
+		
+		agregar_entrada_tlb(TLB, info_proceso_memoria, &mutex_tlb, PID, numero_pagina, marco);
+		elemento_buscado_segun_marco = list_find(TLB, (void*)marco);
+		return elemento_buscado_segun_marco->marco;
+
 	}
 
-	verificar_tamanio_tlb(TLB &mutex_tlb);
-
-	int posicion_nodo_buscado = posicion_nodo_tlb(TLB, info_proceso_memoria);
-
-	agregar_entrada_tlb(TLB, info_proceso_memoria, &mutex_tlb, info_proceso_memoria->valor->pid, info_proceso_memoria->valor->numero_pagina, info_proceso_memoria->valor->marco);
+	int posicion_elemento_buscado = posicion_elemento_tlb(TLB, elemento_buscado_segun_marco);
+	agregar_entrada_tlb(TLB, info_proceso_memoria, &mutex_tlb, PID, numero_pagina, marco);
+	eliminar_entrada_tlb(TLB, &mutex_tlb, posicion_elemento_buscado);
 	
-	eliminar_entrada_tlb(TLB, &mutex_tlb, posicion_nodo_buscado);
-
-	return;
+	return info_proceso_memoria = list_find(TLB, (void*)marco);;
 }
 
 
