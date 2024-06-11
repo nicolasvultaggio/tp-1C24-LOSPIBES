@@ -5,8 +5,8 @@
 #include <../../utils/include/protocolo.h>
 
 typedef struct{
-	size_t nro_pagina;
-	size_t nro_marco;
+	int nro_pagina; //pasarlo a memoria como size_t
+	int nro_marco; //pasarlo a memoria como size_t
 }fila_tabla_de_paginas; //las tablas de paginas no son tablas, son listas, es mas facil de manejar
 typedef struct {
 	int pid;
@@ -35,27 +35,27 @@ int fd_conexion_io;
 
 void terminar_programa();
 void leer_configuraciones();
-void iniciar_memoria_contigua();
+//void iniciar_memoria_contigua();
 
 //MUTEX
 void inicializar_semaforos();
 pthread_mutex_t mutex_lista_procesos; 
 pthread_mutex_t mutex_frames_array; 
 
-void * user_space;
+/*
+char * user_space;
 t_bitarray * frames_array;
 char * bitmap;
-size_t cant_marcos;
-
+*/
 
 //2do checkpoint
 int puerto_escucha;
-size_t tam_memoria;
-size_t tam_pagina; //los size_t sirven mas para representar cantidad de bytes
+int tam_memoria;
+int tam_pagina; 
 char* path_instrucciones;
 int retardo_respuesta;
 /**********/
-char* memoria;
+char* memoriaPrincipal;
 t_list* lista_de_procesos;// esta sera una lista de procesos, entonces cada nodo es un proceso(con un pid y una sublista de instrucciones)
 char* server_name = "SOY UN CLIENTE";
 t_list * leer_pseudocodigo(char* ruta);
@@ -68,7 +68,16 @@ t_linea_instruccion* buscar_instruccion(int pid, int program_counter);
 void send_proxima_instruccion(int filedescriptor, t_linea_instruccion *instruccion);
 void procesar_pedido_instruccion(int socket_cpu);
 void instruccion_destroyer(t_linea_instruccion* instruccion);
-size_t dividir_y_redondear_hacia_arriba(size_t a,size_t b);
+int dividir_y_redondear_hacia_arriba(int a,int b);
 int nro_de_marco_libre();
 bool es_proceso_con_pid(void * un_pid);
+int bitsToBytes(int bits);
+
+int cant_marcos;
+int iniciarMemoria();
+int iniciarPaginacion();
+int idGlobal;
+char * data;
+char * frames_array;
+char * asignarMemoriaBits(int bits);
 #endif

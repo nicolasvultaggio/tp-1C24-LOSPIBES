@@ -7,6 +7,8 @@ int main() {
     config_memoria = config_create("./configs/memoria.config");
     leer_configuraciones();
 	 //CHECKPOINT 3 lo que realice aca es crear la memoria de usuario 
+
+	//iniciar_memoria_contigua();
 	int mem = iniciarMemoria();
 
 	if(!mem){
@@ -18,7 +20,6 @@ int main() {
     
     log_info(logger_memoria, "Puerto de memoria habilitado para sus clientes");
 
-	iniciar_memoria_contigua();
     //***************************CHECKPOINT 2*************************+
     
     // Iniciar conexiones y esperar y creo lista de procesos
@@ -29,20 +30,18 @@ int main() {
 	terminar_programa(logger_memoria, config_memoria);
     
     //CHECKPOINT 3
-	int mem = iniciarMemoria();
-
-	if(!mem){
-		return 0;
-	}
+	
 }
 
+/*
 void iniciar_memoria_contigua(){
-	user_space = malloc(tam_memoria); //casteo porque size_t representa numeros de bytes mejor
+	user_space = malloc(tam_memoria); 
 	cant_marcos = tam_memoria / tam_pagina;//siempre devuelve un numero entero, porque tam_memoria = tam_pagina * cant_marcos, por hipotesis del tp
 	bitmap=malloc(dividir_y_redondear_hacia_arriba(cant_marcos,8)); //el tamaño del bitmap es la cantidad de bits que ocupará expresada en bytes
 	frames_array = bitarray_create_with_mode(bitmap,dividir_y_redondear_hacia_arriba( cant_marcos , 8), LSB_FIRST); // simplemente apunto al bitmap como si fuera un array de bits
 	//solo utilizar cant_marcos, user_space, frames_array
 } //IMPORTANTE, la cantidad de elementos del bitarray a veces no termina siendo igual a la cantidad de marcos, redondeando para arriba nos aseguramos de que esta no sea menor
+*/
 
 int nro_de_marco_libre(){
 	for(int i=0; i<cant_marcos; i++){
@@ -52,8 +51,8 @@ int nro_de_marco_libre(){
 	return -1; //simbolizamos el -1 como que no hay marcos disponibles ----> acá devolver OUT OF MEMORY
 }
 
-size_t dividir_y_redondear_hacia_arriba(size_t a,size_t b){
-	size_t resultado = a / b ;
+int dividir_y_redondear_hacia_arriba(int a,int b){
+	int resultado = a / b ;
 	if (a % b == 0){
 		return resultado;
 	}
@@ -69,8 +68,8 @@ void inicializar_semaforos(){
 //Esta pensado para que en un futuro lea mas de una configuracion. 
 void leer_configuraciones(){
     puerto_propio = config_get_string_value(config_memoria,"PUERTO_PROPIO");
-    tam_memoria= (size_t) config_get_int_value(config_memoria, "TAM_MEMORIA");
-    tam_pagina= (size_t) config_get_int_value(config_memoria,"TAM_PAGINA");
+    tam_memoria= config_get_int_value(config_memoria, "TAM_MEMORIA");
+    tam_pagina= config_get_int_value(config_memoria,"TAM_PAGINA");
     path_instrucciones=config_get_string_value(config_memoria,"PATH_INSTRUCCIONES");
     retardo_respuesta= config_get_int_value(config_memoria,"RETARDO_RESPUESTA");
 }
@@ -301,7 +300,7 @@ void finalizar_proceso_a_pedido_de_kernel(int un_pid){
 	
 	void liberar_fila_paginas(void * fila){
 		fila_tabla_de_paginas * fila_c = (fila_tabla_de_paginas*) fila;
-		size_t marco = fila_c->nro_marco;
+		int marco = fila_c->nro_marco;
 		pthread_mutex_lock(&mutex_frames_array);
 		bitarray_clean_bit(frames_array, (off_t) marco); //marcamos cada marco como libre en el bitarray
 		pthread_mutex_unlock(&mutex_frames_array);
@@ -374,16 +373,16 @@ void procesar_pedido_instruccion(int socket_cpu){ //la lista de procesos es una 
 	send_proxima_instruccion(socket_cpu, instruccion_a_enviar);
 }
 /*************************************/
-int iniciarMemoria(void){
+int iniciarMemoria(){
 	
 	idGlobal = 0;
 	log_info(logger_memoria, "RAM: %d",tam_memoria);
     int control = iniciarPaginacion();
     
-
     return control; //DEVUELVE 0 SI FALLA LA ELEGIDA
 }
-int iniciarPaginacion(void){ 
+
+int iniciarPaginacion(){ 
     
     //MEMORIA PRINCIPAL
     memoriaPrincipal = malloc(tam_memoria);
@@ -392,18 +391,13 @@ int iniciarPaginacion(void){
         //NO SE RESERVO LA MEMORIA
     	perror("MALLOC FAIL!\n");
         return 0;
-    }
-
-    int tamanioPaginas = tam_pagina; //ES IGUAL AL TAMANIO DE LOS FRAMES DE LA MEMORIA
+    };
     
+    cant_marcos = tam_memoria/ tam_pagina;
     
+    log_info(logger_memoria,"Tengo %d marcos de %d bytes en memoria principal",cant_marcos,tam_pagina);
     
-    
-    cant_frames_ppal = tam_memoria/ tamanioPaginas;
-    
-    log_info(logger,"Tengo %d marcos de %d bytes en memoria principal",cant_frames_ppal, tamanioPaginas);
-    
-    data = asignarMemoriaBits(cant_frames_ppal);//entero a bit
+    data = asignarMemoriaBits(cant_marcos);//entero a bit
     
     if(data == NULL){
         
@@ -411,16 +405,13 @@ int iniciarPaginacion(void){
         return 0;
     }
 
-    memset(data,0,cant_frames_ppal/8);//pongo en cero
-    frames_ocupados_ppal = bitarray_create_with_mode(data, cant_frames_ppal/8, MSB_FIRST);//creo el puntero al vector de bit que ya estan en cero
-	tablaDePaginas = list_create();
+    memset(data,0,cant_marcos/8);//pongo en cero
+    frames_array = bitarray_create_with_mode(data, cant_marcos/8, MSB_FIRST);//creo el puntero al vector de bit que ya estan en cero
 
-
-    
     return 1;
 }
 	
-	char* asignarMemoriaBits(int bits)//recibe bits asigna bytes
+char* asignarMemoriaBits(int bits)//recibe bits asigna bytes
 {
 	char* aux;
 	int bytes;
@@ -430,6 +421,7 @@ int iniciarPaginacion(void){
 	memset(aux,0,bytes);
 	return aux; 
 }
+
 int bitsToBytes(int bits){
 	int bytes;
 	if(bits < 8)
