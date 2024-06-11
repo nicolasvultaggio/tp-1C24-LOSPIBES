@@ -6,6 +6,12 @@ int main() {
     logger_memoria = log_create("memoria_logs.log","memoria",1,LOG_LEVEL_INFO);
     config_memoria = config_create("./configs/memoria.config");
     leer_configuraciones();
+	 //CHECKPOINT 3 lo que realice aca es crear la memoria de usuario 
+	int mem = iniciarMemoria();
+
+	if(!mem){
+		return 0;
+	}
     //iniciar servidor de memoria
     //CHECKPOINT 1 *************/
     fd_escucha_memoria = iniciar_servidor(NULL, puerto_propio,logger_memoria,"Memoria");
@@ -22,7 +28,12 @@ int main() {
 	// Termino programa
 	terminar_programa(logger_memoria, config_memoria);
     
-    
+    //CHECKPOINT 3
+	int mem = iniciarMemoria();
+
+	if(!mem){
+		return 0;
+	}
 }
 
 void inicializar_semaforos(){
@@ -299,4 +310,74 @@ void procesar_pedido_instruuccion(int socket_cpu, t_list* proceso_instrucciones)
 	usleep(retardo_respuesta*1000);//preguntar 
 	send_proxima_instruccion(socket_cpu, instruccion_a_enviar);
 }
+/*************************************/
+int iniciarMemoria(void){
+	
+	idGlobal = 0;
+	log_info(logger_memoria, "RAM: %d",tam_memoria);
+    int control = iniciarPaginacion();
+    
+
+    return control; //DEVUELVE 0 SI FALLA LA ELEGIDA
+}
+int iniciarPaginacion(void){ 
+    
+    //MEMORIA PRINCIPAL
+    memoriaPrincipal = malloc(tam_memoria);
+
+    if(memoriaPrincipal == NULL){
+        //NO SE RESERVO LA MEMORIA
+    	perror("MALLOC FAIL!\n");
+        return 0;
+    }
+
+    int tamanioPaginas = tam_pagina; //ES IGUAL AL TAMANIO DE LOS FRAMES DE LA MEMORIA
+    
+    
+    
+    
+    cant_frames_ppal = tam_memoria/ tamanioPaginas;
+    
+    log_info(logger,"Tengo %d marcos de %d bytes en memoria principal",cant_frames_ppal, tamanioPaginas);
+    
+    data = asignarMemoriaBits(cant_frames_ppal);//entero a bit
+    
+    if(data == NULL){
+        
+        perror("MALLOC FAIL!\n");
+        return 0;
+    }
+
+    memset(data,0,cant_frames_ppal/8);//pongo en cero
+    frames_ocupados_ppal = bitarray_create_with_mode(data, cant_frames_ppal/8, MSB_FIRST);//creo el puntero al vector de bit que ya estan en cero
+	tablaDePaginas = list_create();
+
+
+    
+    return 1;
+}
+	
+	char* asignarMemoriaBits(int bits)//recibe bits asigna bytes
+{
+	char* aux;
+	int bytes;
+	bytes = bitsToBytes(bits);
+	//printf("BYTES: %d\n", bytes);
+	aux = malloc(bytes);
+	memset(aux,0,bytes);
+	return aux; 
+}
+int bitsToBytes(int bits){
+	int bytes;
+	if(bits < 8)
+		bytes = 1; 
+	else
+	{
+		double c = (double) bits;
+		bytes = ceil(c/8.0);
+	}
+	
+	return bytes;
+}
+    
 
