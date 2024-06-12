@@ -381,7 +381,7 @@ void enviar_marco (int fd_conexion_memoria, int marco){ //EN EL CASO DE NO ENCON
 }
 
 void enviar_solicitud_lectura_memoria(int direccion_fisica, int pid, int fd_memoria){
-	t_paquete* paquete = crear_paquete(LEER_MEMORIA);
+	t_paquete* paquete = crear_paquete(LECTURA_MEMORIA);
 	agregar_a_paquete(paquete, &direccion_fisica, sizeof(int));
 	agregar_a_paquete(paquete, &pid, sizeof(int));
 	enviar_paquete(paquete, fd_memoria);
@@ -389,7 +389,7 @@ void enviar_solicitud_lectura_memoria(int direccion_fisica, int pid, int fd_memo
 }
 
 void enviar_solicitud_escritura_memoria(int direccion_fisica, uint32_t valor, valores_tlb* valores, int fd_conexion_memoria){
-	t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);
+	t_paquete* paquete = crear_paquete(ESCRITURA_MEMORIA);
 	agregar_a_paquete(paquete, &direccion_fisica, sizeof(int));
 	agregar_a_paquete(paquete, &valor, sizeof(uint32_t));
 	agregar_a_paquete(paquete, valores, sizeof(valores_tlb));

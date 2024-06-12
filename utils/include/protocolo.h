@@ -145,14 +145,10 @@ typedef enum {
 	/* MEMORIA - CPU / CPU - MEMORIA */	
 	SOLICITAR_INSTRUCCION,
 	PROXIMA_INSTRUCCION,
-	NRO_MARCO,
 	LECTURA_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
 	ESCRITURA_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
-	REAJUSTAR_TAMANIO_PROCESO,//puede ser reducir o ampliar
-	
-	ESCRIBIR_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
-	LEER_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
-	SIZE_PAGE,// memoria envia el tamaño de la pagina cargada en su respectivo config
+	REAJUSTAR_TAMANIO_PROCESO,//puede ser reducir o ampliaR
+	SIZE_PAGE, // memoria envia el tamaño de la pagina cargada en su respectivo config
 	SOLICITUD_MARCO,
 	MARCO,
 	VALOR_LEIDO,
@@ -228,8 +224,15 @@ typedef struct{
 	int marco;
 } nodo_tlb;
 
-/******************************/
-
+/* ESTRUCTURA PARA EL ENVIO DE DIRECCIONES FISICAS DE cpu AL kernell*/
+typedef struct{
+	int  pid;
+	size_t direccion_fisica;
+	//dependiendo el tamaño de las paginas y del tamaño de los registros
+	//CPU al hacer la respectiva traduccion  deba enviar hasta 3 direcciones fisicas
+	// caso: DL 29 y que el tamaño de marcos sea de 2 y los registros de 4 byte
+	// floor(29/2) = 14, entonces se debe enviar 14,15,16
+}direccion_fisica;
 
 void empaquetar_pcb(t_paquete* paquete, pcb* PCB,motivo_desalojo MOTIVO);
 int fin_pcb(t_list* lista);
@@ -280,8 +283,12 @@ typedef struct{
 }direccion_logica;
 //estos dos no creo que se usen pero es por si las direcciones vienen en decimal
 typedef struct{
-	int marco;
-	int desplazamiento;
+	int  pid;
+	size_t direccion_fisica;
+	//dependiendo el tamaño de las paginas y del tamaño de los registros
+	//CPU al hacer la respectiva traduccion  deba enviar hasta 3 direcciones fisicas
+	// caso: DL 29 y que el tamaño de marcos sea de 2 y los registros de 4 byte
+	// floor(29/2) = 14, entonces se debe enviar 14,15,16
 }direccion_fisica;
 
 
