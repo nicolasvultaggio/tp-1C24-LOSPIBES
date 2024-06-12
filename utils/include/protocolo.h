@@ -255,7 +255,8 @@ void enviar_liberar_proceso(pcb* pcb,int fd);
 void enviar_tamanio_pagina(int fd_cpu_dispatch, int tam_pag);
 void enviar_solicitud_marco(int fd_conexion_memoria, int pid, int numero_pagina);
 void enviar_marco (int fd_conexion_memoria, int marco);
-void enviar_solicitud_lectura_memoria(int direccion_fisica, int pid, int fd__conexion_memoria);
+void enviar_solicitud_lectura_memoria(size_t direccion_fisica, int pid, int fd__conexion_memoria);
+void enviar_solicitud_escritura_memoria(int direccion_fisica, uint32_t valor, valores_tlb* valores, int fd_conexion_memoria);
 
 /* RECVS */
 void recibir_mensaje(t_log* loggerServidor, int socket_cliente);
@@ -271,7 +272,7 @@ pcb* guardar_datos_del_pcb(t_list* paquete); //usar para cuando en un paquete, v
 int recibir_tamanio_pagina(int fd_conexion_memoria);
 valores_tlb * recibir_solicitud_marco(int fd_conexion_memoria);
 int recibir_marco (int fd_conexion_memoria);
-
+uint32_t recibir_valor_leido_memoria(int fd_memoria);
 
 typedef struct{
 	int pagina;

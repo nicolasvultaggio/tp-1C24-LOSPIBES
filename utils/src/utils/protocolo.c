@@ -709,10 +709,3 @@ uint32_t recibir_valor_leido_memoria(int fd_memoria){
 
 
 
-
-
-
-void recibir_solicitud_lectura_memoria(int fd_cpu_dispatch){
-		
-	return ret;
-}

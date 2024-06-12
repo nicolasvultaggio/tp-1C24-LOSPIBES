@@ -213,7 +213,7 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", pcb->pid, "MOV IN", param1, param2);
 
 	int direccion_logica = atoi(DIRECCION);
-	int direccion_fisica = solicitar_direccion_fisica(pcb, direccion_logica);
+	size_t direccion_fisica = MMU(pcb, direccion_logica);
 	if(direccion_fisica == -1){
 		return;
 	}
@@ -223,52 +223,38 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 	log_info(logger_cpu, "PID: %d - Accion: LEER - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
 	ejecutar_set(PCB, DATOS, valor);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
-
 
 void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", pcb->pid, "MOV OUT", param1, param2);
+	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", PCB->pid, "MOV OUT", param1, param2);
 
 	int direccion_logica = atoi(DIRECCION);
-	int direccion_fisica = solicitar_direccion_fisica(pcb, direccion_logica);
+	size_t direccion_fisica = MMU(pcb, direccion_logica);
 	if(direccion_fisica == -1){
 		return;
 	}
 
 	uint32_t valor32;
 
-	/*if(strcmp(registro, "AX") == 0){
-		valor32 = PCB->registros.AX;
-	} else if(strcmp(registro, "BX") == 0){
-		valor32 = PCB->registros.BX;
-	} else if(strcmp(registro, "CX") == 0){
-		valor32 = PCB->registros.CX;
-	} else if(strcmp(registro, "DX") == 0){
-		valor32 = PCB->registros.DX;
+	if(strcmp(registro, "EAX") == 0){
+		valor32 = PCB->registros.EAX;
+	} else if(strcmp(registro, "EBX") == 0){
+		valor32 = PCB->registros.EBX;
+	} else if(strcmp(registro, "ECX") == 0){
+		valor32 = PCB->registros.ECX;
+	} else if(strcmp(registro, "EDX") == 0){
+		valor32 = PCB->registros.EDX;
 	}
-*/
+
 	int numero_pagina = floor(direccion_logica/TAM_PAGINA);
 	valores_tlb* valores = malloc(sizeof(valores_tlb));
 	valores->numero_pagina = numero_pagina;
 	valores->pid = PCB->pid;
-	send_solicitud_escritura_memoria(direccion_fisica, valor32, valores, fd_conexion_memoria);
+	enviar_solicitud_escritura_memoria(direccion_fisica, valor32, valores, fd_conexion_memoria);
 	log_info(logger_cpu, "PID: %d - Accion: ESCRIBIR - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
 	check_interrupt();
-	free(pyn);
+	free(valores);
 }
 
 void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
@@ -468,12 +454,12 @@ uint32_t recibir_valor_leido(){
 				valor = recibir_valor_leido_memoria(fd_conexion_memoria);
 				break;
 			}
+}
 
-int MMU(pcb* PCB, char* DIRECCION){ //que la direccion fisica sea un size_t, fijate que las interfaces y todo lo que es direcciones de memoria ya implementado es con size_t
-	int direccion_fisica;
+size_t MMU(pcb* PCB, char* DIRECCION){
 	int marco;
 	int direccion_logica = atoi(DIRECCION);
-	int numero_pagina = floor(direccion_logica / TAM_PAGINA); // tam_pagina no existe
+	int numero_pagina = floor(direccion_logica / TAM_PAGINA);
 	int desplazamiento =  direccion_logica - numero_pagina * TAM_PAGINA;
 
 	switch (MAX_TLB_ENTRY)
@@ -487,21 +473,9 @@ int MMU(pcb* PCB, char* DIRECCION){ //que la direccion fisica sea un size_t, fij
 		break;
 	}
 
-
-	
-	send_solicitud_marco(fd_memoria, pcb->pid, numero_pagina);
-	int marco = recibir_marco();
-	if(marco == -1){
-		//log_info(logger, "Page Fault PID: %d - Pagina: %d", pcb->pid, numero_pagina); //log ob
-		//iniciar acciones page fault
-		//send_pcb(pcb, dispatch_cliente_fd); ojo sergio, creo que cambio la funcion para enviar un pcb, preguntale a tomi
-		//send_pcb_pf(numero_pagina, desplazamiento, dispatch_cliente_fd);
-		//sem_post(&sem_nuevo_proceso); 
-		//return marco;
-	}
-	log_info(logger_cpu,  "PID: %d - OBTENER MARCO - Página: %d - Marco: %d", pcb->pid, numero_pagina, marco); 
-	//int direccion_fisica = marco*tam_pagina + desplazamiento;        //aca  ^^^ no podes poner pcb->pid, es PCB->pid, pcb en minusculas es el tipo de dato, no un puntero -> DEBUGGEEN ESTAS COSAS PORQUE ESTOS ERRORES SE ACUMULAN
-	return direccion_fisica; //direccion fisica tiene que ser un size_t, no un int, fijate como esta en todo el tp, los size_t se usan para representar numeros de bytes, no los int
+	log_info(logger_cpu,  "PID: %d - OBTENER MARCO - Página: %d - Marco: %d", PCB->pid, numero_pagina, marco); 
+	size_t direccion_fisica = marco*tam_pagina + desplazamiento;      
+	return direccion_fisica;
 }
 
 /* CHECK INTERRUPT */
@@ -695,8 +669,6 @@ int MMU(pcb* PCB, char* DIRECCION){
 	int direccion_fisica = marco*TAM_PAGINA + desplazamiento;
 	return direccion_fisica;
 }
-
-
 
 void inicializar_tlb(){
 
