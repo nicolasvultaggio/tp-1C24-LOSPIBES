@@ -197,13 +197,12 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 /* EXECUTE se ejecua lo correspodiente a cada instruccion */
 
 void ejecutar_set(pcb* PCB, char* registro, char* valor){
-	if(medir_registro(registro)){
-		uint8_t valor8 = strtoul(valor, NULL, 10);
-		setear_registro8(PCB, registro, valor8);
-	}else{
-		uint32_t valor32 = strtoul(valor, NULL, 10);
-		setear_registro32(PCB, registro, valor32);
-	}
+	
+	uint8_t valor8 = strtoul(valor, NULL, 10);
+	uint32_t valor32 = strtoul(valor, NULL, 10);
+	
+	setear_registro(PCB, registro, valor8, valor32);
+
 	es_exit =false; //poner en true 
 	es_bloqueante=false; //modificar siempre que es_exit = false
 	return;
@@ -212,7 +211,10 @@ void ejecutar_set(pcb* PCB, char* registro, char* valor){
 void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", pcb->pid, "MOV IN", DATOS, DIRECCION);
+	
 	int direccion_logica = atoi(DIRECCION);
+	
+	
 	size_t direccion_fisica = MMU(pcb, direccion_logica);
 	enviar_solicitud_lectura_memoria(direccion_fisica, PCB->pid, fd_conexion_memoria);
 	uint32_t valor = recibir_valor_leido();
@@ -226,6 +228,9 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", PCB->pid, "MOV OUT", DIRECCION, DATOS);
 
 	int direccion_logica = atoi(DIRECCION);
+
+	int cantidad_paginas_a_traducir = calculo_de_paginas(DATOS, direccion_logica);
+
 	size_t direccion_fisica = MMU(pcb, direccion_logica);
 
 	uint32_t valor32;
@@ -380,6 +385,60 @@ void ejecutar_error(pcb* PCB){ //se usa esta en algun momento?
 
 /* FUNCIONES PARA EL CALCULO ARITMETICOLOGICO */
 
+size_t size_registro(char * registro){
+
+	size_t SIZEEE;
+
+	if(strcmp(registro, "AX") == 0){
+		SIZEEE = sizeof(uint8_t);
+	} else if(strcmp(registro, "BX") == 0){
+		SIZEEE = sizeof(uint8_t);
+	} else if(strcmp(registro, "CX") == 0){
+		SIZEEE = sizeof(uint8_t);
+	} else if(strcmp(registro, "DX") == 0){
+		SIZEEE = sizeof(uint8_t);
+	} else  if(strcmp(registro, "EAX") == 0){
+		SIZEEE = sizeof(uint32_t);
+	} else if(strcmp(registro, "EBX") == 0){
+		SIZEEE = sizeof(uint32_t);
+	} else if(strcmp(registro, "ECX") == 0){
+		SIZEEE = sizeof(uint32_t);
+	} else if(strcmp(registro, "EDX") == 0){
+		SIZEEE = sizeof(uint32_t);
+	} else if(strcmp(registro, "SI") == 0){
+		SIZEEE = sizeof(uint32_t);
+	} else if(strcmp(registro, "DI") == 0){
+		SIZEEE = sizeof(uint32_t);
+	}
+
+	return SIZEEE;
+}
+
+void setear_registro(pcb* PCB, char* registro, uint8_t valor8, uint8_t valor32){
+	if(strcmp(registro, "AX") == 0){
+		PCB->registros.AX = valor8;
+	} else if(strcmp(registro, "BX") == 0){
+		PCB->registros.BX = valor8;
+	} else if(strcmp(registro, "CX") == 0){
+		PCB->registros.CX = valor8;
+	} else if(strcmp(registro, "DX") == 0){
+		PCB->registros.DX = valor8;
+	}else if(strcmp(registro, "EAX") == 0){
+		PCB->registros.EAX = valor32;
+	} else if(strcmp(registro, "EBX") == 0){
+		PCB->registros.EBX = valor32;
+	} else if(strcmp(registro, "ECX") == 0){
+		PCB->registros.ECX = valor32;
+	} else if(strcmp(registro, "EDX") == 0){
+		PCB->registros.EDX = valor32;
+	} else if(strcmp(registro, "SI") == 0){
+		PCB->registros.SI = valor32;
+	} else if(strcmp(registro, "DI") == 0){
+		PCB->registros.DI = valor32;
+	}
+	return;
+}
+
 bool medir_registro(char* registro){
 	if(strcmp(registro, "AX") == 0){
 		return true;
@@ -394,35 +453,7 @@ bool medir_registro(char* registro){
 	}
 }
 
-void setear_registro8(pcb* PCB, char* registro, uint8_t valor){
-	if(strcmp(registro, "AX") == 0){
-		PCB->registros.AX = valor;
-	} else if(strcmp(registro, "BX") == 0){
-		PCB->registros.BX = valor;
-	} else if(strcmp(registro, "CX") == 0){
-		PCB->registros.CX = valor;
-	} else if(strcmp(registro, "DX") == 0){
-		PCB->registros.DX = valor;
-	}
-	return;
-}
 
-void setear_registro32(pcb* PCB, char* registro, uint32_t valor){
-   if(strcmp(registro, "EAX") == 0){
-		PCB->registros.EAX = valor;
-	} else if(strcmp(registro, "EBX") == 0){
-		PCB->registros.EBX = valor;
-	} else if(strcmp(registro, "ECX") == 0){
-		PCB->registros.ECX = valor;
-	} else if(strcmp(registro, "EDX") == 0){
-		PCB->registros.EDX = valor;
-	} else if(strcmp(registro, "SI") == 0){
-		PCB->registros.SI = valor;
-	} else if(strcmp(registro, "DI") == 0){
-		PCB->registros.DI = valor;
-	}
-	return;
-}
 
 uint8_t capturar_registro8(pcb* PCB, char* registro){
 	if(strcmp(registro, "AX") == 0){
@@ -453,6 +484,16 @@ uint32_t capturar_registro32(pcb* PCB, char* registro){
 }
 
 /* FUNCIONES MOVEIN MOVEOUT */
+
+
+
+int calculo_de_paginas(char* DATOS, int direccion_logica){
+
+	int numero_pagina_inicial = floor(direccion_logica/TAM_PAGINA);
+	int numero_pagina_final = numero_pagina_inicial + size_registro(DATOS);
+
+	return numero_pagina_final - numero_pagina_inicial;
+}
 
 uint32_t recibir_valor_leido(){
 	uint32_t valor;
