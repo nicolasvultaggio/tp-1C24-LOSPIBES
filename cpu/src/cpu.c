@@ -52,6 +52,7 @@ void leer__configuraciones(){
 void inicializar_semaforos(){
 
 	pthread_mutex_init(&mutex_tlb, NULL);
+	pthread_mutex_init(&mutex_motivo_x_consola, NULL);
 
 	sem_init(&sem_recibir_pcb, 0, 1);
 	sem_init(&sem_execute, 0, 0);
@@ -498,7 +499,16 @@ void* interrupcion(void *arg) {
 		case INTERR:
 			motivo_desalojo motivo = recibir_motiv_desalojo(fd_escucha_interrupt);
 			interrupcion_actual = malloc(sizeof(motivo_desalojo));
-			(*interrupcion_actual) = motivo;
+			pthread_mutex_lock(&mutex_motivo_x_consola);
+			if(!hay_interrupcion_x_consola){
+				if(motivo == EXIT_CONSOLA){
+					hay_interrupcion_x_consola = true;
+					(*interrupcion_actual) = motivo; // motivo = EXIT_CONSOLA
+				}else{
+					(*interrupcion_actual) = motivo; // motivo = EXIT_CONSOLA
+				}
+			}
+			pthread_mutex_unlock(&mutex_motivo_x_consola);
 			break;
 		case -1:
 			log_error(logger_cpu, "El cliente se desconecto.");
@@ -578,6 +588,9 @@ void check_interrupt (){
 							enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,EXITO,NULL,NULL, NULL, NULL, NULL);
 							sem_post(&sem_recibir_pcb);
 							liberar_interrupcion_actual();
+							pthread_mutex_lock(&mutex_motivo_x_consola);
+							hay_interrupcion_x_consola = false;
+							pthread_mutex_unlock(&mutex_motivo_x_consola);
 						}
 					}else{//no es wait, puede ser una syscall bloqueante o resize
 						if(es_resize){ 
@@ -589,6 +602,9 @@ void check_interrupt (){
 								enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,EXITO,NULL,NULL, NULL, NULL, NULL);
 								sem_post(&sem_recibir_pcb);
 								liberar_interrupcion_actual();
+								pthread_mutex_lock(&mutex_motivo_x_consola);
+								hay_interrupcion_x_consola = false;
+								pthread_mutex_unlock(&mutex_motivo_x_consola);
 							}
 						}else{ //este caso es las syscalls bloqueantes, ni resize ni wait
 							//avisarle a kernel del desalojo?
