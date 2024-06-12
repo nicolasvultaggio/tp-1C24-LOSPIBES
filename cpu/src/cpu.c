@@ -145,7 +145,7 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			check_interrupt();
 			break;
 		case RESIZE:
-			//ejecutar_resize();
+			ejecutar_resize(PCB,instruccion->parametro1);
 			break;
 		case COPY_STRING:
 			//ejecutar_copy_string();
@@ -210,14 +210,9 @@ void ejecutar_set(pcb* PCB, char* registro, char* valor){
 
 void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", pcb->pid, "MOV IN", param1, param2);
-
+	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", pcb->pid, "MOV IN", DATOS, DIRECCION);
 	int direccion_logica = atoi(DIRECCION);
 	size_t direccion_fisica = MMU(pcb, direccion_logica);
-	if(direccion_fisica == -1){
-		return;
-	}
-
 	enviar_solicitud_lectura_memoria(direccion_fisica, PCB->pid, fd_conexion_memoria);
 	uint32_t valor = recibir_valor_leido();
 	log_info(logger_cpu, "PID: %d - Accion: LEER - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
@@ -227,13 +222,10 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 
 void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", PCB->pid, "MOV OUT", param1, param2);
+	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", PCB->pid, "MOV OUT", DIRECCION, DATOS);
 
 	int direccion_logica = atoi(DIRECCION);
 	size_t direccion_fisica = MMU(pcb, direccion_logica);
-	if(direccion_fisica == -1){
-		return;
-	}
 
 	uint32_t valor32;
 
@@ -323,6 +315,21 @@ void ejecutar_jnz(pcb* PCB, char* registro, char* valor){
 	es_bloqueante=false; //modificar siempre que es_exit = false
 	return;
 }
+
+void ejecutar_resize(pcb* PCB, char* tamanio){
+
+
+
+
+
+
+
+
+
+
+
+}
+
 
 void ejecutar_wait(pcb* PCB, char* registro){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "WAIT", registro);
@@ -794,3 +801,5 @@ void terminar_programa(){
 	}
     liberar_conexion(fd_conexion_memoria);
 }
+
+

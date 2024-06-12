@@ -399,8 +399,7 @@ void enviar_solicitud_escritura_memoria(int direccion_fisica, uint32_t valor, va
 
 
 /* FUNNCIONES DE RECIBO (RECV) */
-void recibir_mensaje(t_log* loggerServidor ,int socket_cliente)
-{
+void recibir_mensaje(t_log* loggerServidor ,int socket_cliente){
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
 	log_info(loggerServidor, "Me llego el mensaje %s", buffer);
