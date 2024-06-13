@@ -14,7 +14,8 @@ int main(int argc, char* argv[]){
 
 	/* CONECTO CPU CON MEMORIA */
 	fd_conexion_memoria = crear_conexion(ip_memoria, puerto_memoria, logger_cpu, "CPU");
-	enviar_mensaje("Hola, soy CPUta!", fd_conexion_memoria);
+	enviar_mensaje("Hola, soy CPU!", fd_conexion_memoria);
+	recv(fd_conexion_memoria,&tam_pagina,sizeof(int),MSG_WAITALL);
 	snd_handshake(fd_conexion_memoria);
 	log_info(logger_cpu, "Handshake a MEMORIA realizado");
 	
@@ -164,7 +165,7 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			check_interrupt();
 			break;
 		case IO_STDIN_READ:
-			//ejecutar_io_stdin_read();
+			ejecutar_io_stdin_read(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3);
 			break;
 		case IO_STDOUT_WRITE:
 			//ejecutar_io_stdout_write();
@@ -411,6 +412,19 @@ void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* un
 	return;
 }
 
+ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
+	int direccion_logica_i = atoi(registro_direccion);
+	int tamanio_a_leer = atoi(registro_tamanio);
+
+	t_list * paginas_a_traducir = obtener_paginas_a_traducir(direccion_logica_i,tamanio_a_leer);
+	
+}
+
+t_list * obtener_paginas_a_traducir(int direccion_logica_i, int tamanio_a_leer ){
+	int direccion_logica_f = direccion_logica_i + tamanio_a_leer -1;
+
+	int pagina_inicial = 
+}
 void ejecutar_exit(pcb* PCB){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
 	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXITO,NULL,NULL,NULL,NULL,NULL);

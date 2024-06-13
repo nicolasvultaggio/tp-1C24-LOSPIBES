@@ -113,5 +113,5 @@ void check_interrupt();
 void* interrupcion(void *arg);
 void detectar_motivo_desalojo();
 
-
+int tam_pagina;
 #endif

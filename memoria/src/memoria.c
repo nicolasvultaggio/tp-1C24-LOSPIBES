@@ -188,6 +188,15 @@ static void procesar_clientes(void* void_args){
 			return;
 		}
 		switch (cop) {
+		case MENSAJE:
+			recibir_mensaje(logger_memoria, cliente_socket);
+			send(cliente_socket,&tam_pagina,sizeof(int),0); //para que el cpu sepa el tamaño de las paginas
+			break;
+		case PAQUETE:
+			t_list *paquete_recibido = recibir_paquete(cliente_socket);
+			log_info(logger_memoria, "Recibí un paquete con los siguientes valores: ");
+			list_iterate(paquete_recibido, (void*) iterator);
+			break;	
 		case DATOS_PROCESO: // CREAR PROCESO: este codigo SOLO LO ENVIA EL KERNEL 
 				t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);// por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
 				iniciar_proceso_a_pedido_de_Kernel(datos_proceso->path, datos_proceso->pid, cliente_socket);//el parametro size sera usado en el 3er check,"datos_proceso->size"
