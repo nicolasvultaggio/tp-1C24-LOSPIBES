@@ -212,6 +212,10 @@ static void procesar_clientes(void* void_args){
 		case REAJUSTAR_TAMANIO_PROCESO:
 				//de la cpu, aumentar o diminuir
 				break;
+		case FINALIZAR_PROCESO:
+				// si o si tenes que recibir al menos un pid
+				//finalizar_proceso_a_pedido_de_kernel(ese pid que recibiste)
+				break;
 		default:
 				log_error(logger_memoria, "Codigo de operacion no reconocido en memoria");
 				return;
@@ -286,10 +290,12 @@ void iniciar_proceso_a_pedido_de_Kernel(char* path, int pid, int socket_kernel) 
 
 
 void finalizar_proceso_a_pedido_de_kernel(int un_pid){
+
 	bool es_proceso_con_pid(void * un_proceso){
 		t_proceso * un_proceso_c = (t_proceso *) un_proceso;
 		return un_proceso_c->pid == un_pid;
 	};//no importa que esta en blanco es un tema del editor de texto, el compilador lo va a poder compilar
+
 	pthread_mutex_lock(&mutex_lista_procesos);
 	t_proceso * proceso_a_finalizar = list_find(lista_de_procesos, (void*)es_proceso_con_pid);
 	pthread_mutex_unlock(&mutex_lista_procesos);
