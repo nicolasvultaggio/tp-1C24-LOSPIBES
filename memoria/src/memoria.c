@@ -190,7 +190,7 @@ static void procesar_clientes(void* void_args){
 		switch (cop) {
 		case MENSAJE:
 			recibir_mensaje(logger_memoria, cliente_socket);
-			send(cliente_socket,&tam_pagina,sizeof(int),0); //para que el cpu sepa el tamaño de las paginas
+			//posiblemente haya que enviar una respuesta tambien para indicar que se recibio el mensaje
 			break;
 		case PAQUETE:
 			t_list *paquete_recibido = recibir_paquete(cliente_socket);
@@ -198,10 +198,10 @@ static void procesar_clientes(void* void_args){
 			list_iterate(paquete_recibido, (void*) iterator);
 			break;	
 		case DATOS_PROCESO: // CREAR PROCESO: este codigo SOLO LO ENVIA EL KERNEL 
-				t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);// por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
-				iniciar_proceso_a_pedido_de_Kernel(datos_proceso->path, datos_proceso->pid, cliente_socket);//el parametro size sera usado en el 3er check,"datos_proceso->size"
-				free(datos_proceso->path);
-				free(datos_proceso);
+			t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);// por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
+			iniciar_proceso_a_pedido_de_Kernel(datos_proceso->path, datos_proceso->pid, cliente_socket);//el parametro size sera usado en el 3er check,"datos_proceso->size"
+			free(datos_proceso->path);
+			free(datos_proceso);
 			break;
 		case SOLICITAR_INSTRUCCION:// ESTE CODIGO SOLO LO ENVÍA CPU
 				log_info(logger_memoria, "Solicitud de instruccion recibida");

@@ -213,16 +213,11 @@ typedef enum{
 }op_io_a_kernel;
 
 /* TLB */
-
 typedef struct{
 	int pid;
-	int numero_pagina;
-} valores_tlb;
-
-typedef struct{
-	valores_tlb* valor;
+	int num_pag;
 	int marco;
-} nodo_tlb;
+}nodo_tlb;
 
 /* ESTRUCTURA PARA EL ENVIO DE DIRECCIONES FISICAS DE cpu AL kernell*/
 typedef struct{
@@ -273,7 +268,6 @@ motivo_desalojo recibir_motiv_desalojo(int fd_escucha_dispatch);
 pcb* recibir_liberar_proceso(int fd);
 pcb* guardar_datos_del_pcb(t_list* paquete); //usar para cuando en un paquete, vienen los datos de un pcb y otras cosas mas
 int recibir_tamanio_pagina(int fd_conexion_memoria);
-valores_tlb * recibir_solicitud_marco(int fd_conexion_memoria);
 int recibir_marco (int fd_conexion_memoria);
 uint32_t recibir_valor_leido_memoria(int fd_memoria);
 

@@ -364,12 +364,15 @@ void enviar_tamanio_pagina(int fd_cpu_dispatch, int tam_pag){
 
 void enviar_solicitud_marco(int fd_conexion_memoria, int pid, int numero_pagina){
 	t_paquete* paquete = crear_paquete(SOLICITUD_MARCO);
-	valores_tlb* valores = malloc(sizeof(valores_tlb));
-	valores->pid = pid;
-	valores->numero_pagina = numero_pagina;
-	agregar_a_paquete(paquete, valores, sizeof(valores_tlb));
+	int malloc_pid = malloc(sizeof(int));
+	int malloc_num_pag = malloc(sizeof(int));
+	malloc_pid = pid;
+	malloc_num_pag = numero_pagina;
+	agregar_a_paquete(paquete, malloc_pid, sizeof(int));
+	agregar_a_paquete(paquete, malloc_num_pag, sizeof(int));
 	enviar_paquete(paquete, fd_conexion_memoria);
-	free(valores);
+	free(malloc_pid);
+	free(malloc_num_pag);
 	eliminar_paquete(paquete);
 }
 
@@ -689,7 +692,7 @@ int recibir_marco (int fd_conexion_memoria){
 	t_list* paquete = recibir_paquete(fd_conexion_memoria);
 	int marquitos = 0;
 	int* marco = list_get(paquete, 0);
-	marquitos = marco;
+	marquitos = *marco;
 	free(marco);
 	list_destroy(paquete);
 	return marquitos;
