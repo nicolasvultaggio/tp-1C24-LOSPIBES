@@ -256,27 +256,34 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 }
 
 void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
-	uint8_t destino8;
-	uint8_t origen8;
-	uint32_t destino32;
-	uint32_t origen32;
-	if(medir_registro(destinoregistro)){
-		destino8 = capturar_registro8(PCB, destinoregistro);
-	}else{
-		destino32 = capturar_registro32(PCB, destinoregistro);
+	
+	size_t size_origen = 0, size_destino = 0;
+
+	uint8_t destino8, origen8;
+		
+	uint32_t destino32, origen32;
+
+	size_origen = size_registro(origenregistro);
+	size_destino = size_registro(destinoregistro);
+
+	if((size_origen == 1) && (size_destino == 1)){
+		* destino8 = capturar_registro(PCB, destinoregistro);
+		* origen8 = capturar_registro(PCB, origenregistro);
+		destino8 = destino8 + origen8;
+	}else if((size_origen == 1) && (size_destino == 4)){
+		* destino32 = capturar_registro(PCB, destinoregistro);
+		* origen8 = capturar_registro(PCB, origenregistro);
+		destino32 = destino32 + (uint32_t) origen8;
+	}else if((size_origen == 4) && (size_destino == 1)){
+		* destino8 = capturar_registro(PCB, destinoregistro);
+		* origen32 = capturar_registro(PCB, origenregistro);
+		destino8 = destino8 + (uint8_t) origen32;
+	}else if((size_origen == 4) && (size_destino == 4)){
+		* destino32 = capturar_registro(PCB, destinoregistro);
+		* origen32 = capturar_registro(PCB, origenregistro);
+		destino32 = destino32 + origen32;
 	}
 
-	if(medir_registro(origenregistro)){
-		origen8 = capturar_registro8(PCB, origenregistro);
-	}else{
-		origen32 = capturar_registro32(PCB, origenregistro);
-	}
-
-	if(medir_registro(destinoregistro)){
-		setear_registro8(PCB, destinoregistro, destino8 + (uint8_t) origen8); 
-	}else{//																	//ojo, aca no hay mas referencia a origen ni destino, solo 
-		setear_registro32(PCB, destinoregistro, destino32 + (uint32_t) origen32);
-	}
 	es_exit = false;  
 	es_bloqueante = false; 
 	return;
@@ -284,32 +291,67 @@ void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
 
 void ejecutar_sub(pcb* PCB, char* destinoregistro, char* origenregistro){
 
-	uint8_t origen;
-	uint32_t origen32;
+	size_t size_origen = 0, size_destino = 0;
 
-	if(medir_registro(origenregistro)){
-		origen = capturar_registro8(PCB, origenregistro);
-	}else{
-		origen = capturar_registro32(PCB, origenregistro);
-	}
-
-	if(medir_registro(destinoregistro)){
-		uint8_t destino = capturar_registro8(PCB, destinoregistro);
-		uint8_t origen8 = (uint8_t) origen;
-		setear_registro8(PCB, destinoregistro, destino + origen8);
-	}else{
-		uint32_t destino = capturar_registro32(PCB, destinoregistro);
-		uint32_t origen8 = (uint32_t) origen32;
-		setear_registro32(PCB, destinoregistro, destino + origen32);
-	}
+	uint8_t destino8, origen8;
 		
+	uint32_t destino32, origen32;
+
+	size_origen = size_registro(origenregistro);
+	size_destino = size_registro(destinoregistro);
+
+	if((size_origen == 1) && (size_destino == 1)){
+		* destino8 = capturar_registro(PCB, destinoregistro);
+		* origen8 = capturar_registro(PCB, origenregistro);
+		destino8 = destino8 - origen8;
+	}else if((size_origen == 1) && (size_destino == 4)){
+		* destino32 = capturar_registro(PCB, destinoregistro);
+		* origen8 = capturar_registro(PCB, origenregistro);
+		destino32 = destino32 - (uint32_t) origen8;
+	}else if((size_origen == 4) && (size_destino == 1)){
+		* destino8 = capturar_registro(PCB, destinoregistro);
+		* origen32 = capturar_registro(PCB, origenregistro);
+		destino8 = destino8 - (uint8_t) origen32;
+	}else if((size_origen == 4) && (size_destino == 4)){
+		* destino32 = capturar_registro(PCB, destinoregistro);
+		* origen32 = capturar_registro(PCB, origenregistro);
+		destino32 = destino32 - origen32;
+	}
+
 	es_exit =false;  //siempre modificar
 	es_bloqueante=false; //modificar siempre que es_exit = false
 	return;
 }
 
 void ejecutar_jnz(pcb* PCB, char* registro, char* valor){
-	uint32_t program_counter_actualizado = (uint32_t)strtoul(valor,NULL,10);
+	
+	uint8_t * registro8, * valor8;
+
+	uint32_t * registro32, * valor32;
+	
+	
+
+
+
+
+
+
+
+	uint32_t PC_actualizado = valor;
+	
+
+	size_t * reg_value = capturar_registro (registro);
+
+	if (reg_value != 0)
+	{
+		
+	}else if (reg != 00)
+	{
+		/* code */
+	}
+	
+	
+
 	if(medir_registro(registro)){
 		if(capturar_registro8(PCB, registro) != 0)
 			PCB->PC = program_counter_actualizado;
@@ -414,7 +456,7 @@ size_t size_registro(char * registro){
 	return SIZEEE;
 }
 
-void setear_registro(pcb* PCB, char* registro, uint8_t valor8, uint8_t valor32){
+void setear_registro(pcb * PCB, char * registro, uint8_t valor8, uint32_t valor32){
 	if(strcmp(registro, "AX") == 0){
 		PCB->registros.AX = valor8;
 	} else if(strcmp(registro, "BX") == 0){
@@ -439,48 +481,30 @@ void setear_registro(pcb* PCB, char* registro, uint8_t valor8, uint8_t valor32){
 	return;
 }
 
-bool medir_registro(char* registro){
+void * capturar_registro(pcb * PCB, char * registro){
+	
 	if(strcmp(registro, "AX") == 0){
-		return true;
+		return * PCB->registros.AX;
 	} else if(strcmp(registro, "BX") == 0){
-		return true;
+		return * PCB->registros.BX;
 	} else if(strcmp(registro, "CX") == 0){
-		return true;
+		return * PCB->registros.CX;
 	} else if(strcmp(registro, "DX") == 0){
-		return true;
-	}else{
-		return false;
-	}
-}
-
-
-
-uint8_t capturar_registro8(pcb* PCB, char* registro){
-	if(strcmp(registro, "AX") == 0){
-		return PCB->registros.AX;
-	} else if(strcmp(registro, "BX") == 0){
-		return PCB->registros.BX;
-	} else if(strcmp(registro, "CX") == 0){
-		return PCB->registros.CX;
-	} else if(strcmp(registro, "DX") == 0){
-		return PCB->registros.DX;
-	}
-}
-
-uint32_t capturar_registro32(pcb* PCB, char* registro){
-   if(strcmp(registro, "EAX") == 0){
-		return PCB->registros.EAX;
+		return * PCB->registros.DX;
+	}else if(strcmp(registro, "EAX") == 0){
+		return * PCB->registros.EAX;
 	} else if(strcmp(registro, "EBX") == 0){
-		return PCB->registros.EBX;
+		return * PCB->registros.EBX;
 	} else if(strcmp(registro, "ECX") == 0){
-		return PCB->registros.ECX;
+		return * PCB->registros.ECX;
 	} else if(strcmp(registro, "EDX") == 0){
-		return PCB->registros.EDX;
+		return * PCB->registros.EDX;
 	} else if(strcmp(registro, "SI") == 0){
-		return PCB->registros.SI;
+		return * PCB->registros.SI;
 	} else if(strcmp(registro, "DI") == 0){
-		return PCB->registros.DI;
+		return * PCB->registros.DI;
 	}
+
 }
 
 /* FUNCIONES MOVEIN MOVEOUT */
