@@ -7,10 +7,10 @@
 typedef struct{
 	int nro_pagina; //pasarlo a memoria como size_t
 	int nro_marco; //pasarlo a memoria como size_t
-}fila_tabla_de_paginas; //las tablas de paginas no son tablas, son listas, es mas facil de manejar
+}fila_tabla_de_paginas; //las tablas de paginas no son tablas, son listas, es mas facil de manejar|| es la misma que t_pagina??preguntar a nicoo es es asi, agregar PID para encontrar el proceso en funcion encontrar marco
 typedef struct {
 	int pid;
-	t_list* tabla_de_paginas;
+	t_list* tabla_de_paginas;// SER UNA TABLA t_pagina LINEA 28
 	t_list* instrucciones;
 } t_proceso;//para armar mi lista de procesos en memoria
 
@@ -19,7 +19,22 @@ typedef struct
 	int pid;
 	int program_counter;
 } t_solicitud_instruccion;//lo que uso para recibir los datos que me envia CPU
-
+typedef struct
+{
+	int pid;
+	int numero_pagina;
+} pid_y_pag;//lo que uso para recibir los datos  para leer el PID Y NRO DE PAGINA cuando solicitan NUMERO DE MARCO
+typedef struct
+{
+	int pid;
+	int numpag;
+	int marco;
+}t_pagina;//tabla de pagina de un proceso. tiene ID del proceso, numero pagina  y el numero marco asociado a esa pagina
+typedef struct
+{
+	int pid;
+	t_list* paginas;
+} t_tdp;//???
 int fd_escucha_memoria;
 int fd_conexion_server;
 
@@ -80,4 +95,5 @@ int idGlobal;
 char * data;
 char * frames_array;
 char * asignarMemoriaBits(int bits);
+t_list tablas_de_paginas;
 #endif

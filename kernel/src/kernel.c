@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
     
 
     pthread_t hilo_consola;
-	pthread_create(&hilo_consola, NULL, (void*)iniciar_consola, NULL); //si termina siendo solo esto lo que hace, hace falta que sea un hilo a parte?
+	pthread_create(&hilo_consola, NULL, (void*)iniciar_consola, NULL); 
 	pthread_join(hilo_consola, NULL);
 
 
@@ -253,7 +253,6 @@ bool validacion_de_instrucciones(char* leido){
 void atender_instruccion_valida(char* leido){
     char** comando_consola = string_split(leido , " ");
 
-    //A TODOS LES FALTA IMPLEMENTAR LA LOGICA, PERO DEJO EL ESQUELETO ARMADO
     if(strcmp(comando_consola[0] , "EJECUTAR_SCRIPT") == 0){
         ejecutar_script(comando_consola[1]);
     }else if(strcmp(comando_consola[0], "INICIAR_PROCESO") == 0){
@@ -369,7 +368,7 @@ void enlistar_procesos(){
     t_list* lista_pids_exec = obtener_lista_pid(cola_exec);
     char* lista_exec = de_lista_a_string(lista_pids_exec);
 
-    t_list* lista_pids_block = obtener_lista_pid(cola_block);//IMPLEMENTAR ESTA LISTA 
+    t_list* lista_pids_block = obtener_lista_pid(cola_block);
     char* lista_block = de_lista_a_string(lista_pids_block);
 
     t_list* lista_pids_exit = obtener_lista_pid(cola_exit);
@@ -470,7 +469,7 @@ char* motivo_a_string(motivo_desalojo motivo){
         break;
 
 
-    //TODAS COMENTADAS PORQ TODAVIA NO LAS IMPLEMENTARON
+    
 
 
     default:
@@ -478,7 +477,6 @@ char* motivo_a_string(motivo_desalojo motivo){
         break;
     }
 };
-//SEGUIR DESAROLLANDO
 
 void pcb_destroy(pcb* pcb){
     for (int i = 0; i < list_size(pcb->recursos_asignados); i++)
@@ -609,7 +607,7 @@ void atender_vuelta_dispatch(){
                 }
                 switch(pcb_actualizado->motivo){
                     case SOLICITAR_INTERFAZ_GENERICA: 
-                        char * instruccion_gen = list_get(lista,final_pcb+1); //devuelve el puntero al dato del elemento de la lista original // FIJATE QUE LA POSICION 14 CREO Q ES EL REGISTRO DI
+                        char * instruccion_gen = list_get(lista,final_pcb+1); //devuelve el puntero al dato del elemento de la lista original 
                         char * nombre_interfaz_gen=list_get(lista,final_pcb+2); //devuelve el puntero al dato del elemento de la lista original
                         char * tiempo_a_esperar=list_get(lista,final_pcb+3); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
                         element_interfaz * interfaz_gen = interfaz_existe_y_esta_conectada(nombre_interfaz_gen); //puntero al elemento original de la lista, ojo

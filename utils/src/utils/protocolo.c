@@ -345,6 +345,7 @@ void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_des
 	eliminar_paquete(paquete);
 
 }
+
 void enviar_liberar_proceso(pcb* pcb, int fd){
 	t_paquete* paquete = crear_paquete(FINALIZAR_PROCESO);
 
@@ -354,10 +355,51 @@ void enviar_liberar_proceso(pcb* pcb, int fd){
 	eliminar_paquete(paquete);
 }
 
+void enviar_tamanio_pagina(int fd_cpu_dispatch, int tam_pag){
+	t_paquete* paquete = crear_paquete(SIZE_PAGE);
+	agregar_a_paquete(paquete, &tam_pag, sizeof(int));
+	enviar_paquete(paquete, fd_cpu_dispatch);
+	eliminar_paquete(paquete);
+}
+
+void enviar_solicitud_marco(int fd_conexion_memoria, int pid, int numero_pagina){
+	t_paquete* paquete = crear_paquete(SOLICITUD_MARCO);
+	valores_tlb* valores = malloc(sizeof(valores_tlb));
+	valores->pid = pid;
+	valores->numero_pagina = numero_pagina;
+	agregar_a_paquete(paquete, valores, sizeof(valores_tlb));
+	enviar_paquete(paquete, fd_conexion_memoria);
+	free(valores);
+	eliminar_paquete(paquete);
+}
+
+void enviar_marco (int fd_conexion_memoria, int marco){ //EN EL CASO DE NO ENCONTRAR EL MARCO CORRESPONDIENTE A LOS VALORES PEDIDOS ENVIAR UN -1
+	t_paquete* paquete = crear_paquete(MARCO);
+	agregar_a_paquete(paquete, &marco, sizeof(int));
+	enviar_paquete(paquete, fd_conexion_memoria);
+	eliminar_paquete(paquete);
+}
+
+void enviar_solicitud_lectura_memoria(int direccion_fisica, int pid, int fd_memoria){
+	t_paquete* paquete = crear_paquete(LECTURA_MEMORIA);
+	agregar_a_paquete(paquete, &direccion_fisica, sizeof(int));
+	agregar_a_paquete(paquete, &pid, sizeof(int));
+	enviar_paquete(paquete, fd_memoria);
+	eliminar_paquete(paquete);
+}
+
+void enviar_solicitud_escritura_memoria(int direccion_fisica, uint32_t valor, valores_tlb* valores, int fd_conexion_memoria){
+	t_paquete* paquete = crear_paquete(ESCRITURA_MEMORIA);
+	agregar_a_paquete(paquete, &direccion_fisica, sizeof(int));
+	agregar_a_paquete(paquete, &valor, sizeof(uint32_t));
+	agregar_a_paquete(paquete, valores, sizeof(valores_tlb));
+	enviar_paquete(paquete, fd_conexion_memoria);
+	eliminar_paquete(paquete);
+}
+
 
 /* FUNNCIONES DE RECIBO (RECV) */
-void recibir_mensaje(t_log* loggerServidor ,int socket_cliente)
-{
+void recibir_mensaje(t_log* loggerServidor ,int socket_cliente){
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
 	log_info(loggerServidor, "Me llego el mensaje %s", buffer);
@@ -625,3 +667,44 @@ pcb* recibir_liberar_proceso(int fd){
 	list_destroy(paqute);
 	return pcb;
 }
+
+int recibir_tamanio_pagina(int fd_conexion_memoria){
+	t_list* paquete = recibir_paquete(fd_conexion_memoria);
+	int tam_pagina = 0;
+	int* tam_pag = list_get(paquete, 0);
+	tam_pagina = *tam_pag;
+	free(tam_pag);
+	list_destroy(paquete);
+	return tam_pagina;
+}
+
+valores_tlb * recibir_solicitud_marco(int fd_conexion_memoria){
+	t_list* paquete = recibir_paquete(fd);
+	valores_tlb* valores = list_get(paquete, 0);
+	list_destroy(paquete);
+	return valores;
+}
+
+int recibir_marco (int fd_conexion_memoria){
+	t_list* paquete = recibir_paquete(fd_conexion_memoria);
+	int marquitos = 0;
+	int* marco = list_get(paquete, 0);
+	marquitos = marco;
+	free(marco);
+	list_destroy(paquete);
+	return marquitos;
+}
+
+uint32_t recibir_valor_leido_memoria(int fd_memoria){
+	t_list* paquete = recibir_paquete(fd_memoria);
+	uint32_t* valor = list_get(paquete, 0);
+	list_destroy(paquete);
+	return *valor;
+}
+
+
+
+
+
+
+

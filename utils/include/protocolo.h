@@ -142,14 +142,17 @@ typedef enum {
 	CODE_PCB,
 	DATOS_PROCESO,
 
-	/* MEMORIA - CPU / CPU - MEMORIA */
+	/* MEMORIA - CPU / CPU - MEMORIA */	
 	SOLICITAR_INSTRUCCION,
 	PROXIMA_INSTRUCCION,
-	NRO_MARCO,
 	LECTURA_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
 	ESCRITURA_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
-	REAJUSTAR_TAMANIO_PROCESO,//puede ser reducir o ampliar
-	
+	REAJUSTAR_TAMANIO_PROCESO,//puede ser reducir o ampliaR
+	SIZE_PAGE, // memoria envia el tamaño de la pagina cargada en su respectivo config
+	SOLICITUD_MARCO,
+	MARCO,
+	VALOR_LEIDO,
+
 	INTERR //UNICO codigo de operacion de la conexion interrupt
 }op_code; //codigos de operacion entre modulos, sirven para establecer que tipos de datos recibe el paquete
 
@@ -214,16 +217,22 @@ typedef enum{
 typedef struct{
 	int pid;
 	int numero_pagina;
-	int marco;
 } valores_tlb;
 
 typedef struct{
 	valores_tlb* valor;
-	struct snodo* siguiente;
+	int marco;
 } nodo_tlb;
 
-/******************************/
-
+/* ESTRUCTURA PARA EL ENVIO DE DIRECCIONES FISICAS DE cpu AL kernell*/
+typedef struct{
+	int  pid;
+	size_t direccion_fisica;
+	//dependiendo el tamaño de las paginas y del tamaño de los registros
+	//CPU al hacer la respectiva traduccion  deba enviar hasta 3 direcciones fisicas
+	// caso: DL 29 y que el tamaño de marcos sea de 2 y los registros de 4 byte
+	// floor(29/2) = 14, entonces se debe enviar 14,15,16
+}direccion_fisica;
 
 void empaquetar_pcb(t_paquete* paquete, pcb* PCB,motivo_desalojo MOTIVO);
 int fin_pcb(t_list* lista);
@@ -246,6 +255,11 @@ void enviar_solicitud_de_instruccion(int fd, int pid, int program_counter);
 void enviar_datos_proceso(char* path,int pid,int fd_conexion);
 void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_desalojo MOTIVO, char* parametro1, char* parametro2, char* parametro3, char* parametro4, char* parametro5);
 void enviar_liberar_proceso(pcb* pcb,int fd);
+void enviar_tamanio_pagina(int fd_cpu_dispatch, int tam_pag);
+void enviar_solicitud_marco(int fd_conexion_memoria, int pid, int numero_pagina);
+void enviar_marco (int fd_conexion_memoria, int marco);
+void enviar_solicitud_lectura_memoria(size_t direccion_fisica, int pid, int fd__conexion_memoria);
+void enviar_solicitud_escritura_memoria(int direccion_fisica, uint32_t valor, valores_tlb* valores, int fd_conexion_memoria);
 
 /* RECVS */
 void recibir_mensaje(t_log* loggerServidor, int socket_cliente);
@@ -257,8 +271,11 @@ t_datos_proceso* recibir_datos_del_proceso(int fd_kernel);
 pcb* recibir_pcb(int socket);
 motivo_desalojo recibir_motiv_desalojo(int fd_escucha_dispatch);
 pcb* recibir_liberar_proceso(int fd);
-
 pcb* guardar_datos_del_pcb(t_list* paquete); //usar para cuando en un paquete, vienen los datos de un pcb y otras cosas mas
+int recibir_tamanio_pagina(int fd_conexion_memoria);
+valores_tlb * recibir_solicitud_marco(int fd_conexion_memoria);
+int recibir_marco (int fd_conexion_memoria);
+uint32_t recibir_valor_leido_memoria(int fd_memoria);
 
 typedef struct{
 	int pagina;
@@ -266,8 +283,12 @@ typedef struct{
 }direccion_logica;
 //estos dos no creo que se usen pero es por si las direcciones vienen en decimal
 typedef struct{
-	int marco;
-	int desplazamiento;
+	int  pid;
+	size_t direccion_fisica;
+	//dependiendo el tamaño de las paginas y del tamaño de los registros
+	//CPU al hacer la respectiva traduccion  deba enviar hasta 3 direcciones fisicas
+	// caso: DL 29 y que el tamaño de marcos sea de 2 y los registros de 4 byte
+	// floor(29/2) = 14, entonces se debe enviar 14,15,16
 }direccion_fisica;
 
 

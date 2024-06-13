@@ -14,10 +14,11 @@ bool hay_interrupcion;
 
 /* TLB */
 int MAX_TLB_ENTRY;
-int ENTRADAS_ACTUAL;
+int TAM_PAGINA;
 t_list* translation_lookaside_buffer;
 pthread_mutex_t mutex_tlb;
 /* SEMAFOROS */
+pthread_mutex_t mutex_motivo_x_consola;
 sem_t sem_recibir_pcb;
 sem_t sem_execute;
 sem_t sem_interrupcion;
@@ -51,6 +52,7 @@ bool es_wait; //modificar si se pone a bloqueante = true
 bool cambio_proceso_wait; // modificar si se pone a es_wait = true
 bool es_resize; //modificar si se pone bloqueante = true
 bool resize_desalojo_outofmemory; //modificar si se pone es_resize = true
+bool hay_interrupcion_x_consola = false; //al inicio no tiene ninguna => false
 
 /* REGISTROS */
 typedef struct{
