@@ -248,13 +248,13 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	uint32_t * datos = capturar_registro(DATOS);
 	size_t size_reg = size_registro(DATOS);
 	t_list * traducciones = obtener_traducciones(direccion_logica, size_reg);
-	t_paquete * paquete = crear_paquete(ESCRITURA_MEMORIA); //no uso enviar_pcb porque no me sirve, necesito enviar una lista de cosas
+	t_paquete * paquete = crear_paquete(ESCRITURA_MEMORIA);
 	agregar_a_paquete(paquete,&size_reg,(int));
 	agregar_a_paquete(paquete,datos,size_reg);
 	empaquetar_traducciones(paquete,traducciones);
 	enviar_paquete(paquete,fd_conexion_memoria);
 	eliminar_paquete(paquete);
-	log_info(logger_cpu, "PID: %d - Accion: ESCRIBIR - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
+	//log_info(logger_cpu, "PID: %d - Accion: ESCRIBIR - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
 	check_interrupt();
 
 }
@@ -354,12 +354,12 @@ void ejecutar_resize(pcb* PCB, char* tamanio){
 	switch (codigo_operacion){
 		case OUTOFMEMORY:
 			enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, SIN_MEMORIA,NULL,NULL,NULL,NULL,NULL);
-			es_exit=false;  //siempre modificar
-			es_bloqueante=false; //modificar siempre que es_exit = false
+			es_exit = true;  //siempre modificar
+			es_bloqueante = false; //modificar siempre que es_exit = false
 			break;
 		case OK:
-			es_exit=false;  //siempre modificar
-			es_bloqueante=false; //modificar siempre que es_exit = false
+			es_exit = false;  //siempre modificar
+			es_bloqueante = false; //modificar siempre que es_exit = false
 			break;
 	}
 	
@@ -368,8 +368,18 @@ void ejecutar_resize(pcb* PCB, char* tamanio){
 
 void ejecutar_copy_string(pcb* PCB, char* tamanio){
 
-//falta cpy string
+	uint32_t reg_SI = PCB->registros.SI;
+	uint32_t reg_DI = PCB->registros.DI;
+	int copy_tamanio = atoi (tamanio);
 
+	t_paquete * paquete = crear_paquete(COPY);
+	agregar_a_paquete(paquete,&reg_SI,sizeof(uint32_t));
+	agregar_a_paquete(paquete,&reg_DI,sizeof(uint32_t));
+	agregar_a_paquete(paquete,&copy_tamanio,sizeof(int));
+	enviar_paquete(paquete,fd_conexion_memoria);
+	eliminar_paquete(paquete);
+
+	return;
 }
 
 void ejecutar_wait(pcb* PCB, char* registro){
@@ -405,9 +415,13 @@ void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* un
 }
 
 ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
-	int direccion_logica_i = atoi(registro_direccion);
+	
+	/*int direccion_logica_i = atoi(registro_direccion);
 	int tamanio_a_leer = atoi(registro_tamanio);
+	*/ // son char pero palbras (osea EAX) igual registro tamaño
 
+	uint32_t * direccion_logica_i = capturar_registro(registro_direccion);
+	size_t tamanio_a_leer = size_registro(registro_tamanio);
 
 	t_list * traducciones = obtener_traducciones(direccion_logica_i,tamanio_a_leer);
 	
@@ -417,7 +431,7 @@ ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char *
 
 	agregar_a_paquete(paquete,"IO_STDIN_READ",strlen("IO_STDIN_READ")+1);
 	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
-	agregar_a_paquete(paquete,&tamanio_a_leer,sizeof(int);
+	agregar_a_paquete(paquete,&tamanio_a_leer,sizeof(int));
 	empaquetar_traducciones(paquete,traducciones);
 	enviar_paquete(paquete,fd_cpu_dispatch);
 	sem_post(&sem_recibir_pcb);
@@ -430,9 +444,12 @@ ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char *
 }
 
 ejecutar_io_stdout_write(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
-	int direccion_logica_i = atoi(registro_direccion);
-	int tamanio_a_escribir = atoi(registro_tamanio);
+	/*int direccion_logica_i = atoi(registro_direccion);
+	int tamanio_a_leer = atoi(registro_tamanio);
+	*/ // son char pero palbras (osea EAX) igual registro tamaño
 
+	uint32_t * direccion_logica_i = capturar_registro(registro_direccion);
+	size_t tamanio_a_escribir = size_registro(registro_tamanio);
 
 	t_list * traducciones = obtener_traducciones(direccion_logica_i,tamanio_a_escribir);
 	
@@ -460,8 +477,8 @@ void ejecutar_exit(pcb* PCB){
 	es_exit=true;  //siempre modificar
 }
 
-void ejecutar_error(pcb* PCB){ //se usa esta en algun momento?
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
+void ejecutar_error(pcb* PCB){ //se usa esta en algun momento? creo que no, 
+	//log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
 	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXIT_CONSOLA,NULL,NULL,NULL,NULL,NULL);
 	sem_post(&sem_recibir_pcb);
 }
