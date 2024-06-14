@@ -295,10 +295,7 @@ void iniciar_proceso_a_pedido_de_Kernel(char* path, int pid, int socket_kernel) 
     proceso_nuevo->pid = pid;
     proceso_nuevo->instrucciones = instrucciones;
 	proceso_nuevo->tabla_de_paginas=list_create(); //solo crea la lista, pero arranca sin elementos ya que no tiene marcos asignados, se le agregan elementos del tipo fila_tabla_de_paginas
-	/*desde aca se implementa una lista de tabla de paginas(que es una lista global) que arrancan en -1 en los marcos ya que cuando el proceso es creado a
-	pedido de memoria esta en new*/
-	//Crear la tabla de páginas
-	
+
 	push_con_mutex(lista_de_procesos, proceso_nuevo, &mutex_lista_procesos);
 }
 

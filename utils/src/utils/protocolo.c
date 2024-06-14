@@ -335,7 +335,7 @@ void enviar_datos_proceso(char* path, int pid, int fd_conexion){
 	eliminar_paquete(paquete_de_datos_proceso);
 }
 
-void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_desalojo MOTIVO, char* parametro1, char* parametro2, char* parametro3, char* parametro4, char* parametro5){
+void enviar_pcb(pcb* PCB, int un_fd, op_code OPERACION, motivo_desalojo MOTIVO, char* parametro1, char* parametro2, char* parametro3, char* parametro4, char* parametro5){
 
 	t_paquete* paquete = crear_paquete(OPERACION);
 	empaquetar_pcb(paquete, PCB, MOTIVO);
@@ -357,12 +357,11 @@ void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_des
 			agregar_a_paquete(paquete, &parametro1, strlen(parametro1) + 1);
 			break;
 		
-		case SOLICITAR_SIGNAL:
-			agregar_a_paquete(paquete, &parametro1, strlen(parametro1) + 1);
-			break;
-		
-
-		//ES NECESARIO COLOCAR LOS MOTIVOS EN LOS UE NO SE AGREGA INFORMACION AL PCB?
+		/*
+			-Sergio:ES NECESARIO COLOCAR LOS MOTIVOS EN LOS UE NO SE AGREGA INFORMACION AL PCB? 
+			-Nico: tiene razon Sergio, creo que no haría falta poner el resto porque total no agregan mas informacion, podría salir del switch ahora
+			(cuando el resto lo vea pongan que opinan)
+		*/
 		case EXITO:
 			break;
 		case EXIT_CONSOLA:
@@ -373,24 +372,32 @@ void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_des
 			break;	
 		case PROCESO_ACTIVO:
 			break;
+		case FINALIZAR_PROCESO:
+			break;
 		case SIN_MEMORIA:
 			break;
 		default:
 			break;
 	}
-	enviar_paquete(paquete, fd_escucha_dispatch);
+	enviar_paquete(paquete, un_fd);
 	eliminar_paquete(paquete);
 	return;
 
 }
 
-void enviar_liberar_proceso(pcb* pcb, int fd){
+void enviar_liberar_proceso(pcb* un_pcb, int fd){
+	/*
 	t_paquete* paquete = crear_paquete(FINALIZAR_PROCESO);
 
 	agregar_a_paquete(paquete, pcb,sizeof(pcb));
 
 	enviar_paquete(paquete, fd);
 	eliminar_paquete(paquete);
+	*/
+
+	//oojo, no hace falta enviar el pcb entero, solo el pid
+	//ademas esta mal enviado el pcb, no podes enviar un struct asi de una en un paquete nenedaun
+	
 }
 
 void enviar_tamanio_pagina(int fd_cpu_dispatch, int tam_pag){
@@ -417,23 +424,6 @@ void enviar_solicitud_marco(int fd_conexion_memoria, int pid, int numero_pagina)
 void enviar_marco (int fd_conexion_memoria, int marco){ //EN EL CASO DE NO ENCONTRAR EL MARCO CORRESPONDIENTE A LOS VALORES PEDIDOS ENVIAR UN -1
 	t_paquete* paquete = crear_paquete(MARCO);
 	agregar_a_paquete(paquete, &marco, sizeof(int));
-	enviar_paquete(paquete, fd_conexion_memoria);
-	eliminar_paquete(paquete);
-}
-
-void enviar_solicitud_lectura_memoria(int direccion_fisica, int pid, int fd_memoria){
-	t_paquete* paquete = crear_paquete(LECTURA_MEMORIA);
-	agregar_a_paquete(paquete, &direccion_fisica, sizeof(int));
-	agregar_a_paquete(paquete, &pid, sizeof(int));
-	enviar_paquete(paquete, fd_memoria);
-	eliminar_paquete(paquete);
-}
-
-void enviar_solicitud_escritura_memoria(int direccion_fisica, uint32_t valor, valores_tlb* valores, int fd_conexion_memoria){
-	t_paquete* paquete = crear_paquete(ESCRITURA_MEMORIA);
-	agregar_a_paquete(paquete, &direccion_fisica, sizeof(int));
-	agregar_a_paquete(paquete, &valor, sizeof(uint32_t));
-	agregar_a_paquete(paquete, valores, sizeof(valores_tlb));
 	enviar_paquete(paquete, fd_conexion_memoria);
 	eliminar_paquete(paquete);
 }
@@ -720,12 +710,6 @@ int recibir_tamanio_pagina(int fd_conexion_memoria){
 	return tam_pagina;
 }
 
-valores_tlb * recibir_solicitud_marco(int fd_conexion_memoria){
-	t_list* paquete = recibir_paquete(fd);
-	valores_tlb* valores = list_get(paquete, 0);
-	list_destroy(paquete);
-	return valores;
-}
 
 int recibir_marco (int fd_conexion_memoria){
 	t_list* paquete = recibir_paquete(fd_conexion_memoria);

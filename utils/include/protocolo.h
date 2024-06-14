@@ -256,15 +256,12 @@ void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void enviar_mensaje_de_exito(int socket, char* mensaje);
 void enviar_operacion(int socket_conexion, op_code numero);
 void snd_handshake(int fd_socket_cliente);
-void enviar_solicitud_de_instruccion(int fd, int pid, int program_counter);
 void enviar_datos_proceso(char* path,int pid,int fd_conexion);
-void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_desalojo MOTIVO, char* parametro1, char* parametro2, char* parametro3, char* parametro4, char* parametro5);
-void enviar_liberar_proceso(pcb* pcb,int fd);
+void enviar_pcb(pcb* PCB, int un_fd, op_code OPERACION, motivo_desalojo MOTIVO, char* parametro1, char* parametro2, char* parametro3, char* parametro4, char* parametro5);
+void enviar_liberar_proceso(pcb* un_pcb,int fd);
 void enviar_tamanio_pagina(int fd_cpu_dispatch, int tam_pag);
 void enviar_solicitud_marco(int fd_conexion_memoria, int pid, int numero_pagina);
 void enviar_marco (int fd_conexion_memoria, int marco);
-void enviar_solicitud_lectura_memoria(size_t direccion_fisica, int pid, int fd__conexion_memoria);
-void enviar_solicitud_escritura_memoria(int direccion_fisica, uint32_t valor, valores_tlb* valores, int fd_conexion_memoria);
 
 /* RECVS */
 void recibir_mensaje(t_log* loggerServidor, int socket_cliente);
@@ -281,19 +278,5 @@ int recibir_tamanio_pagina(int fd_conexion_memoria);
 int recibir_marco (int fd_conexion_memoria);
 uint32_t recibir_valor_leido_memoria(int fd_memoria);
 void empaquetar_traducciones(t_paquete* paquete, t_list* lista_de_traducciones);
-typedef struct{
-	int pagina;
-	int desplazamiento;
-}direccion_logica;
-//estos dos no creo que se usen pero es por si las direcciones vienen en decimal
-typedef struct{
-	int  pid;
-	size_t direccion_fisica;
-	//dependiendo el tamaño de las paginas y del tamaño de los registros
-	//CPU al hacer la respectiva traduccion  deba enviar hasta 3 direcciones fisicas
-	// caso: DL 29 y que el tamaño de marcos sea de 2 y los registros de 4 byte
-	// floor(29/2) = 14, entonces se debe enviar 14,15,16
-}direccion_fisica;
-
 
 #endif
