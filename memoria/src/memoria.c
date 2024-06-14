@@ -207,17 +207,17 @@ static void procesar_clientes(void* void_args){
 				log_info(logger_memoria, "Solicitud de instruccion recibida");
 				procesar_pedido_instruccion(cliente_socket);
 				break;
-		case NRO_MARCO:
+		case SOLICITUD_MARCO:
 				log_info(logger_memoria, "Solicitud de marco"); //cuando sergio haga send_pedido_de_marco o como se iame
 				procesar_solicitud_nromarco(cliente_socket);
 				//recibir el paquete (si o si un pid y un numero de pagina)
 				//invocar una funcion que busque un proceso por su pid, acceda a su tabla de paginas y devuelva el numero de marco asociado a un numero de pagina enviado por parametro
 				break;
 		case LECTURA_MEMORIA:
-				//de una interfaz o de la cpu
+				procesar_lectura_en_memoria(cliente_socket);
 				break;
 		case ESCRITURA_MEMORIA:
-				//de una interfaz o de la cpu
+				procesar_escritura_en_memoria(cliente_socket);
 				break;
 		case REAJUSTAR_TAMANIO_PROCESO:
 				//de la cpu, aumentar o diminuir
@@ -491,4 +491,52 @@ void send_marco (int fd, int marco){
 	eliminar_paquete(paquete);
 }   
 
+void procesar_escritura_en_memoria(int cliente_socket){ //esto es para las interfaces
+	
+	//recibimos la data
+	t_list * lista = recibir_paquete(cliente_socket);
+	int * p_direccion_fisica = (int *) list_get(lista,0);
+	size_t direccion_fisica = (size_t) *p_direccion_fisica;
+	free(p_direccion_fisica);
+
+	int * p_bytes = (int *) list_get(lista,1);
+	size_t bytes = (size_t) *p_bytes;
+	free(p_bytes);
+
+	char *string_a_escribir = (char *) list_get(lista,2);
+
+	list_destroy(lista);
+
+	memcpy(memoriaPrincipal+direccion_fisica,string_a_escribir,bytes); //OJO, nosotros no escribimos en memoria con caracter nulo, por eso no es strlen(string_a_escribir)+1
+
+	free(string_a_escribir);
+
+	char * rta = "Ok";
+	t_paquete * paquete = crear_paquete(ESCRITURA_MEMORIA); //podría ser cualquier codigo de operacion, no me importa
+	agregar_a_paquete(paquete,rta,sizeof(rta));
+	enviar_paquete(paquete,cliente_socket);
+	eliminar_paquete(paquete);
+}
+
+void procesar_lectura_en_memoria(int cliente_socket){
+	//terminar durante ingles
+	t_list * lista = recibir_paquete(cliente_socket);
+
+	int * p_bytes = (int *) list_get(lista,0);
+	size_t bytes = (size_t)  *p_bytes;
+	free(p_bytes);
+	int * p_direccion_fisica = (int *) list_get(lista,1);
+	size_t direccion_fisica = (size_t) *p_direccion_fisica;
+	free(p_direccion_fisica);
+	list_destroy(lista);
+
+	char * buffer= malloc(bytes);
+	memcpy(buffer,memoriaPrincipal+direccion_fisica,bytes);  //ojo, buffer sin '\0' al final
+
+	t_paquete * paquete = crear_paquete(LECTURA_MEMORIA); //podría ser cualquier codigo de operacion, no me importa
+	agregar_a_paquete(paquete,buffer,bytes);//no lo enviamos con el caracter nulo porque en memoria no se guarda el caracter nulo, STDOUT se encarga de agregar el '\0'
+	enviar_paquete(paquete,cliente_socket);
+	eliminar_paquete(paquete);
+	free(buffer);
+}
 

@@ -21,7 +21,7 @@ typedef struct
 } t_solicitud_instruccion;//lo que uso para recibir los datos que me envia CPU
 typedef struct
 {
-	int pid;
+	int pid;//                      soy nico, no entiendo, se usa este o el de abajo? me gusta mas el de abajo
 	int numero_pagina;
 } pid_y_pag;//lo que uso para recibir los datos  para leer el PID Y NRO DE PAGINA cuando solicitan NUMERO DE MARCO
 typedef struct
@@ -31,12 +31,8 @@ typedef struct
 	int marco;
 }t_pagina;//tabla de pagina de un proceso. tiene ID del proceso, numero pagina  y el numero marco asociado a esa pagina
 //LA lista t_list ya esta creada ahora cuando se asignen marcos a los procesos en con resize se debera usar esta estructura como lista de tablas
-typedef struct
-/*{
-	int pid;
-	t_list* paginas;
-} t_tdp;*/
-// se usaria si implementamos que lalista de tablas no este en los procesos, seria mas facil.. preguntar a nico 
+
+ 
 int fd_escucha_memoria;
 int fd_conexion_server;
 
@@ -89,6 +85,8 @@ int dividir_y_redondear_hacia_arriba(int a,int b);
 int nro_de_marco_libre();
 bool es_proceso_con_pid(void * un_pid);
 int bitsToBytes(int bits);
+void procesar_escritura_en_memoria(int cliente_socket);
+void procesar_lectura_en_memoria(int cliente_socket);
 
 int cant_marcos;
 int iniciarMemoria();

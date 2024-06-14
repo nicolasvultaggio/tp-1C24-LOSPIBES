@@ -211,7 +211,7 @@ void atender_STDIN(){
     t_list * traducciones = desempaquetar_traducciones(lista,1);
     list_destroy(lista);
 
-    char buffer[tam+1];
+    char buffer[tam+1]; //agregamos 1 para poder definir escribir por pantalla
     char *booleano;
     do{
         printf("Ingresar línea:\n");
@@ -235,23 +235,27 @@ void atender_STDIN(){
         
         //preparamos datos a enviar
         nodo_lectura_escritura * traduccion = list_get(traducciones,i);
-        char string_a_enviar[traduccion->bytes+1];
-        memcpy(string_a_enviar,buffer+offset,(size_t) traduccion->bytes);
-        string_a_enviar[traduccion->bytes]='\0';
+        char string_a_enviar[traduccion->bytes];
+        memcpy(string_a_enviar,buffer+offset,traduccion->bytes);//detalle: no guardamos '\0' en lo que le enviamos a memoria para que escriba
         offset+=traduccion->bytes;
         
         //empaquetamos datos y los enviamos a memoria
         t_paquete * paquete2 = crear_paquete(ESCRITURA_MEMORIA);
         agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(int));
-        agregar_a_paquete(paquete2,string_a_enviar,strlen(string_a_enviar)+1);//enviamos el byte a escribir a memoria con caracter nulo y todo 
+        agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(int));//para que sepa cuantos bytes escribir
+        agregar_a_paquete(paquete2,string_a_enviar,traduccion->bytes);
         enviar_paquete(paquete2,fd_conexion_memoria);
         eliminar_paquete(paquete2);
 
         //recibimos respuesta de memoria, si falló ALGUNA escritura, operacion fallida
-        int size;
-        char * rta_memoria = recibir_buffer(&size,fd_conexion_memoria);//recibimos respuesta con caracter nulo y todo
-        operacion_exitosa = strcmp(rta_memoria,"Ok"); //comparamos cada respuesta de memoria, alcanza con que alguna NO sea "Ok"
-       
+        int cod_op;
+	    recv(fd_conexion_memoria, &cod_op, sizeof(int), MSG_WAITALL); //al pedo, esta nada mas para que podamos recibir el codop antes del paquete
+        t_list * lista = recibir_paquete(fd_conexion_memoria);
+        char * rta = (char*) list_get(lista,0);
+        printf("%s\n",rta); //imprime "ok" en pantalla
+        operacion_exitosa = strcmp(rta,"Ok"); //comparamos cada respuesta de memoria, alcanza con que alguna NO sea "Ok"
+        free(rta);
+        list_destroy(lista);
     }
 
     list_destroy_and_destroy_elements(traducciones,(void*)traduccion_destroyer);
@@ -275,7 +279,7 @@ void atender_STDOUT(){
     t_list * traducciones = desempaquetar_traducciones(lista,1);
     list_destroy(lista);
 
-    char buffer[tam+1]="";
+    char buffer[tam+1];
     
     int offset=0;
     int cantidad_de_traducciones = list_size(traducciones);
@@ -294,17 +298,18 @@ void atender_STDOUT(){
         eliminar_paquete(paquete2);
 
         //recibimos respuesta de memoria, escribimos en el buffer
-        int size;
-        char * rta_memoria = recibir_buffer(&size,fd_conexion_memoria); //recibimos lo leido con el caracter nulo y todo => strlen(rta_memoria)= (traduccion->bytes) + 1
-        
-        memcpy(buffer+offset,rta_memoria,(size_t)traduccion->bytes); //como strlen(rta_memoria)= (traduccion->bytes) + 1, y nosotros solo copiamos (traduccion->bytes), dejamos afuera el ultimo, el '\0'
-        
+        int cod_op;
+	    recv(fd_conexion_memoria, &cod_op, sizeof(int), MSG_WAITALL); //al pedo, esta nada mas para que podamos recibir el codop antes del paquete
+        t_list * lista = recibir_paquete(fd_conexion_memoria);
+        char * string_leido = (char*) list_get(lista,0);
+        list_destroy(lista);
+
+        memcpy(buffer+offset,string_leido,(size_t)traduccion->bytes);//detalle: no guardamos caracter nulo
+    
         offset+=traduccion->bytes;
-
-        free(rta_memoria);
     }
-
-    buffer[tam+1]='\0';
+    
+    buffer[tam+1]='\0'; // agregamos '\0' solo para escribir por pantalla (necesario para printf)
 
     printf("%s",buffer);
 
@@ -318,6 +323,9 @@ void atender_STDOUT(){
         send(fd_conexion_kernel,&b,sizeof(int),0); 
     }
 }
+
+    
+
 
 void atender_DIALFS(){ // hoy, 2/5/2024, a las 20:07, esuchando JIMMY FALLON de Luchito, empiezo la funcion mas dificil de las interfaces, suerte loko
    // char * instruccion = recibir_instruccion_de_kernel();
