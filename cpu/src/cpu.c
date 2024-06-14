@@ -368,7 +368,7 @@ void ejecutar_resize(pcb* PCB, char* tamanio){
 
 void ejecutar_copy_string(pcb* PCB, char* tamanio){
 
-
+//falta cpy string
 
 }
 
