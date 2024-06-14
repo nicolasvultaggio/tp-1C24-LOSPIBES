@@ -114,6 +114,7 @@ bool es_entrada_TLB_de_PID(void * un_nodo_tlb );
 size_t size_registro(char * registro);
 void setear_registro(pcb * PCB, char * registro, uint8_t valor8, uint32_t valor32);
 void * capturar_registro(pcb * PCB, char * registro);
+uint32_t recibir_lectura_memoria();
 
 
 

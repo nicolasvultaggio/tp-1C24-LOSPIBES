@@ -150,7 +150,7 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			ejecutar_resize(instruccion->parametro1);
 			break;
 		case COPY_STRING:
-			//ejecutar_copy_string();
+			ejecutar_copy_string(PCB,instruccion->parametro1);
 			break;
 		case WAIT:
 			ejecutar_wait(PCB, instruccion->parametro1);
@@ -212,46 +212,48 @@ void ejecutar_set(pcb* PCB, char* registro, char* valor){
 void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", PCB->pid, "MOV IN", DATOS, DIRECCION);
-	
-	int direccion_logica = atoi(DIRECCION);
-	
-	
-	size_t direccion_fisica = MMU(pcb, direccion_logica);
-	enviar_solicitud_lectura_memoria(direccion_fisica, PCB->pid, fd_conexion_memoria);
-	uint32_t valor = recibir_valor_leido();
-	log_info(logger_cpu, "PID: %d - Accion: LEER - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
-	ejecutar_set(PCB, DATOS, valor);
+	/*
+	SET EAX 30
+	MOV_IN EBX EAX
 
+    En EAX tengo guardada la dirección lógica 30
+    La longitud a leer va a ser el tamaño de EBX, o sea 4
+    Entonces tengo que leer desde el byte 30 hasta el 33
+	*/
+	uint32_t * direccion_logica = capturar_registro(DIRECCION);
+	size_t size_reg = size_registro(DATOS);
+	t_list * traducciones = obtener_traducciones(direccion_logica, size_reg);
+	t_paquete * paquete = crear_paquete(LECTURA_MEMORIA); //no uso enviar_pcb porque no me sirve, necesito enviar una lista de cosas
+	agregar_a_paquete(paquete,&size_reg,(int));
+	empaquetar_traducciones(paquete,traducciones);
+	enviar_paquete(paquete,fd_conexion_memoria);
+	eliminar_paquete(paquete);
+	
+	if(size_reg == 4){
+		setear_registro(PCB, DATOS, 0, recibir_lectura_memoria());
+	}else if(size_reg == 1){
+		setear_registro(PCB, DATOS, (uint8_t) recibir_lectura_memoria(), 0);
+	}
+
+	//log_info(logger_cpu, "PID: %d - Accion: LEER - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
+	
+	return;
 }
 
 void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", PCB->pid, "MOV OUT", DIRECCION, DATOS);
 
-	int direccion_logica = atoi(DIRECCION);
-
-	int cantidad_paginas_a_traducir = calculo_de_paginas(DATOS, direccion_logica);
-
-	int direccion_fisica= MMU(direccion_fisica);
-
-	uint32_t valor32;
-
-	if(strcmp(registro, "EAX") == 0){
-		valor32 = PCB->registros.EAX;
-	} else if(strcmp(registro, "EBX") == 0){
-		valor32 = PCB->registros.EBX;
-	} else if(strcmp(registro, "ECX") == 0){
-		valor32 = PCB->registros.ECX;
-	} else if(strcmp(registro, "EDX") == 0){
-		valor32 = PCB->registros.EDX;
-	}
-	/*
-	int numero_pagina = floor(direccion_logica/TAM_PAGINA);
-	valores_tlb* valores = malloc(sizeof(valores_tlb));
-	valores->numero_pagina = numero_pagina;
-	valores->pid = PCB->pid;
-	*/
-	enviar_solicitud_escritura_memoria(direccion_fisica, valor32, valores, fd_conexion_memoria); //no se usa
+	uint32_t * direccion_logica = capturar_registro(DIRECCION);
+	uint32_t * datos = capturar_registro(DATOS);
+	size_t size_reg = size_registro(DATOS);
+	t_list * traducciones = obtener_traducciones(direccion_logica, size_reg);
+	t_paquete * paquete = crear_paquete(ESCRITURA_MEMORIA); //no uso enviar_pcb porque no me sirve, necesito enviar una lista de cosas
+	agregar_a_paquete(paquete,&size_reg,(int));
+	agregar_a_paquete(paquete,datos,size_reg);
+	empaquetar_traducciones(paquete,traducciones);
+	enviar_paquete(paquete,fd_conexion_memoria);
+	eliminar_paquete(paquete);
 	log_info(logger_cpu, "PID: %d - Accion: ESCRIBIR - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
 	check_interrupt();
 
@@ -362,6 +364,12 @@ void ejecutar_resize(pcb* PCB, char* tamanio){
 	}
 	
 	return;
+}
+
+void ejecutar_copy_string(pcb* PCB, char* tamanio){
+
+
+
 }
 
 void ejecutar_wait(pcb* PCB, char* registro){
@@ -539,7 +547,16 @@ void * capturar_registro(pcb * PCB, char * registro){
 
 /* FUNCIONES stdin_read y stout_write */
 
-t_list * obtener_traducciones(int direccion_logica_i, int tamanio_a_leer ){
+t_list * obtener_traducciones(uint32_t direccion_logica_i, int tamanio_a_leer ){ //cambio los tipos de datos de DL y tamanio por el siguiente ejemplo
+	/*
+	SET EAX 30 
+	MOV_IN EBX EAX
+
+    En EAX tengo guardada la dirección lógica 30
+    La longitud a leer va a ser el tamaño de EBX, o sea 4
+    Entonces tengo que leer desde el byte 30 hasta el 33
+	*/
+	/* EAX es uint32_t y el tamanio a leer es sizeof(EBX) y EBX es sizeof*/
 	int direccion_logica_f = direccion_logica_i + tamanio_a_leer -1;
 
 	int pagina_inicial = direccion_logica_i / tam_pagina;
@@ -581,6 +598,17 @@ t_list * obtener_traducciones(int direccion_logica_i, int tamanio_a_leer ){
 	return lista_traducciones;
 	//importante, esta funcion no libera la lista
 }
+
+uint32_t recibir_lectura_memoria(){
+	t_list* paquete = recibir_paquete(fd_conexion_memoria);
+	uint32_t lecturita = 0;
+	uint32_t* lectura = list_get(paquete, 0);
+	lecturita = *lectura;
+	free(lectura);
+	list_destroy(paquete);
+	return lecturita;
+}
+
 
 /* CHECK INTERRUPT */
 void* interrupcion(void *arg) {
@@ -758,7 +786,7 @@ void liberar_interrupcion_actual(){
 
 /* TRADUCCION LOGICA A FISICA */
 
-int MMU( int direccion_logica){
+int MMU(uint32_t direccion_logica){
 	int marco;
 	int numero_pagina = floor(direccion_logica / TAM_PAGINA); //ya de por si redondea para abajo, posiblemente floor sea innecesario
 	int desplazamiento =  direccion_logica % TAM_PAGINA;
