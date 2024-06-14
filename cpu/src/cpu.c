@@ -225,8 +225,6 @@ void ejecutar_set(pcb* PCB, char* registro, char* valor){
 }
 
 void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
-
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", PCB->pid, "MOV IN", DATOS, DIRECCION);
 	/*
 	SET EAX 30
 	MOV_IN EBX EAX
@@ -235,6 +233,25 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
     La longitud a leer va a ser el tamaño de EBX, o sea 4
     Entonces tengo que leer desde el byte 30 hasta el 33
 	*/
+
+	/*
+	
+	RESIZE 100
+	SET EAX 34
+	SET EBX 48
+	MOV_OUT EAX EBX
+	MOV_IN ECX EAX
+	SET EBX 104
+	MOV_OUT ECX EBX
+	MOV_IN DX ECX
+	EXIT
+
+	En este caso, en la dirección 34 se guarda el 48. Y luego en la dirección 48 se guarda el 104.
+	Nuestro problema surge cuando intentamos hacer MOV_IN DX ECX. Ya que el DX ocupa 1 byte y el 104 
+	se guardo en memoria como 4 bytes, algo así:
+
+	*/
+
 	uint32_t * direccion_logica = capturar_registro(DIRECCION);
 	size_t size_reg = size_registro(DATOS);
 	t_list * traducciones = obtener_traducciones(direccion_logica, size_reg);
@@ -257,7 +274,25 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 
 void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", PCB->pid, "MOV OUT", DIRECCION, DATOS);
+	/*
+	
+	RESIZE 100
+	SET EAX 34
+	SET EBX 48
+	MOV_OUT EAX EBX
+	MOV_IN ECX EAX
+	SET EBX 104
+	MOV_OUT ECX EBX
+	MOV_IN DX ECX
+	EXIT
+
+	En este caso, en la dirección 34 se guarda el 48. Y luego en la dirección 48 se guarda el 104.
+	Nuestro problema surge cuando intentamos hacer MOV_IN DX ECX. Ya que el DX ocupa 1 byte y el 104 
+	se guardo en memoria como 4 bytes, algo así:
+
+	*/
+
+	
 
 	uint32_t * direccion_logica = capturar_registro(DIRECCION);
 	uint32_t * datos = capturar_registro(DATOS);
@@ -269,7 +304,15 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	empaquetar_traducciones(paquete,traducciones);
 	enviar_paquete(paquete,fd_conexion_memoria);
 	eliminar_paquete(paquete);
-	//log_info(logger_cpu, "PID: %d - Accion: ESCRIBIR - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
+	
+	for (int i = 0; i < list_size(traducciones); i++){
+		
+		log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica: %d - Valor: %d ", PCB->pid, list_get(traducciones,i), datos);	
+	
+	}
+	
+	list_destroy(traducciones);
+
 	check_interrupt();
 
 }
