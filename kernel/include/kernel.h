@@ -27,16 +27,16 @@ typedef struct {
 
 typedef struct{
     pcb * el_pcb;
-    size_t * direccion_fisica;
-    size_t * tamanio;
+    int tamanio_lectura;
+    t_list * traducciones;
 }pcb_block_STDIN ;
 
 
 //no importa que sean exactamente iguales me importa que sean de un tipo distinto
 typedef struct{
     pcb * el_pcb;
-    size_t * direccion_fisica;
-    size_t * tamanio;
+    int tamanio_escritura;
+    t_list * traducciones;
 }pcb_block_STDOUT;
 
 typedef struct{

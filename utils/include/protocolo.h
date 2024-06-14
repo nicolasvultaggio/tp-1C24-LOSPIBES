@@ -152,6 +152,8 @@ typedef enum {
 	SOLICITUD_MARCO,
 	MARCO,
 	VALOR_LEIDO,
+	OUTOFMEMORY,
+	OK,
 
 	INTERR //UNICO codigo de operacion de la conexion interrupt
 }op_code; //codigos de operacion entre modulos, sirven para establecer que tipos de datos recibe el paquete
@@ -213,16 +215,17 @@ typedef enum{
 }op_io_a_kernel;
 
 /* TLB */
-
 typedef struct{
 	int pid;
-	int numero_pagina;
-} valores_tlb;
-
-typedef struct{
-	valores_tlb* valor;
+	int num_pag;
 	int marco;
-} nodo_tlb;
+}nodo_tlb;
+
+typedef struct
+{
+	int direccion_fisica; // recordar que: la direccion fisica ya incluye al offset
+	int bytes;
+}nodo_lectura_escritura; //para que sirve? es la unidad mas basica de escritura o lectura, no hace falta mas desgloce: leer "bytes" bytes desde la direccion fisica, o escribir "bytes" bytes desde la direccion fisica
 
 /* ESTRUCTURA PARA EL ENVIO DE DIRECCIONES FISICAS DE cpu AL kernell*/
 typedef struct{
@@ -244,7 +247,8 @@ void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void* serializar_paquete(t_paquete* paquete, int bytes);
 void eliminar_paquete(t_paquete* paquete);
 void iterator(char* value, t_log *logger);
-
+t_list * desempaquetar_traducciones(t_list* paquete, int cantidad);
+void traduccion_destroyer(void * traduccion);
 /* SENDS */
 void enviar_mensaje(char* mensaje, int socket_cliente);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
@@ -273,10 +277,9 @@ motivo_desalojo recibir_motiv_desalojo(int fd_escucha_dispatch);
 pcb* recibir_liberar_proceso(int fd);
 pcb* guardar_datos_del_pcb(t_list* paquete); //usar para cuando en un paquete, vienen los datos de un pcb y otras cosas mas
 int recibir_tamanio_pagina(int fd_conexion_memoria);
-valores_tlb * recibir_solicitud_marco(int fd_conexion_memoria);
 int recibir_marco (int fd_conexion_memoria);
 uint32_t recibir_valor_leido_memoria(int fd_memoria);
-
+void empaquetar_traducciones(t_paquete* paquete, t_list* lista_de_traducciones);
 typedef struct{
 	int pagina;
 	int desplazamiento;

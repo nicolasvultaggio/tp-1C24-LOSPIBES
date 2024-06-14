@@ -598,11 +598,11 @@ void atender_vuelta_dispatch(){
                         char* recurso_signal = list_get(lista, final_pcb+1);
 				        manejar_signal(pcb_actualizado, recurso_signal);
 				        free(recurso_signal);
-				break;
+				    break;
                 }
                 break;
                 case INTERFAZ: //aca repito logica como loco pero sucede que me chupa la cabeza de la chota 
-                if(tiempo_transcurrido_en_cpu < atoi(quantum)){
+                if(tiempo_transcurrido_en_cpu < atoi(quantum)){ //CHE ESTO SOLO HACERLO SI ES VRR
                     pcb_actualizado->QUANTUM = atoi(quantum) - tiempo_transcurrido_en_cpu;
                 }
                 switch(pcb_actualizado->motivo){
@@ -639,10 +639,10 @@ void atender_vuelta_dispatch(){
                         //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
                         break;
                     case SOLICITAR_STDIN:
-                        char * instruccion_STDIN = list_get(lista,final_pcb+1); 
-                        char * nombre_interfaz_STDIN=list_get(lista,final_pcb+2); 
-                        size_t * direccion_real_STDIN=list_get(lista,final_pcb+3);// supongo que las direcciones logicas son size_t que representan el numero de byte 
-                        size_t * registro_tamanio_STDIN=list_get(lista,final_pcb+4); 
+                        char * instruccion_STDIN= list_get(lista,final_pcb+1);
+                        char * nombre_interfaz_STDIN= list_get(lista,final_pcb+2);
+                        int * tamanio_a_leer = list_get(lista,final_pcb+3);
+                        t_list *traducciones_STDIN = desempaquetar_traducciones(lista,final_pcb+4);
                         element_interfaz * interfaz_STDIN = interfaz_existe_y_esta_conectada(nombre_interfaz_STDIN);
                          if(interfaz_STDIN){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
                             if(STDIN_acepta_instruccion(instruccion_STDIN)){
@@ -651,8 +651,9 @@ void atender_vuelta_dispatch(){
                                 list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
                                 pcb_block_STDIN * info_de_bloqueo = malloc(sizeof(pcb_block_STDIN));//falta liberar
                                 info_de_bloqueo->el_pcb = pcb_actualizado ;//simplemente otra referencia 
-                                info_de_bloqueo->direccion_fisica= direccion_real_STDIN;//simplemente otra referencia
-                                info_de_bloqueo->tamanio=registro_tamanio_STDIN;
+                                info_de_bloqueo->tamanio_lectura=tamanio_a_leer;
+                                info_de_bloqueo->traducciones = *traducciones_STDIN;
+                                free(tamanio_a_leer);//libero porque ya guarde su valor
                                 cambiar_estado(pcb_actualizado,BLOCKED);
                                 push_con_mutex(interfaz_STDIN->cola_bloqueados,info_de_bloqueo,interfaz_STDIN->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
                                 push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block);
@@ -663,8 +664,8 @@ void atender_vuelta_dispatch(){
                         //finalizar proceso
                         free(instruccion_STDIN); 
                         free(nombre_interfaz_STDIN); 
-                        free(direccion_real_STDIN); //ya no me importa la direccion
-                        free(registro_tamanio_STDIN);
+                        free(tamanio_a_leer);
+                        list_destroy_and_destroy_elements(traducciones_STDIN,(void*) traduccion_destroyer);
                         list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
                         cambiar_estado(pcb_actualizado,EXITT);
                         pcb_actualizado->motivo = INTERFAZ_INVALIDA; // Asi notificamos porq verga finalizo
@@ -675,8 +676,8 @@ void atender_vuelta_dispatch(){
                     case SOLICITAR_STDOUT:
                         char * instruccion_STDOUT = list_get(lista,final_pcb+1); 
                         char * nombre_interfaz_STDOUT=list_get(lista,final_pcb+2); 
-                        size_t * direccion_real_STDOUT=list_get(lista,final_pcb+3); // supongo que las direcciones logicas son size_t que representan el numero de byte 
-                        size_t * registro_tamanio_STDOUT=list_get(lista,final_pcb+4); 
+                        int * tamanio_de_escritura = list_get(lista,final_pcb+3); 
+                        t_list *traducciones_STDOUT = desempaquetar_traducciones(lista,final_pcb+4);                        
                         element_interfaz * interfaz_STDOUT = interfaz_existe_y_esta_conectada(nombre_interfaz_STDOUT);
                          if(interfaz_STDOUT){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
                             if(STDOUT_acepta_instruccion(instruccion_STDOUT)){
@@ -685,8 +686,9 @@ void atender_vuelta_dispatch(){
                                 list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
                                 pcb_block_STDOUT* info_de_bloqueo = malloc(sizeof(pcb_block_STDOUT));//falta liberar
                                 info_de_bloqueo->el_pcb = pcb_actualizado ; //simplemente otra referencia 
-                                info_de_bloqueo->direccion_fisica= direccion_real_STDOUT; //simplemente otra referencia
-                                info_de_bloqueo->tamanio=registro_tamanio_STDOUT;
+                                info_de_bloqueo->traducciones=traducciones_STDOUT;
+                                info_de_bloqueo->traducciones=*tamanio_de_escritura;
+                                free(tamanio_de_escritura); //libero porque ya guarde su valor
                                 cambiar_estado(pcb_actualizado,BLOCKED);
                                 push_con_mutex(interfaz_STDOUT->cola_bloqueados,info_de_bloqueo,interfaz_STDOUT->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
                                 push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block);
@@ -697,8 +699,8 @@ void atender_vuelta_dispatch(){
                         //finalizar proceso
                         free(instruccion_STDOUT); 
                         free(nombre_interfaz_STDOUT); 
-                        free(direccion_real_STDOUT); 
-                        free(registro_tamanio_STDOUT);
+                        free(tamanio_de_escritura);
+                        list_destroy_and_destroy_elements(traducciones_STDOUT,(void*)traduccion_destroyer);
                         list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
                         cambiar_estado(pcb_actualizado,EXITT);
                         pcb_actualizado->motivo = INTERFAZ_INVALIDA; // Asi notificamos porq verga finalizo
@@ -707,8 +709,6 @@ void atender_vuelta_dispatch(){
                         //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
                         break;
                 }
-                
-                
                 break;
             }
             sem_post(&sem_despachar);//una vez hecho todo, decirle a despachador() que puede planificar otro pcb
@@ -1127,8 +1127,8 @@ void atender_interfaz_STDIN(element_interfaz * datos_interfaz){
             pcb_block_STDIN * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,datos_interfaz->mutex_procesos_blocked);//agarra el primero de la cola de blocked 
             //contenido del paquete de instruccion
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
-            agregar_a_paquete(paquete,proceso_a_atender->direccion_fisica,sizeof(size_t));//direccion fisica
-            agregar_a_paquete(paquete,proceso_a_atender->tamanio,sizeof(size_t));//direccion fisica
+            agregar_a_paquete(paquete,proceso_a_atender->tamanio_lectura,sizeof(int));
+            empaquetar_traducciones(paquete,proceso_a_atender->traducciones);
             if (enviar_paquete_io(paquete,*(datos_interfaz->fd_conexion_con_interfaz)) == (-1) ){ //devuelve -1 la interfaz había cerrado la conexion
                 push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
                 liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
@@ -1142,8 +1142,7 @@ void atender_interfaz_STDIN(element_interfaz * datos_interfaz){
                 }else if(!notificacion){
                     push_con_mutex(cola_exit,proceso_a_atender->el_pcb,&mutex_lista_exit);//finalizo el proceso si la memoria me dijo que no pudo escribir 
                     sem_post(&sem_procesos_exit);
-                    free(proceso_a_atender->direccion_fisica);
-                    free(proceso_a_atender->tamanio);
+                    list_destroy_and_destroy_elements(proceso_a_atender->traducciones,(void*)traduccion_destroyer);
                 }
             }
             eliminar_paquete(paquete);
@@ -1158,8 +1157,8 @@ void atender_interfaz_STDOUT(element_interfaz * datos_interfaz){
             pcb_block_STDOUT * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,datos_interfaz->mutex_procesos_blocked);//agarra el primero de la cola de blocked 
             //contenido del paquete de instruccion
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
-            agregar_a_paquete(paquete,proceso_a_atender->direccion_fisica,sizeof(size_t));//direccion fisica
-            agregar_a_paquete(paquete,proceso_a_atender->tamanio,sizeof(size_t));//direccion fisica
+            agregar_a_paquete(paquete,proceso_a_atender->tamanio_escritura,sizeof(int));
+            empaquetar_traducciones(paquete,proceso_a_atender->traducciones);
             if (enviar_paquete_io(paquete,*(datos_interfaz->fd_conexion_con_interfaz)) == (-1) ){ //devuelve -1 la interfaz había cerrado la conexion
                 push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
                 liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
@@ -1173,8 +1172,7 @@ void atender_interfaz_STDOUT(element_interfaz * datos_interfaz){
                 }else if(!notificacion){
                 push_con_mutex(cola_exit,proceso_a_atender->el_pcb,&mutex_lista_exit);//finalizo el proceso si la memoria me dijo que no pudo escribir 
                 sem_post(&sem_procesos_exit);
-                free(proceso_a_atender->direccion_fisica);
-                free(proceso_a_atender->tamanio);
+                list_destroy_and_destroy_elements(proceso_a_atender->traducciones,(void*)traduccion_destroyer);
                 }
             }
             eliminar_paquete(paquete);
@@ -1218,15 +1216,13 @@ void procesar_vuelta_blocked_a_ready(void * proceso_a_atender, vuelta_type tipo)
                 cambiar_estado(proceso_a_atender_STDIN->el_pcb,READY);
                 push_con_mutex(cola_ready,proceso_a_atender_STDIN->el_pcb,&mutex_lista_ready);
                 sem_post(&sem_procesos_ready);
-                free(proceso_a_atender_STDIN->direccion_fisica);
-                free(proceso_a_atender_STDIN->tamanio);
+                list_destroy_and_destroy_elements(proceso_a_atender_STDIN->traducciones,(void*)traduccion_destroyer);
                 free(proceso_a_atender_STDIN);  
             }else{
                 cambiar_estado(proceso_a_atender_STDIN->el_pcb,READY_AUX);
                 push_con_mutex(cola_ready_aux,proceso_a_atender_STDIN->el_pcb,&mutex_lista_ready);
                 sem_post(&sem_procesos_ready);//el mismo semaforo de procesos porque en si, el proceso esta listo para ejecutarse
-                free(proceso_a_atender_STDIN->direccion_fisica);
-                free(proceso_a_atender_STDIN->tamanio);
+                list_destroy_and_destroy_elements(proceso_a_atender_STDIN->traducciones,(void*)traduccion_destroyer);
                 free(proceso_a_atender_STDIN);  
             }
             break;
@@ -1236,15 +1232,13 @@ void procesar_vuelta_blocked_a_ready(void * proceso_a_atender, vuelta_type tipo)
                 cambiar_estado(proceso_a_atender_STDOUT->el_pcb,READY);
                 push_con_mutex(cola_ready,proceso_a_atender_STDOUT->el_pcb,&mutex_lista_ready);
                 sem_post(&sem_procesos_ready);
-                free(proceso_a_atender_STDOUT->direccion_fisica);
-                free(proceso_a_atender_STDOUT->tamanio);
+                list_destroy_and_destroy_elements(proceso_a_atender_STDOUT->traducciones,(void*)traduccion_destroyer);
                 free(proceso_a_atender_STDOUT); 
             }else{
                 cambiar_estado(proceso_a_atender_STDOUT->el_pcb,READY_AUX);
                 push_con_mutex(cola_ready_aux,proceso_a_atender_STDOUT->el_pcb,&mutex_lista_ready);
                 sem_post(&sem_procesos_ready);
-                free(proceso_a_atender_STDOUT->direccion_fisica);
-                free(proceso_a_atender_STDOUT->tamanio);
+                list_destroy_and_destroy_elements(proceso_a_atender_STDOUT->traducciones,(void*)traduccion_destroyer);
                 free(proceso_a_atender_STDOUT); 
             }
             break;
@@ -1331,8 +1325,7 @@ void liberar_pcb_block_gen(void * pcb_bloqueado){
 
 void liberar_pcb_block_STDIN(void * pcb_bloqueado){
     pcb_block_STDIN * pcb_bloqueado_c = (pcb_block_STDIN *) pcb_bloqueado;
-    free(pcb_bloqueado_c->direccion_fisica);
-    free(pcb_bloqueado_c->tamanio);
+    list_destroy_and_destroy_elements(pcb_bloqueado_c->traducciones,(void*)traduccion_destroyer);
     cambiar_estado(pcb_bloqueado_c->el_pcb,EXITT);
     push_con_mutex(cola_exit,pcb_bloqueado_c->el_pcb,&mutex_lista_exit);
     sem_post(&sem_procesos_exit);
@@ -1342,8 +1335,7 @@ void liberar_pcb_block_STDIN(void * pcb_bloqueado){
 
 void liberar_pcb_block_STDOUT(void * pcb_bloqueado){
     pcb_block_STDOUT * pcb_bloqueado_c = (pcb_block_STDOUT*) pcb_bloqueado;
-    free(pcb_bloqueado_c->direccion_fisica);
-    free(pcb_bloqueado_c->tamanio);
+    list_destroy_and_destroy_elements(pcb_bloqueado_c->traducciones,(void*)traduccion_destroyer);
     cambiar_estado(pcb_bloqueado_c->el_pcb,EXITT);
     push_con_mutex(cola_exit,pcb_bloqueado_c->el_pcb,&mutex_lista_exit);
     sem_post(&sem_procesos_exit);

@@ -129,11 +129,13 @@ n+4 instancias_asignadas(recurso2)
 */
 
 int fin_pcb(t_list* lista){
-    int cantidad_de_recursos = list_get(lista,15);
+	int * final = (int*) list_get(lista,15);
+    int cantidad_de_recursos = *final; //OJO DEVUELVE UN PUNTERO
     int cantidad_de_atributos_recursos = cantidad_de_recursos * 2;
 
     return cantidad_de_recursos + cantidad_de_atributos_recursos;
 }
+
 
 void empaquetar_recursos(t_paquete* paquete, t_list* lista_de_recursos){
 	int cantidad_recursos = list_size(lista_de_recursos);
@@ -142,6 +144,15 @@ void empaquetar_recursos(t_paquete* paquete, t_list* lista_de_recursos){
 		recurso_asignado* recurso_asignado = list_get(lista_de_recursos, i);
 		agregar_a_paquete(paquete, recurso_asignado->nombreRecurso, strlen(recurso_asignado->nombreRecurso) + 1);
 		agregar_a_paquete(paquete, &(recurso_asignado->instancias), sizeof(int));
+	}
+}
+void empaquetar_traducciones(t_paquete* paquete, t_list* lista_de_traducciones){
+	int cantidad_de_traducciones = list_size(lista_de_traducciones);
+	agregar_a_paquete(paquete, &(cantidad_de_traducciones), sizeof(int));//Agregamos la cantidad de traducciones
+	for(int i = 0; i<cantidad_de_traducciones; i++){
+		nodo_lectura_escritura* traduccion = list_get(lista_de_traducciones, i);
+		agregar_a_paquete(paquete, traduccion->direccion_fisica, sizeof(int));
+		agregar_a_paquete(paquete, traduccion->bytes, sizeof(int));
 	}
 }
 
@@ -175,8 +186,34 @@ t_list* desempaquetar_recursos(t_list* paquete, int cantidad){
 	free(cantidad_recursos);
 	return recursos;
 }
+t_list * desempaquetar_traducciones(t_list* paquete, int cantidad){
+	t_list* traducciones = list_create();
+	int* cantidad_traducciones = list_get(paquete, cantidad);
+	int i = cantidad + 1; 
 
+	while(i - cantidad - 1 < (*cantidad_traducciones* 2)){
+		nodo_lectura_escritura* traduccion = malloc(sizeof(nodo_lectura_escritura));
+		int* una_direccion_fisica = (int*) list_get(paquete, i); //nombe del primero
+		traduccion->direccion_fisica = *una_direccion_fisica;
+		free(una_direccion_fisica);
+		i++;
 
+		int* _bytes = (int*) list_get(paquete, i);
+		traduccion->bytes = *_bytes;
+		free(_bytes);
+		i++; // para pasar al nombre del siguiente recurso
+
+		list_add(traduccion, traducciones);
+	}
+
+	free(cantidad_traducciones);
+	return traducciones;
+}
+
+void traduccion_destroyer(void * traduccion){
+	nodo_lectura_escritura * traduccion_c = (nodo_lectura_escritura *) traduccion;
+	free(traduccion_c);
+}
 /* FUNCIONES DE PAQUETE */
 t_paquete* crear_paquete(op_code OPERACION)
 {
@@ -305,44 +342,45 @@ void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_des
 	empaquetar_recursos(paquete, PCB->recursos_asignados);
 	
 	switch (MOTIVO){ 
-		case EXITO:
-			break;
-
-		case EXIT_CONSOLA:
-			//
-			break;
-
-		case INTERRUPCION:
-			//
-			break;
-
-		case FIN_QUANTUM:
-			//
-			break;	
-
-		case PROCESO_ACTIVO:
-			//NO SE QUE ES
-			break;
-
+		
 		case SOLICITAR_INTERFAZ_GENERICA:
-			agregar_a_paquete(paquete, &parametro1, strlen(parametro1) + 1);
-			agregar_a_paquete(paquete, &parametro2, strlen(parametro2) + 1);
-			agregar_a_paquete(paquete, &parametro3, strlen(parametro3) + 1);
+			agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
+			agregar_a_paquete(paquete, parametro2, strlen(parametro2) + 1);
+			agregar_a_paquete(paquete, parametro3, strlen(parametro3) + 1);
 			break;
 
 		case SOLICITAR_WAIT:
-			agregar_a_paquete(paquete, &parametro1, strlen(parametro1) + 1);
+			agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
 			break;
 
 		case SOLICITAR_SIGNAL:
 			agregar_a_paquete(paquete, &parametro1, strlen(parametro1) + 1);
 			break;
-			
+		
+		case SOLICITAR_SIGNAL:
+			agregar_a_paquete(paquete, &parametro1, strlen(parametro1) + 1);
+			break;
+		
+
+		//ES NECESARIO COLOCAR LOS MOTIVOS EN LOS UE NO SE AGREGA INFORMACION AL PCB?
+		case EXITO:
+			break;
+		case EXIT_CONSOLA:
+			break;
+		case INTERRUPCION:
+			break;
+		case FIN_QUANTUM:
+			break;	
+		case PROCESO_ACTIVO:
+			break;
+		case SIN_MEMORIA:
+			break;
 		default:
 			break;
 	}
 	enviar_paquete(paquete, fd_escucha_dispatch);
 	eliminar_paquete(paquete);
+	return;
 
 }
 
@@ -364,12 +402,15 @@ void enviar_tamanio_pagina(int fd_cpu_dispatch, int tam_pag){
 
 void enviar_solicitud_marco(int fd_conexion_memoria, int pid, int numero_pagina){
 	t_paquete* paquete = crear_paquete(SOLICITUD_MARCO);
-	valores_tlb* valores = malloc(sizeof(valores_tlb));
-	valores->pid = pid;
-	valores->numero_pagina = numero_pagina;
-	agregar_a_paquete(paquete, valores, sizeof(valores_tlb));
+	int malloc_pid = malloc(sizeof(int));
+	int malloc_num_pag = malloc(sizeof(int));
+	malloc_pid = pid;
+	malloc_num_pag = numero_pagina;
+	agregar_a_paquete(paquete, malloc_pid, sizeof(int));
+	agregar_a_paquete(paquete, malloc_num_pag, sizeof(int));
 	enviar_paquete(paquete, fd_conexion_memoria);
-	free(valores);
+	free(malloc_pid);
+	free(malloc_num_pag);
 	eliminar_paquete(paquete);
 }
 
@@ -592,7 +633,7 @@ motivo_desalojo recibir_motiv_desalojo(int fd_escucha_interrupt){
 
 pcb* guardar_datos_del_pcb(t_list* paquete){ 
 
-	pcb* PCB = malloc(sizeof(PCB));
+	pcb* PCB = malloc(sizeof(pcb));
 
 	uint32_t* pid = list_get(paquete, 0);
 	PCB->PID = *pid;
@@ -660,6 +701,7 @@ pcb* guardar_datos_del_pcb(t_list* paquete){
 	return PCB;
 }
 
+
 pcb* recibir_liberar_proceso(int fd){
 	t_list* paqute = recibir_paquete(fd);
 	pcb* pcb = list_get(paqute, 0);
@@ -689,7 +731,7 @@ int recibir_marco (int fd_conexion_memoria){
 	t_list* paquete = recibir_paquete(fd_conexion_memoria);
 	int marquitos = 0;
 	int* marco = list_get(paquete, 0);
-	marquitos = marco;
+	marquitos = *marco;
 	free(marco);
 	list_destroy(paquete);
 	return marquitos;

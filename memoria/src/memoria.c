@@ -188,11 +188,20 @@ static void procesar_clientes(void* void_args){
 			return;
 		}
 		switch (cop) {
+		case MENSAJE:
+			recibir_mensaje(logger_memoria, cliente_socket);
+			//posiblemente haya que enviar una respuesta tambien para indicar que se recibio el mensaje
+			break;
+		case PAQUETE:
+			t_list *paquete_recibido = recibir_paquete(cliente_socket);
+			log_info(logger_memoria, "Recibí un paquete con los siguientes valores: ");
+			list_iterate(paquete_recibido, (void*) iterator);
+			break;	
 		case DATOS_PROCESO: // CREAR PROCESO: este codigo SOLO LO ENVIA EL KERNEL 
-				t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);// por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
-				iniciar_proceso_a_pedido_de_Kernel(datos_proceso->path, datos_proceso->pid, cliente_socket);//el parametro size sera usado en el 3er check,"datos_proceso->size"
-				free(datos_proceso->path);
-				free(datos_proceso);
+			t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);// por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
+			iniciar_proceso_a_pedido_de_Kernel(datos_proceso->path, datos_proceso->pid, cliente_socket);//el parametro size sera usado en el 3er check,"datos_proceso->size"
+			free(datos_proceso->path);
+			free(datos_proceso);
 			break;
 		case SOLICITAR_INSTRUCCION:// ESTE CODIGO SOLO LO ENVÍA CPU
 				log_info(logger_memoria, "Solicitud de instruccion recibida");
@@ -212,6 +221,10 @@ static void procesar_clientes(void* void_args){
 				break;
 		case REAJUSTAR_TAMANIO_PROCESO:
 				//de la cpu, aumentar o diminuir
+				break;
+		case FINALIZAR_PROCESO:
+				// si o si tenes que recibir al menos un pid
+				//finalizar_proceso_a_pedido_de_kernel(ese pid que recibiste)
 				break;
 		default:
 				log_error(logger_memoria, "Codigo de operacion no reconocido en memoria");
@@ -311,10 +324,12 @@ void iniciar_proceso_a_pedido_de_Kernel(char* path, int pid, int socket_kernel) 
 
 
 void finalizar_proceso_a_pedido_de_kernel(int un_pid){
+
 	bool es_proceso_con_pid(void * un_proceso){
 		t_proceso * un_proceso_c = (t_proceso *) un_proceso;
 		return un_proceso_c->pid == un_pid;
 	};//no importa que esta en blanco es un tema del editor de texto, el compilador lo va a poder compilar
+
 	pthread_mutex_lock(&mutex_lista_procesos);
 	t_proceso * proceso_a_finalizar = list_find(lista_de_procesos, (void*)es_proceso_con_pid);
 	pthread_mutex_unlock(&mutex_lista_procesos);
