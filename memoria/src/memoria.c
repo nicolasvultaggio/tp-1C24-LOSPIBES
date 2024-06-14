@@ -493,7 +493,7 @@ void send_marco (int fd, int marco){
 
 	agregar_a_paquete(paquete, &marco, sizeof(int));
 	enviar_paquete(paquete, fd);
-	eliminar_paquete(paquete);
+	eliminar_paquete(paquete);dgfn
 }   
 
 
