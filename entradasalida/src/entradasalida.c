@@ -203,9 +203,11 @@ void atender_GENERICA(){// IO_GEN_SLEEP (Interfaz, Unidades de trabajo), no hace
 }
 
 void atender_STDIN(){
+
     t_list * lista = recibir_paquete(fd_conexion_kernel);
     int * tamanio_escritura = list_get(lista,0);
     int tam = *tamanio_escritura;
+    free(tamanio_escritura);
     t_list * traducciones = desempaquetar_traducciones(lista,1);
     list_destroy(lista);
 
@@ -214,61 +216,109 @@ void atender_STDIN(){
     do{
         printf("Ingresar línea:\n");
         if (booleano=fgets(buffer, sizeof(buffer), stdin) != NULL) {
-        // Eliminaa el carácter de nueva línea si está presente
-        size_t len = strlen(buffer);
-        if (len > 0 && buffer[len - 1] == '\n') {
-            buffer[len - 1] = '\0';
-        }
+            // Elimina el carácter de nueva línea si está presente
+            size_t len = strlen(buffer);
+            if (len > 0 && buffer[len - 1] == '\n') { //en caso de que le hayamos dado enter antes de ocupar el tamaño maximo
+                buffer[len - 1] = '\0';
+            }
             printf("La línea ingresada es: %s\n", buffer);
         } else {
             printf("Error al leer la línea. Intentar de nuevo\n");
         }
     }while(!booleano); 
     
-    t_paquete * paquete = crear_paquete(ESCRIBIR_MEMORIA); //ojo que sergio lo tiene que hacer igual
-    agregar_a_paquete(paquete, direccion_fisica,sizeof(size_t));
-    agregar_a_paquete(paquete,tamanio,sizeof(size_t));
-    agregar_a_paquete(paquete,leido,strlen(leido)+1);
-    enviar_paquete(paquete,fd_conexion_memoria);
-    int size;
-    char * rta_memoria = recibir_buffer(&size,fd_conexion_memoria);
-    if(!strcmp(rta_memoria,"OK")){
+    int offset=0;
+    int cantidad_de_traducciones = list_size(traducciones);
+    bool operacion_exitosa=true;
+
+    for(int i =0; i<cantidad_de_traducciones && operacion_exitosa ; i++){
+        
+        //preparamos datos a enviar
+        nodo_lectura_escritura * traduccion = list_get(traducciones,i);
+        char string_a_enviar[traduccion->bytes+1];
+        memcpy(string_a_enviar,buffer+offset,(size_t) traduccion->bytes);
+        string_a_enviar[traduccion->bytes]='\0';
+        offset+=traduccion->bytes;
+        
+        //empaquetamos datos y los enviamos a memoria
+        t_paquete * paquete2 = crear_paquete(ESCRITURA_MEMORIA);
+        agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(int));
+        agregar_a_paquete(paquete2,string_a_enviar,strlen(string_a_enviar)+1);//enviamos el byte a escribir a memoria con caracter nulo y todo 
+        enviar_paquete(paquete2,fd_conexion_memoria);
+        eliminar_paquete(paquete2);
+
+        //recibimos respuesta de memoria, si falló ALGUNA escritura, operacion fallida
+        int size;
+        char * rta_memoria = recibir_buffer(&size,fd_conexion_memoria);//recibimos respuesta con caracter nulo y todo
+        operacion_exitosa = strcmp(rta_memoria,"Ok"); //comparamos cada respuesta de memoria, alcanza con que alguna NO sea "Ok"
+       
+    }
+
+    list_destroy_and_destroy_elements(traducciones,(void*)traduccion_destroyer);
+
+    if(operacion_exitosa){
         int a =1;
         send(fd_conexion_kernel,&a,sizeof(int),0); // le avisa al kernel que la escritura fue exitosa
     }else{ //en teoria no debería entrar aca porque no falla en la escritura, ya lo controlo la MMU
         int b = 0; //si falla al escribir en memoria finalizo el proceso
         send(fd_conexion_kernel,&b,sizeof(int),0); //le avisa al kernel que la escritura salio mal
     }
-    eliminar_paquete(paquete);
-    free(rta_memoria);
-    free(leido);
-    free(direccion_fisica);
-    free(tamanio);
+    
 }
+
 void atender_STDOUT(){
+     
     t_list * lista = recibir_paquete(fd_conexion_kernel);
-    size_t * direccion_fisica = list_get(lista,0);
-    size_t * tamanio =list_get(lista,1);
+    int * tamanio_lectura = list_get(lista,0);
+    int tam = *tamanio_lectura;
+    free(tamanio_lectura);
+    t_list * traducciones = desempaquetar_traducciones(lista,1);
     list_destroy(lista);
-    t_paquete * paquete = crear_paquete(LEER_MEMORIA); //ojo que sergio lo tiene que hacer igual
-    agregar_a_paquete(paquete, direccion_fisica,sizeof(size_t));
-    agregar_a_paquete(paquete,tamanio,sizeof(size_t));
-    enviar_paquete(paquete,fd_conexion_memoria);
-    int size;
-    char * rta_memoria = recibir_buffer(&size,fd_conexion_memoria);//recibe la respuesta de la memoria
-    if(rta_memoria){ //la memoria devolvio algo no nulo, hacer que si la memoria no puede leer, devuelva un puntero nulo (MARCE)
-        int a =1;
-        printf("%s",rta_memoria);
-        send(fd_conexion_kernel,&a,sizeof(int),0); // le avisa al kernel que la lectura fue exitosa
-    }else{ //en teoria no debería entrar aca porque no falla en la escritura, ya lo controlo la MMU
-        int b = 0; //si falla al escribir en memoria finalizo el proceso
-        send(fd_conexion_kernel,&b,sizeof(int),0); //le avisa al kernel que la lectura salio mal
+
+    char buffer[tam+1]="";
+    
+    int offset=0;
+    int cantidad_de_traducciones = list_size(traducciones);
+    bool operacion_exitosa=true;
+
+    for(int i =0; i<cantidad_de_traducciones && operacion_exitosa ; i++){
+        
+        //preparamos datos a enviar
+        nodo_lectura_escritura * traduccion = list_get(traducciones,i);
+        
+        //empaquetamos datos y los enviamos a memoria
+        t_paquete * paquete2 = crear_paquete(LECTURA_MEMORIA);
+        agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(int));
+        agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(int));
+        enviar_paquete(paquete2,fd_conexion_memoria);
+        eliminar_paquete(paquete2);
+
+        //recibimos respuesta de memoria, escribimos en el buffer
+        int size;
+        char * rta_memoria = recibir_buffer(&size,fd_conexion_memoria); //recibimos lo leido con el caracter nulo y todo => strlen(rta_memoria)= (traduccion->bytes) + 1
+        
+        memcpy(buffer+offset,rta_memoria,(size_t)traduccion->bytes); //como strlen(rta_memoria)= (traduccion->bytes) + 1, y nosotros solo copiamos (traduccion->bytes), dejamos afuera el ultimo, el '\0'
+        
+        offset+=traduccion->bytes;
+
+        free(rta_memoria);
     }
-    eliminar_paquete(paquete);
-    free(direccion_fisica);
-    free(tamanio);
-    free(rta_memoria);
+
+    buffer[tam+1]='\0';
+
+    printf("%s",buffer);
+
+    list_destroy_and_destroy_elements(traducciones,(void*)traduccion_destroyer);
+
+    if(operacion_exitosa){
+        int a =1;
+        send(fd_conexion_kernel,&a,sizeof(int),0); // le avisa al kernel que la lectura fue exitosa
+    }else{
+        int b = 0; 
+        send(fd_conexion_kernel,&b,sizeof(int),0); 
+    }
 }
+
 void atender_DIALFS(){ // hoy, 2/5/2024, a las 20:07, esuchando JIMMY FALLON de Luchito, empiezo la funcion mas dificil de las interfaces, suerte loko
    // char * instruccion = recibir_instruccion_de_kernel();
     //free(instruccion);
@@ -290,5 +340,7 @@ void terminar_programa()
     liberar_conexion(fd_conexion_kernel);
     liberar_conexion(fd_conexion_memoria);
 }
+
+
 
 
