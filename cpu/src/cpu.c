@@ -147,7 +147,7 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			check_interrupt();
 			break;
 		case RESIZE:
-			ejecutar_resize(PCB,instruccion->parametro1);
+			ejecutar_resize(instruccion->parametro1);
 			break;
 		case COPY_STRING:
 			//ejecutar_copy_string();
@@ -326,60 +326,43 @@ void ejecutar_sub(pcb* PCB, char* destinoregistro, char* origenregistro){
 }
 
 void ejecutar_jnz(pcb* PCB, char* registro, char* valor){
-	
-	uint8_t * registro8, * valor8;
-
-	uint32_t * registro32, * valor32;
-	
-	
-
-
-
-
-
-
-
-	uint32_t PC_actualizado = valor;
-	
-
-	size_t * reg_value = capturar_registro (registro);
-
-	if (reg_value != 0)
-	{
 		
-	}else if (reg != 00)
-	{
-		/* code */
-	}
-	
-	
+	int * reg_value = capturar_registro (registro); //si es cero cualquier formaton numerico devuelve cero
+	uint32_t pc_actualizado = 0;
 
-	if(medir_registro(registro)){
-		if(capturar_registro8(PCB, registro) != 0)
-			PCB->PC = program_counter_actualizado;
-	}else{
-		if(capturar_registro32(PCB, registro) != 0)
-			PCB->PC = program_counter_actualizado;
+	if (reg_value != 0){
+		pc_actualizado = strtoul(valor, NULL, 10);
+		PCB->PC = pc_actualizado;
 	}
+	
 	es_exit=false;  //siempre modificar
 	es_bloqueante=false; //modificar siempre que es_exit = false
 	return;
 }
 
 void ejecutar_resize(pcb* PCB, char* tamanio){
+	
+	int ajuste_tamanio = atoi(tamanio);
+	t_paquete * paquete = crear_paquete(REAJUSTAR_TAMANIO_PROCESO);
+	agregar_a_paquete(paquete,&ajuste_tamanio,sizeof(int));
+	enviar_paquete(paquete,fd_cpu_dispatch);
+	eliminar_paquete(paquete);
 
-
-//seria solo enviarle el numero de bytes a la memoria
-
-
-
-
-
-
-
-
+	int codigo_operacion = recibir_operacion(fd_conexion_memoria);
+	switch (codigo_operacion){
+		case OUTOFMEMORY:
+			enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, SIN_MEMORIA,NULL,NULL,NULL,NULL,NULL);
+			es_exit=false;  //siempre modificar
+			es_bloqueante=false; //modificar siempre que es_exit = false
+			break;
+		case OK:
+			es_exit=false;  //siempre modificar
+			es_bloqueante=false; //modificar siempre que es_exit = false
+			break;
+	}
+	
+	return;
 }
-
 
 void ejecutar_wait(pcb* PCB, char* registro){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "WAIT", registro);
@@ -456,49 +439,6 @@ ejecutar_io_stout_write(char * nombre_interfaz, char * registro_direccion, char 
 	es_wait = false;  //modificar si se pone a bloqueante = true
 	es_resize = false; //modificar si se pone bloqueante = true
 
-}
-
-t_list * obtener_traducciones(int direccion_logica_i, int tamanio_a_leer ){
-	int direccion_logica_f = direccion_logica_i + tamanio_a_leer -1;
-
-	int pagina_inicial = direccion_logica_i / tam_pagina;
-	int pagina_final = direccion_logica_f / tam_pagina;
-
-	// int numero_de_paginas_a_traducir = pagina_final - pagina_inicial + 1;
-    t_list * lista_traducciones = list_create();
-	//MMU (direccion logica) -> devuelve direccion fisica
-	if (pagina_final != pagina_inicial){
-		for (int i = pagina_inicial; i<=pagina_final;i++){
-			if(i == pagina_inicial){
-				nodo_lectura_escritura * traduccion_inicial = malloc(sizeof(nodo_lectura_escritura));
-				int offset = direccion_logica_i % TAM_PAGINA; 
-				traduccion_inicial->direccion_fisica = MMU(direccion_logica_i);
-				traduccion_inicial->bytes = TAM_PAGINA - offset;
-				list_add(lista_traducciones,traduccion_inicial);
-			}else{
-				if(i == pagina_final){
-					nodo_lectura_escritura * traduccion_final = malloc(sizeof(nodo_lectura_escritura));
-					int offset = direccion_logica_f % TAM_PAGINA; //ultimo byte que se escribe en ese marco
-					traduccion_final->direccion_fisica = MMU(pagina_final*TAM_PAGINA); //se empieza a escribir desde la direccion logica que da inicio a esa pagina
-					traduccion_final->bytes = offset+1; //por cuanto se escribe?
-					list_add(lista_traducciones,traduccion_final);
-				}else{
-					nodo_lectura_escritura * traduccion_intermedia = malloc(sizeof(nodo_lectura_escritura));
-					traduccion_intermedia->direccion_fisica = MMU(i*TAM_PAGINA);
-					traduccion_intermedia->bytes = TAM_PAGINA;
-					list_add(lista_traducciones,traduccion_intermedia);
-				}
-			}
-		}
-	}else{
-		nodo_lectura_escritura * traduccion_inicial = malloc(sizeof(nodo_lectura_escritura));
-		int offset = direccion_logica_i % TAM_PAGINA; 
-		traduccion_inicial->direccion_fisica = MMU(direccion_logica_i);
-		traduccion_inicial->bytes = TAM_PAGINA - offset;
-		list_add(lista_traducciones,traduccion_inicial);
-	}
-	return lista_traducciones;
-	//importante, esta funcion no libera la lista
 }
 
 void ejecutar_exit(pcb* PCB){
@@ -597,26 +537,49 @@ void * capturar_registro(pcb * PCB, char * registro){
 
 }
 
-/* FUNCIONES MOVEIN MOVEOUT */
+/* FUNCIONES stdin_read y stout_write */
 
+t_list * obtener_traducciones(int direccion_logica_i, int tamanio_a_leer ){
+	int direccion_logica_f = direccion_logica_i + tamanio_a_leer -1;
 
+	int pagina_inicial = direccion_logica_i / tam_pagina;
+	int pagina_final = direccion_logica_f / tam_pagina;
 
-int calculo_de_paginas(char* DATOS, int direccion_logica){
-
-	int numero_pagina_inicial = floor(direccion_logica/TAM_PAGINA);
-	int numero_pagina_final = numero_pagina_inicial + size_registro(DATOS);
-
-	return numero_pagina_final - numero_pagina_inicial;
-}
-
-uint32_t recibir_valor_leido(){
-	uint32_t valor;
-	int cod_op = recibir_operacion(fd_conexion_memoria);
-		switch (cod_op) {
-			case VALOR_LEIDO:
-				valor = recibir_valor_leido_memoria(fd_conexion_memoria);
-				break;
+	// int numero_de_paginas_a_traducir = pagina_final - pagina_inicial + 1;
+    t_list * lista_traducciones = list_create();
+	//MMU (direccion logica) -> devuelve direccion fisica
+	if (pagina_final != pagina_inicial){
+		for (int i = pagina_inicial; i<=pagina_final;i++){
+			if(i == pagina_inicial){
+				nodo_lectura_escritura * traduccion_inicial = malloc(sizeof(nodo_lectura_escritura));
+				int offset = direccion_logica_i % TAM_PAGINA; 
+				traduccion_inicial->direccion_fisica = MMU(direccion_logica_i);
+				traduccion_inicial->bytes = TAM_PAGINA - offset;
+				list_add(lista_traducciones,traduccion_inicial);
+			}else{
+				if(i == pagina_final){
+					nodo_lectura_escritura * traduccion_final = malloc(sizeof(nodo_lectura_escritura));
+					int offset = direccion_logica_f % TAM_PAGINA; //ultimo byte que se escribe en ese marco
+					traduccion_final->direccion_fisica = MMU(pagina_final*TAM_PAGINA); //se empieza a escribir desde la direccion logica que da inicio a esa pagina
+					traduccion_final->bytes = offset+1; //por cuanto se escribe?
+					list_add(lista_traducciones,traduccion_final);
+				}else{
+					nodo_lectura_escritura * traduccion_intermedia = malloc(sizeof(nodo_lectura_escritura));
+					traduccion_intermedia->direccion_fisica = MMU(i*TAM_PAGINA);
+					traduccion_intermedia->bytes = TAM_PAGINA;
+					list_add(lista_traducciones,traduccion_intermedia);
+				}
 			}
+		}
+	}else{
+		nodo_lectura_escritura * traduccion_inicial = malloc(sizeof(nodo_lectura_escritura));
+		int offset = direccion_logica_i % TAM_PAGINA; 
+		traduccion_inicial->direccion_fisica = MMU(direccion_logica_i);
+		traduccion_inicial->bytes = TAM_PAGINA - offset;
+		list_add(lista_traducciones,traduccion_inicial);
+	}
+	return lista_traducciones;
+	//importante, esta funcion no libera la lista
 }
 
 /* CHECK INTERRUPT */
@@ -815,7 +778,6 @@ int MMU( int direccion_logica){
 	return marco *TAM_PAGINA + desplazamiento;
 }
 
-
 void inicializar_tlb(){
 
 	translation_lookaside_buffer = list_create();
@@ -824,7 +786,7 @@ void inicializar_tlb(){
 
 }
 
-int solicitar_tamanio_pagina(){ //vos le pedis tambien?
+int solicitar_tamanio_pagina(){ //vos le pedis tambien? si poque no tengo manera de saber el tamaño de pagina
 	int tamanio;
 	int codigo_operacion = recibir_operacion(fd_conexion_memoria);
 	switch (codigo_operacion){
@@ -853,7 +815,6 @@ void agregar_entrada_tlb(t_list* TLB, nodo_tlb * info_proceso_memoria, pthread_m
 
 }
 
-
 void verificar_tamanio_tlb(t_list* TLB, pthread_mutex_t* mutex){
 
 	if((list_size(TLB)/MAX_TLB_ENTRY) =! 1){
@@ -863,7 +824,6 @@ void verificar_tamanio_tlb(t_list* TLB, pthread_mutex_t* mutex){
 	free(puntero); 
 	return;
 }
-
 
 bool es_entrada_TLB_de_PID(void * un_nodo_tlb ){
 	nodo_tlb * nodo_tlb_c = (nodo_tlb *) un_nodo_tlb;
@@ -896,7 +856,6 @@ int consultar_tlb(int PID, int numero_pagina){
 
 	return info_proceso_memoria->marco;
 }
-
 
 nodo_tlb * administrar_tlb( int PID, int numero_pagina, int marco){ //a revisar
 

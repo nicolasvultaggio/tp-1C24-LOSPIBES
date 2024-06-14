@@ -213,7 +213,7 @@ t_list * desempaquetar_traducciones(t_list* paquete, int cantidad){
 void traduccion_destroyer(void * traduccion){
 	nodo_lectura_escritura * traduccion_c = (nodo_lectura_escritura *) traduccion;
 	free(traduccion_c);
-}s
+}
 /* FUNCIONES DE PAQUETE */
 t_paquete* crear_paquete(op_code OPERACION)
 {
@@ -342,25 +342,7 @@ void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_des
 	empaquetar_recursos(paquete, PCB->recursos_asignados);
 	
 	switch (MOTIVO){ 
-		case EXITO:
-			break;
-
-		case EXIT_CONSOLA:
-			//
-			break;
-
-		case INTERRUPCION:
-			//
-			break;
-
-		case FIN_QUANTUM:
-			//
-			break;	
-
-		case PROCESO_ACTIVO:
-			//NO SE QUE ES
-			break;
-
+		
 		case SOLICITAR_INTERFAZ_GENERICA:
 			agregar_a_paquete(paquete, parametro1, strlen(parametro1) + 1);
 			agregar_a_paquete(paquete, parametro2, strlen(parametro2) + 1);
@@ -374,12 +356,31 @@ void enviar_pcb(pcb* PCB, int fd_escucha_dispatch, op_code OPERACION, motivo_des
 		case SOLICITAR_SIGNAL:
 			agregar_a_paquete(paquete, &parametro1, strlen(parametro1) + 1);
 			break;
-			
+		
+		case SOLICITAR_SIGNAL:
+			agregar_a_paquete(paquete, &parametro1, strlen(parametro1) + 1);
+			break;
+		
+
+		//ES NECESARIO COLOCAR LOS MOTIVOS EN LOS UE NO SE AGREGA INFORMACION AL PCB?
+		case EXITO:
+			break;
+		case EXIT_CONSOLA:
+			break;
+		case INTERRUPCION:
+			break;
+		case FIN_QUANTUM:
+			break;	
+		case PROCESO_ACTIVO:
+			break;
+		case SIN_MEMORIA:
+			break;
 		default:
 			break;
 	}
 	enviar_paquete(paquete, fd_escucha_dispatch);
 	eliminar_paquete(paquete);
+	return;
 
 }
 

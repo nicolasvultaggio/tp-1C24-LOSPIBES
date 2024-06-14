@@ -87,11 +87,6 @@ void terminar_programa();
 
 /* EXECUTE Ejecutar instrucciones */
 void ejecutar_set(pcb* PCB, char* parametro1, char* parametro2);
-bool medir_registro(char* registro);
-void setear_registro8(pcb* PCB, char* registro, uint8_t valor);
-void setear_registro32(pcb* PCB, char* registro, uint32_t valor);
-uint8_t capturar_registro8(pcb* PCB, char* registro);
-uint32_t capturar_registro32(pcb* PCB, char* registro);
 void ejecutar_mov_in();
 void ejecutar_mov_out();
 void ejecutar_sum(pcb* PCB, char* parametro1, char* parametro2);
@@ -111,9 +106,19 @@ void ejecutar_io_fs_write();
 void ejecutar_io_fs_read();
 void ejecutar_exit(pcb* PCB);
 void ejecutar_error(pcb* PCB);
+
 void enviar_recurso_por_signal(char * recurso, int fd_escucha_dispatch, op_code OPERACION);
 void enviar_recurso_por_wait(char * recurso, int fd_escucha_dispatch, op_code OPERACION);
+
 bool es_entrada_TLB_de_PID(void * un_nodo_tlb );
+size_t size_registro(char * registro);
+void setear_registro(pcb * PCB, char * registro, uint8_t valor8, uint32_t valor32);
+void * capturar_registro(pcb * PCB, char * registro);
+
+
+
+
+
 /* CHECK INTERRUPT */
 void check_interrupt();
 void* interrupcion(void *arg);
