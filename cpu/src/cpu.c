@@ -211,7 +211,7 @@ void ejecutar_set(pcb* PCB, char* registro, char* valor){
 
 void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", pcb->pid, "MOV IN", DATOS, DIRECCION);
+	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s, %s]", PCB->pid, "MOV IN", DATOS, DIRECCION);
 	
 	int direccion_logica = atoi(DIRECCION);
 	
@@ -251,7 +251,7 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	valores->numero_pagina = numero_pagina;
 	valores->pid = PCB->pid;
 	*/
-	enviar_solicitud_escritura_memoria(direccion_fisica, valor32, valores, fd_conexion_memoria);
+	enviar_solicitud_escritura_memoria(direccion_fisica, valor32, valores, fd_conexion_memoria); //no se usa
 	log_info(logger_cpu, "PID: %d - Accion: ESCRIBIR - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
 	check_interrupt();
 
@@ -416,12 +416,49 @@ void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* un
 ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
 	int direccion_logica_i = atoi(registro_direccion);
 	int tamanio_a_leer = atoi(registro_tamanio);
+	int size_name= strlen(nombre_interfaz);
 
-	t_list * paginas_a_traducir = obtener_paginas_a_traducir(direccion_logica_i,tamanio_a_leer);
+
+	t_list * traducciones = obtener_traducciones(direccion_logica_i,tamanio_a_leer);
 	
+	t_paquete * paquete = crear_paquete(INTERFAZ); //no uso enviar_pcb porque no me sirve, necesito enviar una lista de cosas
+	empaquetar_pcb(paquete, PCB, SOLICITAR_STDIN);
+	empaquetar_recursos(paquete, PCB->recursos_asignados);
+	agregar_a_paquete(paquete,&size_name,sizeof(int));
+	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
+	empaquetar_traducciones(paquete,traducciones);
+	enviar_paquete(paquete,fd_cpu_dispatch);
+	eliminar_paquete(paquete);
+	es_exit=false;  //siempre modificar
+	es_bloqueante=true; //modificar siempre que es_exit = false
+	es_wait = false;  //modificar si se pone a bloqueante = true
+	es_resize = false; //modificar si se pone bloqueante = true
+
 }
 
-t_list * obtener_paginas_a_traducir(int direccion_logica_i, int tamanio_a_leer ){
+ejecutar_io_stout_write(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
+	int direccion_logica_i = atoi(registro_direccion);
+	int tamanio_a_leer = atoi(registro_tamanio);
+	int size_name= strlen(nombre_interfaz);
+
+	t_list * traducciones = obtener_traducciones(direccion_logica_i,tamanio_a_leer);
+	
+	t_paquete * paquete = crear_paquete(INTERFAZ); //no uso enviar_pcb porque no me sirve, necesito enviar una lista de cosas
+	empaquetar_pcb(paquete, PCB, SOLICITAR_STDIN);
+	empaquetar_recursos(paquete, PCB->recursos_asignados);
+	agregar_a_paquete(paquete,&size_name,sizeof(int));
+	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
+	empaquetar_traducciones(paquete,traducciones);
+	enviar_paquete(paquete,fd_cpu_dispatch);
+	eliminar_paquete(paquete);
+	es_exit=false;  //siempre modificar
+	es_bloqueante=true; //modificar siempre que es_exit = false
+	es_wait = false;  //modificar si se pone a bloqueante = true
+	es_resize = false; //modificar si se pone bloqueante = true
+
+}
+
+t_list * obtener_traducciones(int direccion_logica_i, int tamanio_a_leer ){
 	int direccion_logica_f = direccion_logica_i + tamanio_a_leer -1;
 
 	int pagina_inicial = direccion_logica_i / tam_pagina;

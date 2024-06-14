@@ -204,10 +204,27 @@ void atender_GENERICA(){// IO_GEN_SLEEP (Interfaz, Unidades de trabajo), no hace
 
 void atender_STDIN(){
     t_list * lista = recibir_paquete(fd_conexion_kernel);
-    size_t * direccion_fisica = list_get(lista,0);
-    size_t * tamanio =list_get(lista,1);
+    int * tamanio_escritura = list_get(lista,0);
+    int tam = *tamanio_escritura;
+    t_list * traducciones = desempaquetar_traducciones(lista,1);
     list_destroy(lista);
-    char * leido = readline("Ingrese una linea por consola:");
+
+    char buffer[tam+1];
+    char *booleano;
+    do{
+        printf("Ingresar línea:\n");
+        if (booleano=fgets(buffer, sizeof(buffer), stdin) != NULL) {
+        // Eliminaa el carácter de nueva línea si está presente
+        size_t len = strlen(buffer);
+        if (len > 0 && buffer[len - 1] == '\n') {
+            buffer[len - 1] = '\0';
+        }
+            printf("La línea ingresada es: %s\n", buffer);
+        } else {
+            printf("Error al leer la línea. Intentar de nuevo\n");
+        }
+    }while(!booleano); 
+    
     t_paquete * paquete = crear_paquete(ESCRIBIR_MEMORIA); //ojo que sergio lo tiene que hacer igual
     agregar_a_paquete(paquete, direccion_fisica,sizeof(size_t));
     agregar_a_paquete(paquete,tamanio,sizeof(size_t));

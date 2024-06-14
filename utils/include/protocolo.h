@@ -219,6 +219,12 @@ typedef struct{
 	int marco;
 }nodo_tlb;
 
+typedef struct
+{
+	int direccion_fisica; // recordar que: la direccion fisica ya incluye al offset
+	int bytes;
+}nodo_lectura_escritura; //para que sirve? es la unidad mas basica de escritura o lectura, no hace falta mas desgloce: leer "bytes" bytes desde la direccion fisica, o escribir "bytes" bytes desde la direccion fisica
+
 /* ESTRUCTURA PARA EL ENVIO DE DIRECCIONES FISICAS DE cpu AL kernell*/
 typedef struct{
 	int  pid;
@@ -239,7 +245,8 @@ void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void* serializar_paquete(t_paquete* paquete, int bytes);
 void eliminar_paquete(t_paquete* paquete);
 void iterator(char* value, t_log *logger);
-
+t_list * desempaquetar_traducciones(t_list* paquete, int cantidad);
+void traduccion_destroyer(void * traduccion);
 /* SENDS */
 void enviar_mensaje(char* mensaje, int socket_cliente);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
@@ -270,7 +277,7 @@ pcb* guardar_datos_del_pcb(t_list* paquete); //usar para cuando en un paquete, v
 int recibir_tamanio_pagina(int fd_conexion_memoria);
 int recibir_marco (int fd_conexion_memoria);
 uint32_t recibir_valor_leido_memoria(int fd_memoria);
-
+void empaquetar_traducciones(t_paquete* paquete, t_list* lista_de_traducciones);
 typedef struct{
 	int pagina;
 	int desplazamiento;
