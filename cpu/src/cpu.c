@@ -123,52 +123,67 @@ t_linea_instruccion* prox_instruccion(int pid, uint32_t program_counter){
 void decode (t_linea_instruccion* instruccion, pcb* PCB){
 	switch(instruccion->instruccion){
 		case SET:
+			log_info(logger_cpu, "PID: %d - Ejecutando SET %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_set(PCB, instruccion->parametro1, instruccion->parametro2);
 			check_interrupt();
 			break;
 		case MOV_IN:
+			log_info(logger_cpu, "PID: %d - Ejecutando MOV_IN %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_mov_in(PCB, instruccion->parametro1, instruccion->parametro2);
 			check_interrupt();
 			break;
 		case MOV_OUT:
+			log_info(logger_cpu, "PID: %d - Ejecutando MOV_OUT %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_mov_out(PCB, instruccion->parametro1, instruccion->parametro2);
 			check_interrupt();
 			break;
 		case SUM:
+			log_info(logger_cpu, "PID: %d - Ejecutando SUM %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_sum(PCB, instruccion->parametro1, instruccion->parametro2);
 			check_interrupt();
 			break;
 		case SUB:
+			log_info(logger_cpu, "PID: %d - Ejecutando SUB %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_sub(PCB, instruccion->parametro1, instruccion->parametro2);
 			check_interrupt();
 			break;
 		case JNZ:
+			log_info(logger_cpu, "PID: %d - Ejecutando JNZ %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_jnz(PCB, instruccion->parametro1, instruccion->parametro2);
 			check_interrupt();
 			break;
 		case RESIZE:
+			log_info(logger_cpu, "PID: %d - Ejecutando RESIZE %d %d", PCB->PID, instruccion->parametro1);
 			ejecutar_resize(instruccion->parametro1);
 			break;
 		case COPY_STRING:
+			log_info(logger_cpu, "PID: %d - Ejecutando COPY_STRING %d %d", PCB->PID, instruccion->parametro1);
 			ejecutar_copy_string(PCB,instruccion->parametro1);
 			break;
 		case WAIT:
+			log_info(logger_cpu, "PID: %d - Ejecutando WAIT %d %d", PCB->PID, instruccion->parametro1);
 			ejecutar_wait(PCB, instruccion->parametro1);
 			check_interrupt();
 			break;
 		case SIGNAL:
+			log_info(logger_cpu, "PID: %d - Ejecutando SIGNAL %d %d", PCB->PID, instruccion->parametro1);
 			ejecutar_signal(PCB, instruccion->parametro1);
 			check_interrupt();
 			break;
 		case IO_GEN_SLEEP:
+			log_info(logger_cpu, "PID: %d - Ejecutando IO_GEN_SLEEP %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_io_gen_sleep(PCB, "IO_GEN_SLEEP", instruccion->parametro1, instruccion->parametro2);
 			check_interrupt();
 			break;
 		case IO_STDIN_READ:
+			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDIN_READ %d %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
 			ejecutar_io_stdin_read(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3);
+			check_interrupt();
 			break;
 		case IO_STDOUT_WRITE:
-			//ejecutar_io_stdout_write();
+			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDIN_READ %d %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
+			ejecutar_io_stdout_write(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3);
+			check_interrupt();
 			break;
 		case IO_FS_CREATE:
 			//ejecutar_io_fs_create();
@@ -248,13 +263,13 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	uint32_t * datos = capturar_registro(DATOS);
 	size_t size_reg = size_registro(DATOS);
 	t_list * traducciones = obtener_traducciones(direccion_logica, size_reg);
-	t_paquete * paquete = crear_paquete(ESCRITURA_MEMORIA); //no uso enviar_pcb porque no me sirve, necesito enviar una lista de cosas
+	t_paquete * paquete = crear_paquete(ESCRITURA_MEMORIA);
 	agregar_a_paquete(paquete,&size_reg,(int));
 	agregar_a_paquete(paquete,datos,size_reg);
 	empaquetar_traducciones(paquete,traducciones);
 	enviar_paquete(paquete,fd_conexion_memoria);
 	eliminar_paquete(paquete);
-	log_info(logger_cpu, "PID: %d - Accion: ESCRIBIR - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
+	//log_info(logger_cpu, "PID: %d - Accion: ESCRIBIR - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
 	check_interrupt();
 
 }
@@ -354,12 +369,12 @@ void ejecutar_resize(pcb* PCB, char* tamanio){
 	switch (codigo_operacion){
 		case OUTOFMEMORY:
 			enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, SIN_MEMORIA,NULL,NULL,NULL,NULL,NULL);
-			es_exit=false;  //siempre modificar
-			es_bloqueante=false; //modificar siempre que es_exit = false
+			es_exit = true;  //siempre modificar
+			es_bloqueante = false; //modificar siempre que es_exit = false
 			break;
 		case OK:
-			es_exit=false;  //siempre modificar
-			es_bloqueante=false; //modificar siempre que es_exit = false
+			es_exit = false;  //siempre modificar
+			es_bloqueante = false; //modificar siempre que es_exit = false
 			break;
 	}
 	
@@ -368,8 +383,18 @@ void ejecutar_resize(pcb* PCB, char* tamanio){
 
 void ejecutar_copy_string(pcb* PCB, char* tamanio){
 
-//falta cpy string
+	uint32_t reg_SI = PCB->registros.SI;
+	uint32_t reg_DI = PCB->registros.DI;
+	int copy_tamanio = atoi (tamanio);
 
+	t_paquete * paquete = crear_paquete(COPY);
+	agregar_a_paquete(paquete,&reg_SI,sizeof(uint32_t));
+	agregar_a_paquete(paquete,&reg_DI,sizeof(uint32_t));
+	agregar_a_paquete(paquete,&copy_tamanio,sizeof(int));
+	enviar_paquete(paquete,fd_conexion_memoria);
+	eliminar_paquete(paquete);
+
+	return;
 }
 
 void ejecutar_wait(pcb* PCB, char* registro){
@@ -404,10 +429,14 @@ void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* un
 	return;
 }
 
-ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
-	int direccion_logica_i = atoi(registro_direccion);
+void ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
+	
+	/*int direccion_logica_i = atoi(registro_direccion);
 	int tamanio_a_leer = atoi(registro_tamanio);
+	*/ // son char pero palbras (osea EAX) igual registro tamaño
 
+	uint32_t * direccion_logica_i = capturar_registro(registro_direccion);
+	size_t tamanio_a_leer = size_registro(registro_tamanio);
 
 	t_list * traducciones = obtener_traducciones(direccion_logica_i,tamanio_a_leer);
 	
@@ -417,7 +446,7 @@ ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char *
 
 	agregar_a_paquete(paquete,"IO_STDIN_READ",strlen("IO_STDIN_READ")+1);
 	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
-	agregar_a_paquete(paquete,&tamanio_a_leer,sizeof(int);
+	agregar_a_paquete(paquete,&tamanio_a_leer,sizeof(int));
 	empaquetar_traducciones(paquete,traducciones);
 	enviar_paquete(paquete,fd_cpu_dispatch);
 	sem_post(&sem_recibir_pcb);
@@ -429,10 +458,13 @@ ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char *
 
 }
 
-ejecutar_io_stdout_write(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
-	int direccion_logica_i = atoi(registro_direccion);
-	int tamanio_a_escribir = atoi(registro_tamanio);
+void ejecutar_io_stdout_write(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
+	/*int direccion_logica_i = atoi(registro_direccion);
+	int tamanio_a_leer = atoi(registro_tamanio);
+	*/ // son char pero palbras (osea EAX) igual registro tamaño
 
+	uint32_t * direccion_logica_i = capturar_registro(registro_direccion);
+	size_t tamanio_a_escribir = size_registro(registro_tamanio);
 
 	t_list * traducciones = obtener_traducciones(direccion_logica_i,tamanio_a_escribir);
 	
@@ -460,8 +492,8 @@ void ejecutar_exit(pcb* PCB){
 	es_exit=true;  //siempre modificar
 }
 
-void ejecutar_error(pcb* PCB){ //se usa esta en algun momento?
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
+void ejecutar_error(pcb* PCB){ //se usa esta en algun momento? creo que no, 
+	//log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
 	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXIT_CONSOLA,NULL,NULL,NULL,NULL,NULL);
 	sem_post(&sem_recibir_pcb);
 }
@@ -611,6 +643,127 @@ uint32_t recibir_lectura_memoria(){
 	free(lectura);
 	list_destroy(paquete);
 	return lecturita;
+}
+
+
+/* TLB */
+
+/* TRADUCCION LOGICA A FISICA */
+
+int MMU(uint32_t direccion_logica){
+	int marco;
+	int numero_pagina = floor(direccion_logica / TAM_PAGINA); //ya de por si redondea para abajo, posiblemente floor sea innecesario
+	int desplazamiento =  direccion_logica % TAM_PAGINA;
+
+	switch (MAX_TLB_ENTRY)
+	{
+	case 0:
+		marco = solicitar_info_memory(numero_pagina);
+		break;
+	default:
+		marco = consultar_tlb(PCB->PID, numero_pagina);
+		break;
+	} //ya tenes el numero de marco
+
+	log_info(logger_cpu,  "PID: %d - OBTENER MARCO - Página: %d - Marco: %d", PCB->pid, numero_pagina, marco); //log ob
+
+	return marco *TAM_PAGINA + desplazamiento;
+}
+
+void inicializar_tlb(){
+
+	translation_lookaside_buffer = list_create();
+	MAX_TLB_ENTRY = atoi (cantidad_entradas_tlb);
+	TAM_PAGINA = solicitar_tamanio_pagina();
+
+}
+
+int solicitar_tamanio_pagina(){ //vos le pedis tambien? si poque no tengo manera de saber el tamaño de pagina
+	int tamanio;
+	int codigo_operacion = recibir_operacion(fd_conexion_memoria);
+	switch (codigo_operacion){
+		case SIZE_PAGE:
+			TAM_PAGINA = recibir_tamanio_pagina(fd_conexion_memoria);
+			break;
+	}		
+	
+	return tamanio;
+}
+
+int solicitar_info_memory(int numero_pagina){ 
+
+	enviar_solicitud_marco(fd_conexion_memoria, PCB->PID, numero_pagina);
+	return recibir_marco(fd_conexion_memoria);
+
+}
+
+void agregar_entrada_tlb(t_list* TLB, nodo_tlb * info_proceso_memoria, pthread_mutex_t* mutex, int PID, int numero_pagina, int marco){
+
+	info_proceso_memoria->pid = PID;
+	info_proceso_memoria->num_pag = numero_pagina;
+	info_proceso_memoria->marco = marco;
+
+	push_con_mutex(TLB, info_proceso_memoria, &mutex_tlb);
+
+}
+
+void verificar_tamanio_tlb(t_list* TLB, pthread_mutex_t* mutex){
+
+	if((list_size(TLB)/MAX_TLB_ENTRY) =! 1){
+		return;
+	}
+	nodo_tlb* puntero = pop_con_mutex(TLB, mutex);
+	free(puntero); 
+	return;
+}
+
+bool es_entrada_TLB_de_PID(void * un_nodo_tlb ){
+	nodo_tlb * nodo_tlb_c = (nodo_tlb *) un_nodo_tlb;
+	return nodo_tlb_c->pid == PCB->PID;
+}
+
+int consultar_tlb(int PID, int numero_pagina){
+	
+	int marco;
+	int posicion_elemento_buscado;
+	nodo_tlb * info_proceso_memoria;
+	
+	if(list_is_empty(translation_lookaside_buffer)){ //TLB MISS PERO PORQUE LA TLB ESTA VACIA
+		log_info(logger_cpu, "PID: %d - TLB MISS - Pagina: %d", PCB->PID, numero_pagina);
+		marco = solicitar_info_memory(numero_pagina);
+		agregar_entrada_tlb(translation_lookaside_buffer, info_proceso_memoria, &mutex_tlb, PID, numero_pagina, marco);
+		return marco;
+	}
+	
+	info_proceso_memoria = list_find(translation_lookaside_buffer,(void*)es_entrada_TLB_de_PID);
+
+	if(info_proceso_memoria == NULL){ //TLB MISS
+		log_info(logger_cpu, "PID: %d - TLB MISS - Pagina: %d", PCB->PID, numero_pagina);
+		marco = solicitar_info_memory(PID, numero_pagina);
+		info_proceso_memoria = administrar_tlb(PID, numero_pagina, marco); //devuelve si o si la nueva entrada
+	}else{ //ESTO ES TLB HIT
+		if(algoritmo_tlb == "LRU"){ 
+			log_info(logger_cpu, "PID: %d - TLB HIT - Pagina:  %d", PCB->PID, numero_pagina);
+			list_remove_element(translation_lookaside_buffer,info_proceso_memoria);
+			list_add(translation_lookaside_buffer,info_proceso_memoria);
+		}
+	}
+
+	log_info(logger_cpu, "PID: %d - OBTENER MARCO - Pagina: %d - Marco: %d", PCB->PID, numero_pagina, info_proceso_memoria->marco);
+
+	return info_proceso_memoria->marco;
+}
+
+nodo_tlb * administrar_tlb( int PID, int numero_pagina, int marco){ //a revisar
+
+	verificar_tamanio_tlb(translation_lookaside_buffer, &mutex_tlb); // si queda tamanio disponible, no hace nada, si no tiene mas espacio, quita el primero
+	//si o si, tenes espacio para agregar otra entrada
+
+	nodo_tlb * nueva_entrada = malloc(sizeof(nodo_tlb));
+
+	agregar_entrada_tlb(translation_lookaside_buffer,nueva_entrada,&mutex_tlb,PID,numero_pagina,marco);
+	
+	return nueva_entrada;
 }
 
 
@@ -785,123 +938,6 @@ void liberar_interrupcion_actual(){
 	return;
 }
 
-
-/* TLB */
-
-/* TRADUCCION LOGICA A FISICA */
-
-int MMU(uint32_t direccion_logica){
-	int marco;
-	int numero_pagina = floor(direccion_logica / TAM_PAGINA); //ya de por si redondea para abajo, posiblemente floor sea innecesario
-	int desplazamiento =  direccion_logica % TAM_PAGINA;
-
-	switch (MAX_TLB_ENTRY)
-	{
-	case 0:
-		marco = solicitar_info_memory(numero_pagina);
-		break;
-	default:
-		marco = consultar_tlb(PCB->PID, numero_pagina);
-		break;
-	} //ya tenes el numero de marco
-
-	log_info(logger_cpu,  "PID: %d - OBTENER MARCO - Página: %d - Marco: %d", PCB->pid, numero_pagina, marco); //log ob
-
-	return marco *TAM_PAGINA + desplazamiento;
-}
-
-void inicializar_tlb(){
-
-	translation_lookaside_buffer = list_create();
-	MAX_TLB_ENTRY = atoi (cantidad_entradas_tlb);
-	TAM_PAGINA = solicitar_tamanio_pagina();
-
-}
-
-int solicitar_tamanio_pagina(){ //vos le pedis tambien? si poque no tengo manera de saber el tamaño de pagina
-	int tamanio;
-	int codigo_operacion = recibir_operacion(fd_conexion_memoria);
-	switch (codigo_operacion){
-		case SIZE_PAGE:
-			TAM_PAGINA = recibir_tamanio_pagina(fd_conexion_memoria);
-			break;
-	}		
-	
-	return tamanio;
-}
-
-int solicitar_info_memory(int numero_pagina){ 
-
-	enviar_solicitud_marco(fd_conexion_memoria, PCB->PID, numero_pagina);
-	return recibir_marco(fd_conexion_memoria);
-
-}
-
-void agregar_entrada_tlb(t_list* TLB, nodo_tlb * info_proceso_memoria, pthread_mutex_t* mutex, int PID, int numero_pagina, int marco){
-
-	info_proceso_memoria->pid = PID;
-	info_proceso_memoria->num_pag = numero_pagina;
-	info_proceso_memoria->marco = marco;
-
-	push_con_mutex(TLB, info_proceso_memoria, &mutex_tlb);
-
-}
-
-void verificar_tamanio_tlb(t_list* TLB, pthread_mutex_t* mutex){
-
-	if((list_size(TLB)/MAX_TLB_ENTRY) =! 1){
-		return;
-	}
-	nodo_tlb* puntero = pop_con_mutex(TLB, mutex);
-	free(puntero); 
-	return;
-}
-
-bool es_entrada_TLB_de_PID(void * un_nodo_tlb ){
-	nodo_tlb * nodo_tlb_c = (nodo_tlb *) un_nodo_tlb;
-	return nodo_tlb_c->pid == PCB->PID;
-}
-
-int consultar_tlb(int PID, int numero_pagina){
-	
-	int marco;
-	int posicion_elemento_buscado;
-	nodo_tlb * info_proceso_memoria;
-	
-	if(list_is_empty(translation_lookaside_buffer)){ //TLB MISS PERO PORQUE LA TLB ESTA VACIA
-		marco = solicitar_info_memory(PID, numero_pagina);
-		agregar_entrada_tlb(translation_lookaside_buffer, info_proceso_memoria, &mutex_tlb, PID, numero_pagina, marco);
-		return marco;
-	}
-	
-	info_proceso_memoria = list_find(translation_lookaside_buffer,(void*)es_entrada_TLB_de_PID);
-
-	if(info_proceso_memoria == NULL){ //TLB MISS
-		marco = solicitar_info_memory(PID, numero_pagina);
-		info_proceso_memoria = administrar_tlb(PID, numero_pagina, marco); //devuelve si o si la nueva entrada
-	}else{ //ESTO ES TLB HIT
-		if(algoritmo_tlb == "LRU"){ 
-			list_remove_element(translation_lookaside_buffer,info_proceso_memoria);
-			list_add(translation_lookaside_buffer,info_proceso_memoria);
-		}
-	}
-
-	return info_proceso_memoria->marco;
-}
-
-nodo_tlb * administrar_tlb( int PID, int numero_pagina, int marco){ //a revisar
-
-	verificar_tamanio_tlb(translation_lookaside_buffer, &mutex_tlb); // si queda tamanio disponible, no hace nada, si no tiene mas espacio, quita el primero
-	//si o si, tenes espacio para agregar otra entrada
-
-	nodo_tlb * nueva_entrada = malloc(sizeof(nodo_tlb));
-
-	agregar_entrada_tlb(translation_lookaside_buffer,nueva_entrada,&mutex_tlb,PID,numero_pagina,marco);
-	
-	return nueva_entrada;
-}
-
-
 /* LIBERAR MEMORIA USADA POR CPU */
 void terminar_programa(){
     if(logger_cpu != NULL){
@@ -912,5 +948,3 @@ void terminar_programa(){
 	}
     liberar_conexion(fd_conexion_memoria);
 }
-
-
