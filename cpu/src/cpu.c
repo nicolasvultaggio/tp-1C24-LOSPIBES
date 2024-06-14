@@ -407,7 +407,6 @@ void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* un
 ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
 	int direccion_logica_i = atoi(registro_direccion);
 	int tamanio_a_leer = atoi(registro_tamanio);
-	int size_name= strlen(nombre_interfaz);
 
 
 	t_list * traducciones = obtener_traducciones(direccion_logica_i,tamanio_a_leer);
@@ -415,10 +414,13 @@ ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char *
 	t_paquete * paquete = crear_paquete(INTERFAZ); //no uso enviar_pcb porque no me sirve, necesito enviar una lista de cosas
 	empaquetar_pcb(paquete, PCB, SOLICITAR_STDIN);
 	empaquetar_recursos(paquete, PCB->recursos_asignados);
-	agregar_a_paquete(paquete,&size_name,sizeof(int));
+
+	agregar_a_paquete(paquete,"IO_STDIN_READ",strlen("IO_STDIN_READ")+1);
 	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
+	agregar_a_paquete(paquete,&tamanio_a_leer,sizeof(int);
 	empaquetar_traducciones(paquete,traducciones);
 	enviar_paquete(paquete,fd_cpu_dispatch);
+	sem_post(&sem_recibir_pcb);
 	eliminar_paquete(paquete);
 	es_exit=false;  //siempre modificar
 	es_bloqueante=true; //modificar siempre que es_exit = false
@@ -427,20 +429,22 @@ ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char *
 
 }
 
-ejecutar_io_stout_write(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
+ejecutar_io_stdout_write(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
 	int direccion_logica_i = atoi(registro_direccion);
-	int tamanio_a_leer = atoi(registro_tamanio);
-	int size_name= strlen(nombre_interfaz);
+	int tamanio_a_escribir = atoi(registro_tamanio);
 
-	t_list * traducciones = obtener_traducciones(direccion_logica_i,tamanio_a_leer);
+
+	t_list * traducciones = obtener_traducciones(direccion_logica_i,tamanio_a_escribir);
 	
 	t_paquete * paquete = crear_paquete(INTERFAZ); //no uso enviar_pcb porque no me sirve, necesito enviar una lista de cosas
 	empaquetar_pcb(paquete, PCB, SOLICITAR_STDIN);
 	empaquetar_recursos(paquete, PCB->recursos_asignados);
-	agregar_a_paquete(paquete,&size_name,sizeof(int));
+	agregar_a_paquete(paquete,"IO_STDOUT_WRITE",strlen("IO_STDOUT_WRITE")+1);
 	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
+	agregar_a_paquete(paquete,&tamanio_a_escribir,sizeof(int));
 	empaquetar_traducciones(paquete,traducciones);
 	enviar_paquete(paquete,fd_cpu_dispatch);
+	sem_post(&sem_recibir_pcb);
 	eliminar_paquete(paquete);
 	es_exit=false;  //siempre modificar
 	es_bloqueante=true; //modificar siempre que es_exit = false
