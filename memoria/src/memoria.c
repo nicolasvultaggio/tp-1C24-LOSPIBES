@@ -298,26 +298,6 @@ void iniciar_proceso_a_pedido_de_Kernel(char* path, int pid, int socket_kernel) 
 	/*desde aca se implementa una lista de tabla de paginas(que es una lista global) que arrancan en -1 en los marcos ya que cuando el proceso es creado a
 	pedido de memoria esta en new*/
 	//Crear la tabla de páginas
-    t_tdp* tdp = malloc(sizeof(t_tdp));//t_tdp es nodo ppal o struct de la tabla tiene un PID y una lista de t_pagina, habra una sola por proceso
-    tdp->pid = pid;
-
-    int cant_paginas = size / tam_pagina;////ver el tamaño de proceso??? como hago eso preguntar nico eso te dara el nro de paginas que tendra el proceso 
-    t_list* paginas = list_create();
-
-    for (int i = 0; i < cant_paginas; i++) {
-        t_pagina* pag = malloc(sizeof(t_pagina));//preguntar si es la que nico llama fila_tabla_paginas,es uns struc que tiene pagina y marco, sera una lista de ese struct ya que el proceso tiene muchas paginas
-        pag->pid = pid;
-        pag->numpag = i;
-        pag->marco = -1;
-        list_add(paginas, pag);
-    }
-
-    tdp->paginas = paginas;
-
-    list_add(tablas_de_paginas, tdp);
-    log_info(logger_memoria, "Tabla de paginas creada. PID: %d - Tamaño: %d\n", pid, cant_paginas);
-	
-	*/
 	
 	push_con_mutex(lista_de_procesos, proceso_nuevo, &mutex_lista_procesos);
 }
@@ -480,20 +460,20 @@ void procesar_solicitud_nromarco(int fd1){
 	//buscar pagina en tdp
 	t_pagina* pagina = buscar_pagina(valoresenbruto->pid, valoresenbruto->numero_pagina);//Obtengo puntero a la tabla de pagina en la lista de procesos.Uso el pid para encontrar el proceso y nro pagina para encontrar el nro marco
      // t_pagina es tabla que tiene un id del proceso, pagina y el marco correspondiente a esa pagina
-	send_marco(fd1, pagina->marco);//PERO VA ESTAR EN -1, QUIEN ASIGNA EL MARCO CUANDO SE CREA EL PROCESO?? CPU CUANDO HACE EJECUTAR?
+	send_marco(fd1, pagina->marco);//devuelvo el NRO DE MARCO, HAY QUE HACER VALIDACION ? SI El proceso todavia no tiene marcos asignados ya que no hizo resize
 	free(valoresenbruto);
 }
 
-t_pagina* buscar_pagina(int pid, int numero_pagina){
+t_pagina* buscar_pagina(int npid, int numero_pagina){
 	//buscar proceso en tdps
-	bool _encontrar_pid(void* t) {
-		return (((t_tdp*)t)->pid == pid);
-	};//lo hizo nico, y segun el compilador lo entiende aunque este en blanco
-	t_tdp* tdp = list_find(lista_de_procesos, _encontrar_pid);
+	bool encontrar_pid(void* t) {
+        return (((t_proceso*)t)->pid == npid);
+    };//lo hizo nico, y segun el compilador lo entiende aunque este en blanco
+	t_proceso* tdp = list_find(lista_de_procesos, encontrar_pid);
 
 	//buscar pagina en tdp
-	t_pagina* pagina = list_get(tdp->paginas, numero_pagina);
-	log_info(logger, "PID: %d - Pagina: %d - Marco: %d", pid, numero_pagina, pagina->marco);
+	t_pagina* pagina = list_get(tdp->tabla_de_paginas, numero_pagina);//aca obtengo puntero q apunta a la tabla de pagina alli obtengo marco
+	log_info(logger, "PID: %d - Pagina: %d - Marco: %d", npid, numero_pagina, pagina->marco);
 	return pagina;
 }
 pid_y_pag* recv_solicitud_marco(int fd){
@@ -508,7 +488,7 @@ void send_marco (int fd, int marco){
 
 	agregar_a_paquete(paquete, &marco, sizeof(int));
 	enviar_paquete(paquete, fd);
-	eliminar_paquete(paquete);dgfn
+	eliminar_paquete(paquete);
 }   
 
 

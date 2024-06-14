@@ -30,11 +30,13 @@ typedef struct
 	int numpag;
 	int marco;
 }t_pagina;//tabla de pagina de un proceso. tiene ID del proceso, numero pagina  y el numero marco asociado a esa pagina
+//LA lista t_list ya esta creada ahora cuando se asignen marcos a los procesos en con resize se debera usar esta estructura como lista de tablas
 typedef struct
-{
+/*{
 	int pid;
 	t_list* paginas;
-} t_tdp;//???
+} t_tdp;*/
+// se usaria si implementamos que lalista de tablas no este en los procesos, seria mas facil.. preguntar a nico 
 int fd_escucha_memoria;
 int fd_conexion_server;
 
