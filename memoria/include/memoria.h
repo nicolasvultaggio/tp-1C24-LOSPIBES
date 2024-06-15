@@ -4,10 +4,6 @@
 #include <../../utils/include/socket.h>
 #include <../../utils/include/protocolo.h>
 
-typedef struct{
-	int nro_pagina; //pasarlo a memoria como size_t
-	int nro_marco; //pasarlo a memoria como size_t
-}fila_tabla_de_paginas; //las tablas de paginas no son tablas, son listas, es mas facil de manejar|| es la misma que t_pagina??preguntar a nicoo es es asi, agregar PID para encontrar el proceso en funcion encontrar marco
 typedef struct {
 	int pid;
 	t_list* tabla_de_paginas;// SER UNA TABLA t_pagina LINEA 28
@@ -23,10 +19,10 @@ typedef struct
 {
 	int pid;//                      soy nico, no entiendo, se usa este o el de abajo? me gusta mas el de abajo
 	int numero_pagina;
-} pid_y_pag;//lo que uso para recibir los datos  para leer el PID Y NRO DE PAGINA cuando solicitan NUMERO DE MARCO
+} pid_y_pag_de_cpu;//lo que uso para recibir los datos  para leer el PID Y NRO DE PAGINA cuando solicitan NUMERO DE MARCO
 typedef struct
 {
-	int pid;
+	//int pid; //este no hace falta, porque una si pertenece a una tabla de paginas definida, ya conocemos su pid
 	int numpag;
 	int marco;
 }t_pagina;//tabla de pagina de un proceso. tiene ID del proceso, numero pagina  y el numero marco asociado a esa pagina
@@ -87,6 +83,7 @@ bool es_proceso_con_pid(void * un_pid);
 int bitsToBytes(int bits);
 void procesar_escritura_en_memoria(int cliente_socket);
 void procesar_lectura_en_memoria(int cliente_socket);
+void send_marco (int fd, int marco);
 
 int cant_marcos;
 int iniciarMemoria();

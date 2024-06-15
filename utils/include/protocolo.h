@@ -259,7 +259,7 @@ void enviar_datos_proceso(char* path,int pid,int fd_conexion);
 void enviar_pcb(pcb* PCB, int un_fd, op_code OPERACION, motivo_desalojo MOTIVO, char* parametro1, char* parametro2, char* parametro3, char* parametro4, char* parametro5);
 void enviar_liberar_proceso(pcb* un_pcb,int fd);
 void enviar_tamanio_pagina(int fd_cpu_dispatch, int tam_pag);
-void enviar_solicitud_marco(int fd_conexion_memoria, int pid, int numero_pagina);
+void enviar_solicitud_marco(int fd_conexion_memoria,int pid, int numero_pagina);
 void enviar_marco (int fd_conexion_memoria, int marco);
 
 /* RECVS */

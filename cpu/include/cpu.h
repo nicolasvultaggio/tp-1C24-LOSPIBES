@@ -18,7 +18,7 @@ int TAM_PAGINA;
 t_list* translation_lookaside_buffer;
 pthread_mutex_t mutex_tlb;
 /* SEMAFOROS */
-pthread_mutex_t mutex_motivo_x_consola;
+pthread_mutex_t mutex_motivo_x_consola; //what este para que es
 sem_t sem_recibir_pcb;
 sem_t sem_execute;
 sem_t sem_interrupcion;
@@ -113,6 +113,7 @@ void * capturar_registro(char * registro);
 uint32_t recibir_lectura_memoria();
 t_list * obtener_traducciones(uint32_t * direccion_logica_i, int tamanio_a_leer );
 
+int solicitar_frame_memory(int numero_pagina);
 
 
 

@@ -724,7 +724,7 @@ int MMU(uint32_t direccion_logica){
 	switch (MAX_TLB_ENTRY)
 	{
 	case 0:
-		marco = solicitar_info_memory(numero_pagina);
+		marco = solicitar_frame_memory(numero_pagina);
 		break;
 	default:
 		marco = consultar_tlb(PCB->PID, numero_pagina);
@@ -756,7 +756,7 @@ int solicitar_tamanio_pagina(){ //vos le pedis tambien? si poque no tengo manera
 	return tamanio;
 }
 
-int solicitar_info_memory(int numero_pagina){ 
+int solicitar_frame_memory(int numero_pagina){ 
 
 	enviar_solicitud_marco(fd_conexion_memoria, PCB->PID, numero_pagina);
 	return recibir_marco(fd_conexion_memoria);
@@ -796,7 +796,7 @@ int consultar_tlb(int PID, int numero_pagina){
 	
 	if(list_is_empty(translation_lookaside_buffer)){ //TLB MISS PERO PORQUE LA TLB ESTA VACIA
 		log_info(logger_cpu, "PID: %d - TLB MISS - Pagina: %d", PCB->PID, numero_pagina);
-		marco = solicitar_info_memory(numero_pagina);
+		marco = solicitar_frame_memory(numero_pagina);
 		agregar_entrada_tlb(translation_lookaside_buffer, info_proceso_memoria, &mutex_tlb, PID, numero_pagina, marco);
 		return marco;
 	}
@@ -805,7 +805,7 @@ int consultar_tlb(int PID, int numero_pagina){
 
 	if(info_proceso_memoria == NULL){ //TLB MISS
 		log_info(logger_cpu, "PID: %d - TLB MISS - Pagina: %d", PCB->PID, numero_pagina);
-		marco = solicitar_info_memory(PID, numero_pagina);
+		marco = solicitar_frame_memory(PID, numero_pagina);
 		info_proceso_memoria = administrar_tlb(PID, numero_pagina, marco); //devuelve si o si la nueva entrada
 	}else{ //ESTO ES TLB HIT
 		if(algoritmo_tlb == "LRU"){ 

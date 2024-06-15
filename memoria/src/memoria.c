@@ -45,8 +45,13 @@ void iniciar_memoria_contigua(){
 
 int nro_de_marco_libre(){
 	for(int i=0; i<cant_marcos; i++){
-		if(bitarray_test_bit(frames_array, (off_t) i))
+		bool valor;
+		pthread_mutex_lock(&mutex_frames_array);
+		valor=bitarray_test_bit(frames_array, (off_t) i);
+		pthread_mutex_unlock(&mutex_frames_array);
+		if(!valor)
 			return i;
+		
 	}
 	return -1; //simbolizamos el -1 como que no hay marcos disponibles ----> acá devolver OUT OF MEMORY
 }
@@ -199,36 +204,35 @@ static void procesar_clientes(void* void_args){
 			break;	
 		case DATOS_PROCESO: // CREAR PROCESO: este codigo SOLO LO ENVIA EL KERNEL 
 			t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);// por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
-			iniciar_proceso_a_pedido_de_Kernel(datos_proceso->path, datos_proceso->pid, cliente_socket);//el parametro size sera usado en el 3er check,"datos_proceso->size"
+			iniciar_proceso_a_pedido_de_Kernel(datos_proceso->path, datos_proceso->pid, cliente_socket);
 			free(datos_proceso->path);
 			free(datos_proceso);
 			break;
 		case SOLICITAR_INSTRUCCION:// ESTE CODIGO SOLO LO ENVÍA CPU
-				log_info(logger_memoria, "Solicitud de instruccion recibida");
-				procesar_pedido_instruccion(cliente_socket);
-				break;
+			log_info(logger_memoria, "Solicitud de instruccion recibida");
+			procesar_pedido_instruccion(cliente_socket);
+			break;
 		case SOLICITUD_MARCO:
-				log_info(logger_memoria, "Solicitud de marco"); //cuando sergio haga send_pedido_de_marco o como se iame
-				procesar_solicitud_nromarco(cliente_socket);
-				//recibir el paquete (si o si un pid y un numero de pagina)
-				//invocar una funcion que busque un proceso por su pid, acceda a su tabla de paginas y devuelva el numero de marco asociado a un numero de pagina enviado por parametro
-				break;
-		case LECTURA_MEMORIA:
-				procesar_lectura_en_memoria(cliente_socket);
-				break;
-		case ESCRITURA_MEMORIA:
-				procesar_escritura_en_memoria(cliente_socket);
-				break;
+			log_info(logger_memoria, "Solicitud de marco"); //cuando sergio haga send_pedido_de_marco o como se iame
+			procesar_solicitud_nromarco(cliente_socket);
+			//recibir el paquete (si o si un pid y un numero de pagina)
+			//invocar una funcion que busque un proceso por su pid, acceda a su tabla de paginas y devuelva el numero de marco asociado a un numero de pagina enviado por parametro
+			break;
+		case LECTURA_MEMORIA: //PARA STDOUT
+			procesar_lectura_en_memoria(cliente_socket);
+			break;
+		case ESCRITURA_MEMORIA: //PARA STDIN
+			procesar_escritura_en_memoria(cliente_socket);
+			break;
 		case REAJUSTAR_TAMANIO_PROCESO:
-				//de la cpu, aumentar o diminuir
-				break;
+			//de la cpu, aumentar o diminuir
+			break;
 		case FINALIZAR_PROCESO:
-				// si o si tenes que recibir al menos un pid
-				//finalizar_proceso_a_pedido_de_kernel(ese pid que recibiste)
-				break;
+			finalizar_proceso_a_pedido_de_kernel(cliente_socket); //si o si recibe el pid ahi adentro
+			break;
 		default:
-				log_error(logger_memoria, "Codigo de operacion no reconocido en memoria");
-				return;
+			log_error(logger_memoria, "Codigo de operacion no reconocido en memoria");
+			return;
 			}
 
 		}
@@ -300,7 +304,14 @@ void iniciar_proceso_a_pedido_de_Kernel(char* path, int pid, int socket_kernel) 
 }
 
 
-void finalizar_proceso_a_pedido_de_kernel(int un_pid){
+void finalizar_proceso_a_pedido_de_kernel(int un_fd){
+
+	t_list * lista = recibir_paquete(un_fd);
+
+	int * ppid = (int*) list_get(lista,0);
+	int un_pid = *ppid;
+	free(ppid);
+	list_destroy(lista);
 
 	bool es_proceso_con_pid(void * un_proceso){
 		t_proceso * un_proceso_c = (t_proceso *) un_proceso;
@@ -316,8 +327,8 @@ void finalizar_proceso_a_pedido_de_kernel(int un_pid){
 	pthread_mutex_unlock(&mutex_lista_procesos);
 	
 	void liberar_fila_paginas(void * fila){
-		fila_tabla_de_paginas * fila_c = (fila_tabla_de_paginas*) fila;
-		int marco = fila_c->nro_marco;
+		t_pagina * fila_c = (t_pagina*) fila;
+		int marco = fila_c->marco;
 		pthread_mutex_lock(&mutex_frames_array);
 		bitarray_clean_bit(frames_array, (off_t) marco); //marcamos cada marco como libre en el bitarray
 		pthread_mutex_unlock(&mutex_frames_array);
@@ -452,37 +463,52 @@ int bitsToBytes(int bits){
 	return bytes;
 }
 void procesar_solicitud_nromarco(int fd1){
-	pid_y_pag* valoresenbruto= recv_solicitud_marco(fd1);
+	pid_y_pag_de_cpu* valoresenbruto= recv_solicitud_marco(fd1);
 
 	//buscar pagina en tdp
 	t_pagina* pagina = buscar_pagina(valoresenbruto->pid, valoresenbruto->numero_pagina);//Obtengo puntero a la tabla de pagina en la lista de procesos.Uso el pid para encontrar el proceso y nro pagina para encontrar el nro marco
-     // t_pagina es tabla que tiene un id del proceso, pagina y el marco correspondiente a esa pagina
+    // t_pagina es tabla que tiene un id del proceso, pagina y el marco correspondiente a esa pagina
 	send_marco(fd1, pagina->marco);//devuelvo el NRO DE MARCO, HAY QUE HACER VALIDACION ? SI El proceso todavia no tiene marcos asignados ya que no hizo resize
-	free(valoresenbruto);
+	free(valoresenbruto); //excelente
 }
 
 t_pagina* buscar_pagina(int npid, int numero_pagina){
 	//buscar proceso en tdps
 	bool encontrar_pid(void* t) {
-        return (((t_proceso*)t)->pid == npid);
-    };//lo hizo nico, y segun el compilador lo entiende aunque este en blanco
-	t_proceso* tdp = list_find(lista_de_procesos, encontrar_pid);
+		t_proceso* un_proceso = (t_proceso*) t ;
+        return un_proceso->pid == npid;
+    };//lo hizo nico, y segun el compilador lo entiende aunque este en blanco, -SOy nico, lo usaste bien 
+	t_proceso* proceso = list_find(lista_de_procesos,(void*) encontrar_pid);
 
 	//buscar pagina en tdp
-	t_pagina* pagina = list_get(tdp->tabla_de_paginas, numero_pagina);//aca obtengo puntero q apunta a la tabla de pagina alli obtengo marco
-	log_info(logger, "PID: %d - Pagina: %d - Marco: %d", npid, numero_pagina, pagina->marco);
+	t_pagina* pagina = list_get(proceso->tabla_de_paginas, numero_pagina);//aca obtengo puntero q apunta a la tabla de pagina alli obtengo marco
+	// IMPORTANTE, para encontrar el t_pagina SE PUEDE usar list_get en vez de list_find ¿POR QUÉ? porque justo COINCIDE el numero de pagina con el numero de elemento en la lista o sea: PAGINA O -> PAGINA1 -> PAGINA 2 -> PAGINA 3 | OJO esto no es así con los marcos
+	log_info(logger_memoria, "PID: %d - Pagina: %d - Marco: %d", npid, numero_pagina, pagina->marco);
 	return pagina;
 }
-pid_y_pag* recv_solicitud_marco(int fd){
+pid_y_pag_de_cpu* recv_solicitud_marco(int fd){
 	t_list* paquete = recibir_paquete(fd);
-	pid_y_pag* valores = list_get(paquete, 0);
-
+	/*
+	pid_y_pag_de_cpu* valores = list_get(paquete, 0); 
 	list_destroy(paquete);
+	return valores;
+
+	esto SOLO no es valido, asi no lo envía el cpu, hay que recibir bien el paquete
+	*/
+	int * pid = (int *) list_get(paquete,0);
+	int * n_pagina = (int *) list_get(paquete,1);
+	list_destroy(paquete);
+
+	pid_y_pag_de_cpu * valores = malloc(sizeof(pid_y_pag_de_cpu));
+	valores->numero_pagina = *n_pagina;
+	valores->pid = *pid;
+	free(pid); //como ya guardamos los valores, borramos el puntero
+	free(n_pagina); //como ya guardamos los valores, borramos el puntero
+	
 	return valores;
 }
 void send_marco (int fd, int marco){
 	t_paquete* paquete = crear_paquete(MARCO);//preguntarel opcode que utiliza quienme pidio el nro de marco
-
 	agregar_a_paquete(paquete, &marco, sizeof(int));
 	enviar_paquete(paquete, fd);
 	eliminar_paquete(paquete);

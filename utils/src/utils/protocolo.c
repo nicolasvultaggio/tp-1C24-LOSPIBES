@@ -399,8 +399,13 @@ void enviar_liberar_proceso(pcb* un_pcb, int fd){
 	eliminar_paquete(paquete);
 	*/
 
-	//oojo, no hace falta enviar el pcb entero, solo el pid
+	//oojo, esto de aca arriba esta mal, no hace falta enviar el pcb entero, solo el pid
 	//ademas esta mal enviado el pcb, no podes enviar un struct asi de una en un paquete nenedaun
+	t_paquete* paquete = crear_paquete(FINALIZAR_PROCESO);
+	agregar_a_paquete(paquete,&(un_pcb->PID),sizof(int));
+	enviar_paquete(paquete,fd);
+	eliminar_paquete(paquete);
+
 	
 }
 
@@ -411,18 +416,12 @@ void enviar_tamanio_pagina(int fd_cpu_dispatch, int tam_pag){
 	eliminar_paquete(paquete);
 }
 
-void enviar_solicitud_marco(int fd_conexion_memoria, int pid, int numero_pagina){
+void enviar_solicitud_marco( int fd_conexion_memoria,int pid, int numero_pagina){
 	t_paquete* paquete = crear_paquete(SOLICITUD_MARCO);
-	//ES NECESARIO HACER ESTAS VARIABLES COMO PUNTEROS?
-	int * malloc_pid = malloc(sizeof(int));
-	int * malloc_num_pag = malloc(sizeof(int));
-	malloc_pid = pid;
-	malloc_num_pag = numero_pagina;
-	agregar_a_paquete(paquete, malloc_pid, sizeof(int));
-	agregar_a_paquete(paquete, malloc_num_pag, sizeof(int));
+	//ES NECESARIO HACER ESTAS VARIABLES COMO PUNTEROS? na, no hacia falta xd
+	agregar_a_paquete(paquete, &pid, sizeof(int));
+	agregar_a_paquete(paquete,&numero_pagina, sizeof(int));
 	enviar_paquete(paquete, fd_conexion_memoria);
-	free(malloc_pid);
-	free(malloc_num_pag);
 	eliminar_paquete(paquete);
 	return;
 }
@@ -607,12 +606,12 @@ t_datos_proceso* recibir_datos_del_proceso(int fd_kernel){
 	t_list* paquete = recibir_paquete(fd_kernel);
 	t_datos_proceso* datos_proceso = malloc(sizeof(t_datos_proceso)); // Cuando implementen la funcion hagan FREE
 	
-	char *path = list_get(paquete, 0);
-	datos_proceso->path = malloc(strlen(path)); 					//		""""""""""""""""""""""""""""
-	strcpy(datos_proceso->path, path);
+	char *path = (char *)list_get(paquete, 0);
+	datos_proceso->path = malloc(strlen(path)); 					
+	strcpy(datos_proceso->path, path); //strcpy copia TODO, si esta el caracter nulo, tambien
 	free(path);
 
-	int* pid = list_get(paquete,1);
+	int* pid = (int *)list_get(paquete,1);
 	datos_proceso->pid = *pid;
 	free(pid);
 
@@ -623,7 +622,7 @@ t_datos_proceso* recibir_datos_del_proceso(int fd_kernel){
 
 motivo_desalojo recibir_motiv_desalojo(int fd_escucha_interrupt){
 	t_list* paquete = recibir_paquete(fd_escucha_interrupt);
-	motivo_desalojo* motivo = list_get(paquete, 0);
+	motivo_desalojo* motivo =(motivo_desalojo*) list_get(paquete, 0);
 	motivo_desalojo ret = *motivo;
 	free(motivo);
 	list_destroy(paquete);
@@ -720,10 +719,12 @@ int recibir_tamanio_pagina(int fd_conexion_memoria){
 }
 
 
-int recibir_marco (int fd_conexion_memoria){
+int recibir_marco (int fd_conexion_memoria){ //para recibir send_marco
+	int a;
+	recv(fd_conexion_memoria,&a,sizeof(int),MSG_WAITALL);//faltaba recibir primero el codigo de operacion MARCO
 	t_list* paquete = recibir_paquete(fd_conexion_memoria);
 	int marquitos = 0;
-	int* marco = list_get(paquete, 0);
+	int* marco = (int*) list_get(paquete, 0);
 	marquitos = *marco;
 	free(marco);
 	list_destroy(paquete);
