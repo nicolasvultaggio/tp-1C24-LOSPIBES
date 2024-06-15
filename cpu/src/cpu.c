@@ -102,11 +102,11 @@ void fetch (void *arg){
 	}
 }
 
-t_linea_instruccion* prox_instruccion(int pid, uint32_t program_counter){
+t_linea_instruccion * prox_instruccion(int pid, uint32_t program_counter){
 	
 	t_linea_instruccion* instruccion_recibida = malloc(sizeof(t_linea_instruccion));
 	
-	enviar_solicitud_de_instruccion(fd_conexion_memoria, pid, program_counter);
+	//enviar_solicitud_de_instruccion(fd_conexion_memoria, pid, program_counter);
 	
 	int codigo_operacion = recibir_operacion(fd_conexion_memoria, logger_cpu, "Memoria");
 		
@@ -123,65 +123,65 @@ t_linea_instruccion* prox_instruccion(int pid, uint32_t program_counter){
 void decode (t_linea_instruccion* instruccion, pcb* PCB){
 	switch(instruccion->instruccion){
 		case SET:
-			log_info(logger_cpu, "PID: %d - Ejecutando SET %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2);
+			log_info(logger_cpu, "PID: %d - Ejecutando SET %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_set(PCB, instruccion->parametro1, instruccion->parametro2);
 			check_interrupt();
 			break;
 		case MOV_IN:
-			log_info(logger_cpu, "PID: %d - Ejecutando MOV_IN %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2);
+			log_info(logger_cpu, "PID: %d - Ejecutando MOV_IN %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_mov_in(PCB, instruccion->parametro1, instruccion->parametro2);
 			check_interrupt();
 			break;
 		case MOV_OUT:
-			log_info(logger_cpu, "PID: %d - Ejecutando MOV_OUT %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2);
+			log_info(logger_cpu, "PID: %d - Ejecutando MOV_OUT %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_mov_out(PCB, instruccion->parametro1, instruccion->parametro2);
 			check_interrupt();
 			break;
 		case SUM:
-			log_info(logger_cpu, "PID: %d - Ejecutando SUM %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2);
+			log_info(logger_cpu, "PID: %d - Ejecutando SUM %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_sum(PCB, instruccion->parametro1, instruccion->parametro2);
 			check_interrupt();
 			break;
 		case SUB:
-			log_info(logger_cpu, "PID: %d - Ejecutando SUB %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2);
+			log_info(logger_cpu, "PID: %d - Ejecutando SUB %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_sub(PCB, instruccion->parametro1, instruccion->parametro2);
 			check_interrupt();
 			break;
 		case JNZ:
-			log_info(logger_cpu, "PID: %d - Ejecutando JNZ %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2);
+			log_info(logger_cpu, "PID: %d - Ejecutando JNZ %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_jnz(PCB, instruccion->parametro1, instruccion->parametro2);
 			check_interrupt();
 			break;
 		case RESIZE:
-			log_info(logger_cpu, "PID: %d - Ejecutando RESIZE %d %d", PCB->PID, instruccion->parametro1);
+			log_info(logger_cpu, "PID: %d - Ejecutando RESIZE %s", PCB->PID, instruccion->parametro1);
 			ejecutar_resize(instruccion->parametro1);
 			break;
 		case COPY_STRING:
-			log_info(logger_cpu, "PID: %d - Ejecutando COPY_STRING %d %d", PCB->PID, instruccion->parametro1);
+			log_info(logger_cpu, "PID: %d - Ejecutando COPY_STRING %s", PCB->PID, instruccion->parametro1);
 			ejecutar_copy_string(PCB,instruccion->parametro1);
 			break;
 		case WAIT:
-			log_info(logger_cpu, "PID: %d - Ejecutando WAIT %d %d", PCB->PID, instruccion->parametro1);
+			log_info(logger_cpu, "PID: %d - Ejecutando WAIT %s", PCB->PID, instruccion->parametro1);
 			ejecutar_wait(PCB, instruccion->parametro1);
 			check_interrupt();
 			break;
 		case SIGNAL:
-			log_info(logger_cpu, "PID: %d - Ejecutando SIGNAL %d %d", PCB->PID, instruccion->parametro1);
+			log_info(logger_cpu, "PID: %d - Ejecutando SIGNAL %s", PCB->PID, instruccion->parametro1);
 			ejecutar_signal(PCB, instruccion->parametro1);
 			check_interrupt();
 			break;
 		case IO_GEN_SLEEP:
-			log_info(logger_cpu, "PID: %d - Ejecutando IO_GEN_SLEEP %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2);
+			log_info(logger_cpu, "PID: %d - Ejecutando IO_GEN_SLEEP %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_io_gen_sleep(PCB, "IO_GEN_SLEEP", instruccion->parametro1, instruccion->parametro2);
 			check_interrupt();
 			break;
 		case IO_STDIN_READ:
-			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDIN_READ %d %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
+			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDIN_READ %s %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
 			ejecutar_io_stdin_read(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3);
 			check_interrupt();
 			break;
 		case IO_STDOUT_WRITE:
-			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDIN_READ %d %d %d", PCB->PID, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
+			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDIN_READ %s %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
 			ejecutar_io_stdout_write(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3);
 			check_interrupt();
 			break;
@@ -256,12 +256,12 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 	size_t size_reg = size_registro(DATOS);
 	t_list * traducciones = obtener_traducciones(direccion_logica, size_reg);
 	t_paquete * paquete = crear_paquete(LECTURA_MEMORIA); //no uso enviar_pcb porque no me sirve, necesito enviar una lista de cosas
-	agregar_a_paquete(paquete,&size_reg,(int));
+	agregar_a_paquete(paquete,&size_reg,sizeof(int));
 	empaquetar_traducciones(paquete,traducciones);
 	enviar_paquete(paquete,fd_conexion_memoria);
 	eliminar_paquete(paquete);
 	
-	uint_t lectura = recibir_lectura_memoria(); 									
+	uint32_t lectura = recibir_lectura_memoria(); 									
 
 	if(size_reg == 4){
 		setear_registro(PCB, DATOS, 0, lectura);
@@ -273,7 +273,7 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 
 	traduccion = list_get(traducciones,0);
 
-	log_info(logger_cpu, "PID: %d - LEER - Direccion Fisica: %d - Valor: %d ", PCB->pid, traduccion->direccion_fisica, lectura);	
+	log_info(logger_cpu, "PID: %d - LEER - Direccion Fisica: %d - Valor: %d ", PCB->PID, traduccion->direccion_fisica, lectura);	
 	
 	free(traduccion);
 	list_destroy(traducciones);
@@ -309,7 +309,7 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	size_t size_reg = size_registro(DATOS);
 	t_list * traducciones = obtener_traducciones(direccion_logica, size_reg);
 	t_paquete * paquete = crear_paquete(ESCRITURA_MEMORIA);
-	agregar_a_paquete(paquete,&size_reg,(int));
+	agregar_a_paquete(paquete,&size_reg,sizeof(int));
 	agregar_a_paquete(paquete,datos,size_reg);
 	empaquetar_traducciones(paquete,traducciones);
 	enviar_paquete(paquete,fd_conexion_memoria);
@@ -319,7 +319,9 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 
 	traduccion = list_get(traducciones,0);
 
-	log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica: %d - Valor: %d ", PCB->pid, traduccion->direccion_fisica, lectura);	
+	uint32_t lectura = recibir_lectura_memoria(); 	
+
+	log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica: %d - Valor: %d ", PCB->PID, traduccion->direccion_fisica, lectura);	
 	
 	free(traduccion);
 	list_destroy(traducciones);
@@ -340,20 +342,20 @@ void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
 	size_destino = size_registro(destinoregistro);
 
 	if((size_origen == 1) && (size_destino == 1)){
-		* destino8 = capturar_registro(PCB, destinoregistro);
-		* origen8 = capturar_registro(PCB, origenregistro);
+		* destino8 = capturar_registro(destinoregistro);
+		* origen8 = capturar_registro(origenregistro);
 		destino8 = destino8 + origen8;
 	}else if((size_origen == 1) && (size_destino == 4)){
-		* destino32 = capturar_registro(PCB, destinoregistro);
-		* origen8 = capturar_registro(PCB, origenregistro);
+		* destino32 = capturar_registro(destinoregistro);
+		* origen8 = capturar_registro(origenregistro);
 		destino32 = destino32 + (uint32_t) origen8;
 	}else if((size_origen == 4) && (size_destino == 1)){
-		* destino8 = capturar_registro(PCB, destinoregistro);
-		* origen32 = capturar_registro(PCB, origenregistro);
+		* destino8 = capturar_registro(destinoregistro);
+		* origen32 = capturar_registro(origenregistro);
 		destino8 = destino8 + (uint8_t) origen32;
 	}else if((size_origen == 4) && (size_destino == 4)){
-		* destino32 = capturar_registro(PCB, destinoregistro);
-		* origen32 = capturar_registro(PCB, origenregistro);
+		* destino32 = capturar_registro(destinoregistro);
+		* origen32 = capturar_registro(origenregistro);
 		destino32 = destino32 + origen32;
 	}
 
@@ -459,8 +461,6 @@ void ejecutar_copy_string(pcb* PCB, char* tamanio){
 	free(traduccion_DI);
 	list_destroy(traducciones_SI);
 	list_destroy(traducciones_DI);
-
-	//log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica: %d - Valor: %d ", PCB->pid, traduccion->direccion_fisica, datos);	
 
 	return;
 }
@@ -623,7 +623,7 @@ void setear_registro(pcb * PCB, char * registro, uint8_t valor8, uint32_t valor3
 	return;
 }
 
-void * capturar_registro(pcb * PCB, char * registro){
+void * capturar_registro(char * registro){
 	
 	if(strcmp(registro, "AX") == 0){
 		return * PCB->registros.AX;
@@ -651,7 +651,7 @@ void * capturar_registro(pcb * PCB, char * registro){
 
 /* FUNCIONES stdin_read y stout_write */
 
-t_list * obtener_traducciones(uint32_t direccion_logica_i, int tamanio_a_leer ){ //cambio los tipos de datos de DL y tamanio por el siguiente ejemplo
+t_list * obtener_traducciones(uint32_t * direccion_logica_i, int tamanio_a_leer ){ //cambio los tipos de datos de DL y tamanio por el siguiente ejemplo
 	/*
 	SET EAX 30 
 	MOV_IN EBX EAX

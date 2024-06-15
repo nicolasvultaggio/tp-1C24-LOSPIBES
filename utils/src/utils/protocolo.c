@@ -151,8 +151,10 @@ void empaquetar_traducciones(t_paquete* paquete, t_list* lista_de_traducciones){
 	agregar_a_paquete(paquete, &(cantidad_de_traducciones), sizeof(int));//Agregamos la cantidad de traducciones
 	for(int i = 0; i<cantidad_de_traducciones; i++){
 		nodo_lectura_escritura* traduccion = list_get(lista_de_traducciones, i);
-		agregar_a_paquete(paquete, traduccion->direccion_fisica, sizeof(int));
-		agregar_a_paquete(paquete, traduccion->bytes, sizeof(int));
+		agregar_a_paquete(paquete, &traduccion->direccion_fisica, sizeof(int));
+		agregar_a_paquete(paquete, &traduccion->bytes, sizeof(int));
+
+		
 	}
 }
 
@@ -203,7 +205,7 @@ t_list * desempaquetar_traducciones(t_list* paquete, int cantidad){
 		free(_bytes);
 		i++; // para pasar al nombre del siguiente recurso
 
-		list_add(traduccion, traducciones);
+		list_add(traducciones, traduccion);
 	}
 
 	free(cantidad_traducciones);
@@ -409,8 +411,9 @@ void enviar_tamanio_pagina(int fd_cpu_dispatch, int tam_pag){
 
 void enviar_solicitud_marco(int fd_conexion_memoria, int pid, int numero_pagina){
 	t_paquete* paquete = crear_paquete(SOLICITUD_MARCO);
-	int malloc_pid = malloc(sizeof(int));
-	int malloc_num_pag = malloc(sizeof(int));
+	//ES NECESARIO HACER ESTAS VARIABLES COMO PUNTEROS?
+	int * malloc_pid = malloc(sizeof(int));
+	int * malloc_num_pag = malloc(sizeof(int));
 	malloc_pid = pid;
 	malloc_num_pag = numero_pagina;
 	agregar_a_paquete(paquete, malloc_pid, sizeof(int));
@@ -419,6 +422,7 @@ void enviar_solicitud_marco(int fd_conexion_memoria, int pid, int numero_pagina)
 	free(malloc_pid);
 	free(malloc_num_pag);
 	eliminar_paquete(paquete);
+	return;
 }
 
 void enviar_marco (int fd_conexion_memoria, int marco){ //EN EL CASO DE NO ENCONTRAR EL MARCO CORRESPONDIENTE A LOS VALORES PEDIDOS ENVIAR UN -1

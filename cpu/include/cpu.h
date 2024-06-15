@@ -69,11 +69,12 @@ typedef struct{
 	uint32_t* di;
 } t_registros;
 
-typedef struct
-{
+typedef struct {
+
 	int direccion_fisica; // recordar que: la direccion fisica ya incluye al offset
 	int bytes;
-}nodo_lectura_escritura; //para que sirve? es la unidad mas basica de escritura o lectura, no hace falta mas desgloce: leer "bytes" bytes desde la direccion fisica, o escribir "bytes" bytes desde la direccion fisica
+
+} nodo_lectura_escritura; //para que sirve? es la unidad mas basica de escritura o lectura, no hace falta mas desgloce: leer "bytes" bytes desde la direccion fisica, o escribir "bytes" bytes desde la direccion fisica
 
 /* FUNCIONES DE CPU */
 void terminar_programa();
@@ -84,6 +85,7 @@ void fetch ();
 void decode (t_linea_instruccion* instruccion, pcb* PCB);
 t_linea_instruccion* prox_instruccion(int pid, int program_counter);
 void terminar_programa();
+void inicializar_tlb();
 
 /* EXECUTE Ejecutar instrucciones */
 void ejecutar_set(pcb* PCB, char* parametro1, char* parametro2);
@@ -113,9 +115,9 @@ void enviar_recurso_por_wait(char * recurso, int fd_escucha_dispatch, op_code OP
 bool es_entrada_TLB_de_PID(void * un_nodo_tlb );
 size_t size_registro(char * registro);
 void setear_registro(pcb * PCB, char * registro, uint8_t valor8, uint32_t valor32);
-void * capturar_registro(pcb * PCB, char * registro);
+void * capturar_registro(char * registro);
 uint32_t recibir_lectura_memoria();
-
+t_list * obtener_traducciones(uint32_t direccion_logica_i, int tamanio_a_leer );
 
 
 
