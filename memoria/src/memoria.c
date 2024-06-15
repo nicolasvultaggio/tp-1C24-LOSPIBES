@@ -56,14 +56,6 @@ int nro_de_marco_libre(){
 	return -1; //simbolizamos el -1 como que no hay marcos disponibles ----> acá devolver OUT OF MEMORY
 }
 
-int dividir_y_redondear_hacia_arriba(int a,int b){
-	int resultado = a / b ;
-	if (a % b == 0){
-		return resultado;
-	}
-	return ( resultado + 1);
-}
-
 void inicializar_semaforos(){
 	//pthread_mutex_init(&mutex_lista_new, NULL);
 	pthread_mutex_init(&mutex_lista_procesos, NULL);
@@ -225,7 +217,7 @@ static void procesar_clientes(void* void_args){
 			procesar_escritura_en_memoria(cliente_socket);
 			break;
 		case REAJUSTAR_TAMANIO_PROCESO:
-			//de la cpu, aumentar o diminuir
+			procesar_reajuste_de_memoria(cliente_socket);
 			break;
 		case FINALIZAR_PROCESO:
 			finalizar_proceso_a_pedido_de_kernel(cliente_socket); //si o si recibe el pid ahi adentro
@@ -313,14 +305,9 @@ void finalizar_proceso_a_pedido_de_kernel(int un_fd){
 	free(ppid);
 	list_destroy(lista);
 
-	bool es_proceso_con_pid(void * un_proceso){
-		t_proceso * un_proceso_c = (t_proceso *) un_proceso;
-		return un_proceso_c->pid == un_pid;
-	};//no importa que esta en blanco es un tema del editor de texto, el compilador lo va a poder compilar
+	
+	t_proceso * proceso_a_finalizar = buscar_proceso_en_lista(un_pid);
 
-	pthread_mutex_lock(&mutex_lista_procesos);
-	t_proceso * proceso_a_finalizar = list_find(lista_de_procesos, (void*)es_proceso_con_pid);
-	pthread_mutex_unlock(&mutex_lista_procesos);
 
 	pthread_mutex_lock(&mutex_lista_procesos);
 	bool b=list_remove_element(lista_de_procesos,(void*) proceso_a_finalizar); //lo removemos de la lista
@@ -562,4 +549,111 @@ void procesar_lectura_en_memoria(int cliente_socket){
 	eliminar_paquete(paquete);
 	free(buffer);
 }
+
+
+void procesar_reajuste_de_memoria(int un_fd){
+	
+	t_list * lista = recibir_paquete(un_fd);
+	int * p_int = (int*) list_get(lista,0); 
+	int bytes_finales = *p_int;
+	free(p_int);
+	int * p_int2 = (int*) list_get(lista,2); 
+	int un_pid = *p_int2;
+	free(p_int2);
+	list_destroy(lista);
+
+	t_proceso * proceso_reajustado = buscar_proceso_en_lista(un_pid);
+
+	int cantidad_de_paginas_finales = divide_and_ceil(bytes_finales,tam_pagina);
+	int cantidad_de_paginas_actuales = list_size(proceso_reajustado->tabla_de_paginas);
+	
+	int diferencia_de_paginas = cantidad_de_paginas_finales - cantidad_de_paginas_actuales;
+	
+	if(diferencia_de_paginas<0){ //recortar proceso
+		acortar_tamanio_proceso(un_fd,proceso_reajustado,diferencia_de_paginas);
+	}else{
+		switch(diferencia_de_paginas){
+			case 0:
+				enviar_operacion(un_fd,OK);
+				break;
+			default:
+				aumentar_tamanio_proceso(un_fd,proceso_reajustado,diferencia_de_paginas);
+				break;
+		}
+	}
+}
+
+t_proceso *buscar_proceso_en_lista(int un_pid){
+	
+	bool es_proceso_con_pid(void * un_proceso){
+		t_proceso * un_proceso_c = (t_proceso *) un_proceso;
+		return un_proceso_c->pid == un_pid;
+	};//no importa que esta en blanco es un tema del editor de texto, el compilador lo va a poder compilar
+
+	pthread_mutex_lock(&mutex_lista_procesos);
+	t_proceso * proceso_encontrado = list_find(lista_de_procesos, (void*)es_proceso_con_pid);
+	pthread_mutex_unlock(&mutex_lista_procesos);
+
+	return proceso_encontrado;
+
+}
+
+int divide_and_ceil(int numerator, int denominator) { //divide y redondea para arriba
+    // Convertir los enteros a double, dividir y aplicar ceil, luego convertir de vuelta a int
+    return (int)ceil((double)numerator / (double)denominator);
+}
+
+void acortar_tamanio_proceso(int un_fd,t_proceso * proceso_reajustado,int diferencia_de_paginas){
+	int paginas_a_quitar = diferencia_de_paginas * (-1); //diferencia de paginas es negativo bro
+	t_list * tabla_de_paginas = proceso_reajustado->tabla_de_paginas;
+	int ultima_pagina = list_size(tabla_de_paginas)-1; //te dice cual es la ultima pagina(ultimo index), no cantidad de paginas
+
+	for (int i=0;i<paginas_a_quitar;i++){
+		t_pagina * fila = list_remove(tabla_de_paginas,ultima_pagina-i);
+		pthread_mutex_lock(&mutex_frames_array);
+		bitarray_clean_bit(frames_array,(off_t)(fila->marco)); //libero marco
+		pthread_mutex_unlock(&mutex_frames_array);
+		free(fila);
+	}
+
+	enviar_operacion(un_fd,OK);
+	return;
+}
+
+void aumentar_tamanio_proceso(int un_fd,t_proceso * proceso_reajustado,int paginas_a_agregar){
+
+	if(cantidad_de_marcos_disponibles()<paginas_a_agregar){
+		enviar_operacion(un_fd,OUTOFMEMORY);
+	}else{
+		int ultima_pagina=list_size(proceso_reajustado->tabla_de_paginas)-1;
+		int bits_encontrados=0;
+		pthread_mutex_lock(&mutex_frames_array);
+		for (int index=0;index<paginas_a_agregar;index++){
+			if(!bitarray_test_bit(frames_array,(off_t)index)){
+				bits_encontrados++;
+				bitarray_set_bit(frames_array,(off_t)index);
+				t_pagina * nueva_pagina = malloc(sizeof(t_pagina));
+				nueva_pagina->numpag = ultima_pagina+1+bits_encontrados;
+				nueva_pagina->marco = index;
+				list_add(proceso_reajustado->tabla_de_paginas,nueva_pagina);
+			}			
+		}
+		pthread_mutex_unlock(&mutex_frames_array);
+		enviar_operacion(un_fd,OK);
+	}
+	return;
+}
+
+int cantidad_de_marcos_disponibles(){
+	int cantidad_de_marcos_disponibles=0;
+	pthread_mutex_lock(&mutex_frames_array);
+	for (int index=0;index<(cant_marcos-1);index++){
+		if(!bitarray_test_bit(frames_array,(off_t)index))
+			cantidad_de_marcos_disponibles++;
+	}
+	pthread_mutex_unlock(&mutex_frames_array);
+	return cantidad_de_marcos_disponibles;
+}
+
+
 

@@ -401,13 +401,14 @@ void ejecutar_jnz(pcb* PCB, char* registro, char* valor){
 	return;
 }
 
-void ejecutar_resize(pcb* PCB, char* tamanio){
+void ejecutar_resize(char* tamanio){
 	
 	int ajuste_tamanio = atoi(tamanio);
 	t_paquete * paquete = crear_paquete(REAJUSTAR_TAMANIO_PROCESO);
 	agregar_a_paquete(paquete,&ajuste_tamanio,sizeof(int));
+	agregar_a_paquete(paquete,&(PCB->PID),sizeof(int));
 	enviar_paquete(paquete,fd_cpu_dispatch);
-	eliminar_paquete(paquete);
+	
 
 	int codigo_operacion = recibir_operacion(fd_conexion_memoria);
 	switch (codigo_operacion){
@@ -422,6 +423,7 @@ void ejecutar_resize(pcb* PCB, char* tamanio){
 			break;
 	}
 	
+	eliminar_paquete(paquete);
 	return;
 }
 

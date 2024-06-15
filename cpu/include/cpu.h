@@ -88,7 +88,7 @@ void ejecutar_mov_out();
 void ejecutar_sum(pcb* PCB, char* parametro1, char* parametro2);
 void ejecutar_sub(pcb* PCB, char* parametro1, char* parametro2);
 void ejecutar_jnz(pcb* PCB, char* parametro1, char* parametro2);
-void ejecutar_resize();
+void ejecutar_resize(char* tamanio);
 void ejecutar_copy_string();
 void ejecutar_wait(pcb* PCB, char* registro);
 void ejecutar_signal(pcb* PCB, char* registro);
