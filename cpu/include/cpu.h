@@ -122,7 +122,7 @@ void check_interrupt();
 void* interrupcion(void *arg);
 void detectar_motivo_desalojo();
 nodo_tlb * administrar_tlb( int PID, int numero_pagina, int marco);
-int MMU( int direccion_logica);
+int MMU( uint32_t direccion_logica);
 
 int tam_pagina;
 #endif

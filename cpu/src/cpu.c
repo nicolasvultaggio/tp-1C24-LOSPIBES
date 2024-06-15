@@ -257,7 +257,7 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 	t_list * traducciones = obtener_traducciones(direccion_logica, size_reg);
 	t_paquete * paquete = crear_paquete(LECTURA_MEMORIA); //no uso enviar_pcb porque no me sirve, necesito enviar una lista de cosas
 	agregar_a_paquete(paquete,&size_reg,sizeof(int));
-	empaquetar_traducciones(paquete,traducciones);
+	empaquetar_traducciones(paquete,traducciones);//bien sergio carajo lo entendiste
 	enviar_paquete(paquete,fd_conexion_memoria);
 	eliminar_paquete(paquete);
 	
@@ -490,7 +490,7 @@ void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* un
 void ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
 	
 	/*int direccion_logica_i = atoi(registro_direccion);
-	int tamanio_a_leer = atoi(registro_tamanio);
+	int tamanio_a_leer = atoi(registro_tamanio);stdin
 	*/ // son char pero palbras (osea EAX) igual registro tamaño
 
 	uint32_t * direccion_logica_i = capturar_registro(registro_direccion);
@@ -616,25 +616,25 @@ void setear_registro(pcb * PCB, char * registro, uint8_t valor8, uint32_t valor3
 void * capturar_registro(char * registro){
 	
 	if(strcmp(registro, "AX") == 0){
-		return malloc(PCB->registros.AX);
+		return &(PCB->registros.AX);
 	} else if(strcmp(registro, "BX") == 0){
-		return * PCB->registros.BX;
+		return &(PCB->registros.BX);
 	} else if(strcmp(registro, "CX") == 0){
-		return * PCB->registros.CX;
+		return &(PCB->registros.CX);
 	} else if(strcmp(registro, "DX") == 0){
-		return * PCB->registros.DX;
+		return &(PCB->registros.DX);
 	}else if(strcmp(registro, "EAX") == 0){
-		return * PCB->registros.EAX;
+		return &(PCB->registros.EAX);
 	} else if(strcmp(registro, "EBX") == 0){
-		return * PCB->registros.EBX;
+		return &(PCB->registros.EBX);
 	} else if(strcmp(registro, "ECX") == 0){
-		return * PCB->registros.ECX;
+		return &(PCB->registros.ECX);
 	} else if(strcmp(registro, "EDX") == 0){
-		return * PCB->registros.EDX;
+		return &(PCB->registros.EDX);
 	} else if(strcmp(registro, "SI") == 0){
-		return * PCB->registros.SI;
+		return &(PCB->registros.SI);
 	} else if(strcmp(registro, "DI") == 0){
-		return * PCB->registros.DI;
+		return &(PCB->registros.DI);
 	}
 
 }
@@ -672,7 +672,7 @@ t_list * obtener_traducciones(uint32_t * direccion_logica_i, int tamanio_a_leer)
 				traduccion_inicial->direccion_fisica = MMU(direccion_logica_i);
 				traduccion_inicial->bytes = TAM_PAGINA - offset;
 				list_add(lista_traducciones,traduccion_inicial);
-				free(traduccion_inicial);
+				// free(traduccion_inicial); si me liberas este espacio en memoria, pierdo el dato, sería al pedo agregarlo en memoria
 			}else{
 				if(i == pagina_final){
 					nodo_lectura_escritura * traduccion_final = malloc(sizeof(nodo_lectura_escritura));
@@ -680,13 +680,13 @@ t_list * obtener_traducciones(uint32_t * direccion_logica_i, int tamanio_a_leer)
 					traduccion_final->direccion_fisica = MMU(pagina_final*TAM_PAGINA); //se empieza a escribir desde la direccion logica que da inicio a esa pagina
 					traduccion_final->bytes = offset+1; //por cuanto se escribe?
 					list_add(lista_traducciones,traduccion_final);
-					free(traduccion_final);
+					//free(traduccion_final); si me liberas este espacio en memoria, pierdo el dato, sería al pedo agregarlo en memoria
 				}else{
 					nodo_lectura_escritura * traduccion_intermedia = malloc(sizeof(nodo_lectura_escritura));
 					traduccion_intermedia->direccion_fisica = MMU(i*TAM_PAGINA);
 					traduccion_intermedia->bytes = TAM_PAGINA;
 					list_add(lista_traducciones,traduccion_intermedia);
-					free(traduccion_intermedia);
+					//free(traduccion_intermedia); si me liberas este espacio en memoria, pierdo el dato, sería al pedo agregarlo en memoria
 				}
 			}
 		}
@@ -696,7 +696,7 @@ t_list * obtener_traducciones(uint32_t * direccion_logica_i, int tamanio_a_leer)
 		traduccion_inicial->direccion_fisica = MMU(direccion_logica_i);
 		traduccion_inicial->bytes = TAM_PAGINA - offset;
 		list_add(lista_traducciones,traduccion_inicial);
-		free(traduccion_inicial);
+		//free(traduccion_inicial); si me liberas este espacio en memoria, pierdo el dato, sería al pedo agregarlo en memoria
 	}
 
 	return lista_traducciones;
@@ -831,7 +831,7 @@ nodo_tlb * administrar_tlb( int PID, int numero_pagina, int marco){ //a revisar
 
 	agregar_entrada_tlb(translation_lookaside_buffer,nueva_entrada,&mutex_tlb,PID,numero_pagina,marco);
 	
-	free(nueva_entrada);
+	//free(nueva_entrada); si me liberas el espacio en memoria pierdo el dato
 
 	return nueva_entrada;
 }
@@ -843,23 +843,22 @@ void* interrupcion(void *arg) {
 	fd_cpu_interrupt = iniciar_servidor(NULL, puerto_cpu_interrupt, logger_cpu, "CPU");
 	log_info(logger_cpu, "Leavantado el puerto INTERRUPT");
 	fd_escucha_interrupt = esperar_cliente(fd_cpu_interrupt,logger_cpu, "Kernel (interrupt)");
-	
+	interrupcion_actual = malloc(sizeof(motivo_desalojo));
 	while (1) {
 		int codigo_operacion = recibir_operacion(fd_escucha_interrupt, logger_cpu, "Kernel (interrupt)");
 		switch (codigo_operacion) {
 		case INTERR:
 			motivo_desalojo motivo = recibir_motiv_desalojo(fd_escucha_interrupt);
-			interrupcion_actual = malloc(sizeof(motivo_desalojo));
 			pthread_mutex_lock(&mutex_motivo_x_consola);
 			if(!hay_interrupcion_x_consola){
 				if(motivo == EXIT_CONSOLA){
 					hay_interrupcion_x_consola = true;
 					(*interrupcion_actual) = motivo; // motivo = EXIT_CONSOLA
 				}else{
-					(*interrupcion_actual) = motivo; // motivo = EXIT_CONSOLA
+					(*interrupcion_actual) = motivo; // motivo = FIN_QUANTUM
 				}
 			}
-			free(interrupcion_actual);
+			//free(interrupcion_actual); si me liberas el espacio pierdo el dato
 			pthread_mutex_unlock(&mutex_motivo_x_consola);
 			break;
 		case -1:
