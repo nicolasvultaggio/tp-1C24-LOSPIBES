@@ -98,15 +98,15 @@ void fetch (void *arg){
 		log_info(logger_cpu, "PID: %d - FETCH - Program Counter: %d", PCB->PID, PCB->PC);
 		PCB->PC++;
 		decode(proxima_instruccion, PCB);
-
+		free(proxima_instruccion);
 	}
 }
 
 t_linea_instruccion* prox_instruccion(int pid, uint32_t program_counter){
 	
-	t_linea_instruccion* instruccion_recibida = malloc(sizeof(t_linea_instruccion*));
+	t_linea_instruccion* instruccion_recibida = malloc(sizeof(t_linea_instruccion));
 	
-	//enviar_solicitud_de_instruccion(fd_conexion_memoria, pid, program_counter);
+	enviar_solicitud_de_instruccion(fd_conexion_memoria, pid, program_counter);
 	
 	int codigo_operacion = recibir_operacion(fd_conexion_memoria, logger_cpu, "Memoria");
 		
@@ -261,14 +261,24 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 	enviar_paquete(paquete,fd_conexion_memoria);
 	eliminar_paquete(paquete);
 	
-	if(size_reg == 4){
-		setear_registro(PCB, DATOS, 0, recibir_lectura_memoria());
-	}else if(size_reg == 1){
-		setear_registro(PCB, DATOS, (uint8_t) recibir_lectura_memoria(), 0);
-	}
+	uint_t lectura = recibir_lectura_memoria(); 									
 
-	//log_info(logger_cpu, "PID: %d - Accion: LEER - Direccion Fisica: %d - Valor: %d", pcb->pid, direccion_fisica, valor);
+	if(size_reg == 4){
+		setear_registro(PCB, DATOS, 0, lectura);
+	}else if(size_reg == 1){
+		setear_registro(PCB, DATOS, (uint8_t)lectura, 0);
+	}
 	
+	nodo_lectura_escritura * traduccion = malloc(sizeof(nodo_lectura_escritura));
+
+	traduccion = list_get(traducciones,0);
+
+	log_info(logger_cpu, "PID: %d - LEER - Direccion Fisica: %d - Valor: %d ", PCB->pid, traduccion->direccion_fisica, lectura);	
+	
+	free(traduccion);
+	list_destroy(traducciones);
+
+	check_interrupt();
 	return;
 }
 
@@ -305,12 +315,13 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	enviar_paquete(paquete,fd_conexion_memoria);
 	eliminar_paquete(paquete);
 	
-	for (int i = 0; i < list_size(traducciones); i++){
-		
-		log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica: %d - Valor: %d ", PCB->pid, list_get(traducciones,i), datos);	
+	nodo_lectura_escritura * traduccion = malloc(sizeof(nodo_lectura_escritura));
+
+	traduccion = list_get(traducciones,0);
+
+	log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica: %d - Valor: %d ", PCB->pid, traduccion->direccion_fisica, lectura);	
 	
-	}
-	
+	free(traduccion);
 	list_destroy(traducciones);
 
 	check_interrupt();
@@ -426,16 +437,30 @@ void ejecutar_resize(pcb* PCB, char* tamanio){
 
 void ejecutar_copy_string(pcb* PCB, char* tamanio){
 
-	uint32_t reg_SI = PCB->registros.SI;
-	uint32_t reg_DI = PCB->registros.DI;
-	int copy_tamanio = atoi (tamanio);
+	int copy_tamanio = atoi(tamanio);
+
+	t_list * traducciones_SI = obtener_traducciones(PCB->registros.SI, copy_tamanio);
+	t_list * traducciones_DI = obtener_traducciones(PCB->registros.DI, 1);
 
 	t_paquete * paquete = crear_paquete(COPY);
-	agregar_a_paquete(paquete,&reg_SI,sizeof(uint32_t));
-	agregar_a_paquete(paquete,&reg_DI,sizeof(uint32_t));
+	empaquetar_traducciones(paquete,traducciones_SI);
+	empaquetar_traducciones(paquete,traducciones_DI);
 	agregar_a_paquete(paquete,&copy_tamanio,sizeof(int));
 	enviar_paquete(paquete,fd_conexion_memoria);
 	eliminar_paquete(paquete);
+
+	uint_t lectura = recibir_lectura_memoria(); 
+
+	nodo_lectura_escritura * traduccion_DI = malloc(sizeof(nodo_lectura_escritura));
+	traduccion_DI = list_get(traduccion_DI,0);
+
+	log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica DI: %d - Valor: %d ", PCB->pid, traduccion_DI->direccion_fisica, lectura);	
+
+	free(traduccion_DI);
+	list_destroy(traducciones_SI);
+	list_destroy(traducciones_DI);
+
+	//log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica: %d - Valor: %d ", PCB->pid, traduccion->direccion_fisica, datos);	
 
 	return;
 }
@@ -652,6 +677,7 @@ t_list * obtener_traducciones(uint32_t direccion_logica_i, int tamanio_a_leer ){
 				traduccion_inicial->direccion_fisica = MMU(direccion_logica_i);
 				traduccion_inicial->bytes = TAM_PAGINA - offset;
 				list_add(lista_traducciones,traduccion_inicial);
+				free(traduccion_inicial);
 			}else{
 				if(i == pagina_final){
 					nodo_lectura_escritura * traduccion_final = malloc(sizeof(nodo_lectura_escritura));
@@ -659,11 +685,13 @@ t_list * obtener_traducciones(uint32_t direccion_logica_i, int tamanio_a_leer ){
 					traduccion_final->direccion_fisica = MMU(pagina_final*TAM_PAGINA); //se empieza a escribir desde la direccion logica que da inicio a esa pagina
 					traduccion_final->bytes = offset+1; //por cuanto se escribe?
 					list_add(lista_traducciones,traduccion_final);
+					free(traduccion_final);
 				}else{
 					nodo_lectura_escritura * traduccion_intermedia = malloc(sizeof(nodo_lectura_escritura));
 					traduccion_intermedia->direccion_fisica = MMU(i*TAM_PAGINA);
 					traduccion_intermedia->bytes = TAM_PAGINA;
 					list_add(lista_traducciones,traduccion_intermedia);
+					free(traduccion_intermedia);
 				}
 			}
 		}
@@ -673,7 +701,9 @@ t_list * obtener_traducciones(uint32_t direccion_logica_i, int tamanio_a_leer ){
 		traduccion_inicial->direccion_fisica = MMU(direccion_logica_i);
 		traduccion_inicial->bytes = TAM_PAGINA - offset;
 		list_add(lista_traducciones,traduccion_inicial);
+		free(traduccion_inicial);
 	}
+
 	return lista_traducciones;
 	//importante, esta funcion no libera la lista
 }
@@ -806,6 +836,8 @@ nodo_tlb * administrar_tlb( int PID, int numero_pagina, int marco){ //a revisar
 
 	agregar_entrada_tlb(translation_lookaside_buffer,nueva_entrada,&mutex_tlb,PID,numero_pagina,marco);
 	
+	free(nueva_entrada);
+
 	return nueva_entrada;
 }
 
@@ -832,6 +864,7 @@ void* interrupcion(void *arg) {
 					(*interrupcion_actual) = motivo; // motivo = EXIT_CONSOLA
 				}
 			}
+			free(interrupcion_actual);
 			pthread_mutex_unlock(&mutex_motivo_x_consola);
 			break;
 		case -1:
