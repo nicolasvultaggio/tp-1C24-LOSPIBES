@@ -78,6 +78,8 @@ void empaquetar_pcb(t_paquete* paquete, pcb* un_PCB, motivo_desalojo MOTIVO){
 
 	un_PCB->motivo = MOTIVO ; //faltaba esto no? si no el motivo se pasa al pedo por parametro
 
+	//Sergio: no seria mas facil hacer un agregar_a_paquete(paquete,un_PCB,sizeof(pcb)); y listo? creo que como esta ahora seria un uso de memoria inecesario
+
 	agregar_a_paquete(paquete, &(un_PCB->PID), sizeof(int));
 	agregar_a_paquete(paquete, &(un_PCB->PC), sizeof(uint32_t));
 	agregar_a_paquete(paquete, &(un_PCB->QUANTUM), sizeof(int));
@@ -489,8 +491,11 @@ int recibir_operacion(int socket_cliente, t_log * unLogger , char * elQueManda)
 
 pcb* recibir_pcb(int socket){
 
+	 
 	t_list* paquete = recibir_paquete(socket);
 	pcb* PCB = malloc(sizeof(PCB));
+
+	//Sergio: y apartir de lo de enviar pcb aca seria mas facil PCB = list_get(paquete,0)  y listo
 
 	uint32_t* pid = list_get(paquete, 0);
 	PCB->PID = *pid;

@@ -333,29 +333,24 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
 	
 	size_t size_origen = 0, size_destino = 0;
-
-	uint8_t destino8, origen8;
-		
-	uint32_t destino32, origen32;
+	
+	uint8_t destino = malloc()
+//UINT32 foo = some_uint8;
+	uint8_t * destino8 = capturar_registro(destinoregistro);
+	uint8_t * origen8 = capturar_registro(origenregistro);
+	uint32_t * destino32 = capturar_registro(destinoregistro);
+	uint32_t * origen32 = capturar_registro(origenregistro);
 
 	size_origen = size_registro(origenregistro);
 	size_destino = size_registro(destinoregistro);
 
 	if((size_origen == 1) && (size_destino == 1)){
-		* destino8 = capturar_registro(destinoregistro);
-		* origen8 = capturar_registro(origenregistro);
 		destino8 = destino8 + origen8;
 	}else if((size_origen == 1) && (size_destino == 4)){
-		* destino32 = capturar_registro(destinoregistro);
-		* origen8 = capturar_registro(origenregistro);
-		destino32 = destino32 + (uint32_t) origen8;
+		destino32 = destino32 + origen8;
 	}else if((size_origen == 4) && (size_destino == 1)){
-		* destino8 = capturar_registro(destinoregistro);
-		* origen32 = capturar_registro(origenregistro);
-		destino8 = destino8 + (uint8_t) origen32;
+		destino8 = destino8 + origen32;
 	}else if((size_origen == 4) && (size_destino == 4)){
-		* destino32 = capturar_registro(destinoregistro);
-		* origen32 = capturar_registro(origenregistro);
 		destino32 = destino32 + origen32;
 	}
 
@@ -368,33 +363,26 @@ void ejecutar_sub(pcb* PCB, char* destinoregistro, char* origenregistro){
 
 	size_t size_origen = 0, size_destino = 0;
 
-	uint8_t destino8, origen8;
-		
-	uint32_t destino32, origen32;
+	uint8_t * destino8 = capturar_registro(destinoregistro);
+	uint8_t * origen8 = capturar_registro(origenregistro);
+	uint32_t * destino32 = capturar_registro(destinoregistro);
+	uint32_t * origen32 = capturar_registro(origenregistro);
 
 	size_origen = size_registro(origenregistro);
 	size_destino = size_registro(destinoregistro);
 
 	if((size_origen == 1) && (size_destino == 1)){
-		* destino8 = capturar_registro(PCB, destinoregistro);
-		* origen8 = capturar_registro(PCB, origenregistro);
 		destino8 = destino8 - origen8;
 	}else if((size_origen == 1) && (size_destino == 4)){
-		* destino32 = capturar_registro(PCB, destinoregistro);
-		* origen8 = capturar_registro(PCB, origenregistro);
-		destino32 = destino32 - (uint32_t) origen8;
+		destino32 = destino32 - origen8;
 	}else if((size_origen == 4) && (size_destino == 1)){
-		* destino8 = capturar_registro(PCB, destinoregistro);
-		* origen32 = capturar_registro(PCB, origenregistro);
-		destino8 = destino8 - (uint8_t) origen32;
+		destino8 = destino8 - origen32;
 	}else if((size_origen == 4) && (size_destino == 4)){
-		* destino32 = capturar_registro(PCB, destinoregistro);
-		* origen32 = capturar_registro(PCB, origenregistro);
 		destino32 = destino32 - origen32;
 	}
 
-	es_exit =false;  //siempre modificar
-	es_bloqueante=false; //modificar siempre que es_exit = false
+	es_exit = false;  
+	es_bloqueante = false; 
 	return;
 }
 
@@ -626,7 +614,7 @@ void setear_registro(pcb * PCB, char * registro, uint8_t valor8, uint32_t valor3
 void * capturar_registro(char * registro){
 	
 	if(strcmp(registro, "AX") == 0){
-		return * PCB->registros.AX;
+		return malloc(PCB->registros.AX);
 	} else if(strcmp(registro, "BX") == 0){
 		return * PCB->registros.BX;
 	} else if(strcmp(registro, "CX") == 0){
@@ -649,9 +637,14 @@ void * capturar_registro(char * registro){
 
 }
 
+uint32_t convU8toU32(uint8_t *number) {
+  uint32_t result = *number;
+  return *result;
+}
+
 /* FUNCIONES stdin_read y stout_write */
 
-t_list * obtener_traducciones(uint32_t * direccion_logica_i, int tamanio_a_leer ){ //cambio los tipos de datos de DL y tamanio por el siguiente ejemplo
+t_list * obtener_traducciones(uint32_t * direccion_logica_i, int tamanio_a_leer){ //cambio los tipos de datos de DL y tamanio por el siguiente ejemplo
 	/*
 	SET EAX 30 
 	MOV_IN EBX EAX

@@ -229,14 +229,13 @@ typedef struct
 }nodo_lectura_escritura; //para que sirve? es la unidad mas basica de escritura o lectura, no hace falta mas desgloce: leer "bytes" bytes desde la direccion fisica, o escribir "bytes" bytes desde la direccion fisica
 
 /* ESTRUCTURA PARA EL ENVIO DE DIRECCIONES FISICAS DE cpu AL kernell*/
-typedef struct{
-	int  pid;
-	size_t direccion_fisica;
-	//dependiendo el tamaño de las paginas y del tamaño de los registros
-	//CPU al hacer la respectiva traduccion  deba enviar hasta 3 direcciones fisicas
-	// caso: DL 29 y que el tamaño de marcos sea de 2 y los registros de 4 byte
-	// floor(29/2) = 14, entonces se debe enviar 14,15,16
-}direccion_fisica;
+
+typedef struct {
+
+	int direccion_fisica; // recordar que: la direccion fisica ya incluye al offset
+	int bytes;
+
+} nodo_lectura_escritura; //para que sirve? es la unidad mas basica de escritura o lectura, no hace falta mas desgloce: leer "bytes" bytes desde la direccion fisica, o escribir "bytes" bytes desde la direccion fisica
 
 void empaquetar_pcb(t_paquete* paquete, pcb* PCB,motivo_desalojo MOTIVO);
 int fin_pcb(t_list* lista);
