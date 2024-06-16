@@ -505,12 +505,12 @@ void procesar_escritura_en_memoria(int cliente_socket){ //esto es para las inter
 	
 	//recibimos la data
 	t_list * lista = recibir_paquete(cliente_socket);
-	int * p_direccion_fisica = (int *) list_get(lista,0);
-	size_t direccion_fisica = (size_t) *p_direccion_fisica;
+	uint32_t * p_direccion_fisica = (uint32_t *) list_get(lista,0);
+	uint32_t direccion_fisica =  *p_direccion_fisica;
 	free(p_direccion_fisica);
 
-	int * p_bytes = (int *) list_get(lista,1);
-	size_t bytes = (size_t) *p_bytes;
+	uint32_t * p_bytes = (uint32_t *) list_get(lista,1);
+	uint32_t bytes = *p_bytes;
 	free(p_bytes);
 
 	char *string_a_escribir = (char *) list_get(lista,2);
@@ -532,11 +532,11 @@ void procesar_lectura_en_memoria(int cliente_socket){
 	//terminar durante ingles
 	t_list * lista = recibir_paquete(cliente_socket);
 
-	int * p_bytes = (int *) list_get(lista,0);
-	size_t bytes = (size_t)  *p_bytes;
+	uint32_t * p_bytes = (uint32_t *) list_get(lista,0);
+	uint32_t bytes = *p_bytes;
 	free(p_bytes);
-	int * p_direccion_fisica = (int *) list_get(lista,1);
-	size_t direccion_fisica = (size_t) *p_direccion_fisica;
+	uint32_t * p_direccion_fisica = (uint32_t *) list_get(lista,1);
+	uint32_t direccion_fisica = *p_direccion_fisica;
 	free(p_direccion_fisica);
 	list_destroy(lista);
 
@@ -554,17 +554,17 @@ void procesar_lectura_en_memoria(int cliente_socket){
 void procesar_reajuste_de_memoria(int un_fd){
 	
 	t_list * lista = recibir_paquete(un_fd);
-	int * p_int = (int*) list_get(lista,0); 
-	int bytes_finales = *p_int;
+	uint32_t * p_uint32_t = (uint32_t*) list_get(lista,0); 
+	uint32_t bytes_finales = *p_uint32_t;
+	free(p_uint32_t);
+	int * p_int = (int*) list_get(lista,2); 
+	int un_pid = *p_int;
 	free(p_int);
-	int * p_int2 = (int*) list_get(lista,2); 
-	int un_pid = *p_int2;
-	free(p_int2);
 	list_destroy(lista);
 
 	t_proceso * proceso_reajustado = buscar_proceso_en_lista(un_pid);
 
-	int cantidad_de_paginas_finales = divide_and_ceil(bytes_finales,tam_pagina);
+	int cantidad_de_paginas_finales = divide_and_ceil(((int) bytes_finales),tam_pagina);
 	int cantidad_de_paginas_actuales = list_size(proceso_reajustado->tabla_de_paginas);
 	
 	int diferencia_de_paginas = cantidad_de_paginas_finales - cantidad_de_paginas_actuales;

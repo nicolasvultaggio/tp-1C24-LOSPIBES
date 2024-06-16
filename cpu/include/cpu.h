@@ -111,7 +111,7 @@ size_t size_registro(char * registro);
 void setear_registro(pcb * PCB, char * registro, uint8_t valor8, uint32_t valor32);
 void * capturar_registro(char * registro);
 uint32_t recibir_lectura_memoria();
-t_list * obtener_traducciones(uint32_t * direccion_logica_i, int tamanio_a_leer );
+t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_leer );
 
 int solicitar_frame_memory(int numero_pagina);
 
@@ -122,7 +122,7 @@ void check_interrupt();
 void* interrupcion(void *arg);
 void detectar_motivo_desalojo();
 nodo_tlb * administrar_tlb( int PID, int numero_pagina, int marco);
-int MMU( uint32_t direccion_logica);
+uint32_t MMU( uint32_t direccion_logica);
 
 int tam_pagina;
 #endif

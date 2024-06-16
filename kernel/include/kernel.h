@@ -27,7 +27,7 @@ typedef struct {
 
 typedef struct{
     pcb * el_pcb;
-    int tamanio_lectura;
+    uint32_t tamanio_lectura;
     t_list * traducciones;
 }pcb_block_STDIN ;
 
@@ -35,7 +35,7 @@ typedef struct{
 //no importa que sean exactamente iguales me importa que sean de un tipo distinto
 typedef struct{
     pcb * el_pcb;
-    int tamanio_escritura;
+    uint32_t tamanio_escritura;
     t_list * traducciones;
 }pcb_block_STDOUT;
 

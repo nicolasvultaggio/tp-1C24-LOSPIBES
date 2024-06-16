@@ -205,8 +205,8 @@ void atender_GENERICA(){// IO_GEN_SLEEP (Interfaz, Unidades de trabajo), no hace
 void atender_STDIN(){
 
     t_list * lista = recibir_paquete(fd_conexion_kernel);
-    int * tamanio_escritura = list_get(lista,0);
-    int tam = *tamanio_escritura;
+    uint32_t * tamanio_escritura = list_get(lista,0);
+    uint32_t tam = *tamanio_escritura;
     free(tamanio_escritura);
     t_list * traducciones = desempaquetar_traducciones(lista,1);
     list_destroy(lista);
@@ -227,7 +227,7 @@ void atender_STDIN(){
         }
     }while(!booleano); 
     
-    int offset=0;
+    uint32_t offset=0;
     int cantidad_de_traducciones = list_size(traducciones);
     bool operacion_exitosa=true;
 
@@ -241,8 +241,8 @@ void atender_STDIN(){
         
         //empaquetamos datos y los enviamos a memoria
         t_paquete * paquete2 = crear_paquete(ESCRITURA_MEMORIA);
-        agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(int));
-        agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(int));//para que sepa cuantos bytes escribir
+        agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(uint32_t));
+        agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(uint32_t));//para que sepa cuantos bytes escribir
         agregar_a_paquete(paquete2,string_a_enviar,traduccion->bytes);
         enviar_paquete(paquete2,fd_conexion_memoria);
         eliminar_paquete(paquete2);
@@ -273,15 +273,15 @@ void atender_STDIN(){
 void atender_STDOUT(){
      
     t_list * lista = recibir_paquete(fd_conexion_kernel);
-    int * tamanio_lectura = list_get(lista,0);
-    int tam = *tamanio_lectura;
+    uint32_t * tamanio_lectura = list_get(lista,0);
+    uint32_t tam = *tamanio_lectura;
     free(tamanio_lectura);
     t_list * traducciones = desempaquetar_traducciones(lista,1);
     list_destroy(lista);
 
     char buffer[tam+1];
     
-    int offset=0;
+    uint32_t offset=0;
     int cantidad_de_traducciones = list_size(traducciones);
     bool operacion_exitosa=true;
 
@@ -292,8 +292,8 @@ void atender_STDOUT(){
         
         //empaquetamos datos y los enviamos a memoria
         t_paquete * paquete2 = crear_paquete(LECTURA_MEMORIA);
-        agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(int));
-        agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(int));
+        agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(uint32_t));
+        agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(uint32_t));
         enviar_paquete(paquete2,fd_conexion_memoria);
         eliminar_paquete(paquete2);
 

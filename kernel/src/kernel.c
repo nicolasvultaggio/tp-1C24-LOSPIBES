@@ -639,7 +639,7 @@ void atender_vuelta_dispatch(){
                     case SOLICITAR_STDIN:
                         char * instruccion_STDIN= list_get(lista,final_pcb+1);
                         char * nombre_interfaz_STDIN= list_get(lista,final_pcb+2);
-                        int * tamanio_a_leer = list_get(lista,final_pcb+3);
+                        uint32_t * tamanio_a_leer = list_get(lista,final_pcb+3);
                         t_list *traducciones_STDIN = desempaquetar_traducciones(lista,final_pcb+4);
                         element_interfaz * interfaz_STDIN = interfaz_existe_y_esta_conectada(nombre_interfaz_STDIN);
                          if(interfaz_STDIN){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
@@ -649,8 +649,8 @@ void atender_vuelta_dispatch(){
                                 list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
                                 pcb_block_STDIN * info_de_bloqueo = malloc(sizeof(pcb_block_STDIN));//falta liberar
                                 info_de_bloqueo->el_pcb = pcb_actualizado ;//simplemente otra referencia 
-                                info_de_bloqueo->tamanio_lectura=tamanio_a_leer;
-                                info_de_bloqueo->traducciones = *traducciones_STDIN;
+                                info_de_bloqueo->tamanio_lectura=*tamanio_a_leer;
+                                info_de_bloqueo->traducciones = traducciones_STDIN;
                                 free(tamanio_a_leer);//libero porque ya guarde su valor
                                 cambiar_estado(pcb_actualizado,BLOCKED);
                                 push_con_mutex(interfaz_STDIN->cola_bloqueados,info_de_bloqueo,interfaz_STDIN->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
@@ -674,7 +674,7 @@ void atender_vuelta_dispatch(){
                     case SOLICITAR_STDOUT:
                         char * instruccion_STDOUT = list_get(lista,final_pcb+1); 
                         char * nombre_interfaz_STDOUT=list_get(lista,final_pcb+2); 
-                        int * tamanio_de_escritura = list_get(lista,final_pcb+3); 
+                        uint32_t * tamanio_de_escritura = list_get(lista,final_pcb+3); 
                         t_list *traducciones_STDOUT = desempaquetar_traducciones(lista,final_pcb+4);                        
                         element_interfaz * interfaz_STDOUT = interfaz_existe_y_esta_conectada(nombre_interfaz_STDOUT);
                          if(interfaz_STDOUT){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
@@ -685,7 +685,7 @@ void atender_vuelta_dispatch(){
                                 pcb_block_STDOUT* info_de_bloqueo = malloc(sizeof(pcb_block_STDOUT));//falta liberar
                                 info_de_bloqueo->el_pcb = pcb_actualizado ; //simplemente otra referencia 
                                 info_de_bloqueo->traducciones=traducciones_STDOUT;
-                                info_de_bloqueo->traducciones=*tamanio_de_escritura;
+                                info_de_bloqueo->tamanio_escritura= *tamanio_de_escritura;
                                 free(tamanio_de_escritura); //libero porque ya guarde su valor
                                 cambiar_estado(pcb_actualizado,BLOCKED);
                                 push_con_mutex(interfaz_STDOUT->cola_bloqueados,info_de_bloqueo,interfaz_STDOUT->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
@@ -1125,7 +1125,7 @@ void atender_interfaz_STDIN(element_interfaz * datos_interfaz){
             pcb_block_STDIN * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,datos_interfaz->mutex_procesos_blocked);//agarra el primero de la cola de blocked 
             //contenido del paquete de instruccion
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
-            agregar_a_paquete(paquete,proceso_a_atender->tamanio_lectura,sizeof(int));
+            agregar_a_paquete(paquete,proceso_a_atender->tamanio_lectura,sizeof(uint32_t));
             empaquetar_traducciones(paquete,proceso_a_atender->traducciones);
             if (enviar_paquete_io(paquete,*(datos_interfaz->fd_conexion_con_interfaz)) == (-1) ){ //devuelve -1 la interfaz había cerrado la conexion
                 push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
@@ -1155,7 +1155,7 @@ void atender_interfaz_STDOUT(element_interfaz * datos_interfaz){
             pcb_block_STDOUT * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,datos_interfaz->mutex_procesos_blocked);//agarra el primero de la cola de blocked 
             //contenido del paquete de instruccion
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
-            agregar_a_paquete(paquete,proceso_a_atender->tamanio_escritura,sizeof(int));
+            agregar_a_paquete(paquete,proceso_a_atender->tamanio_escritura,sizeof(uint32_t));
             empaquetar_traducciones(paquete,proceso_a_atender->traducciones);
             if (enviar_paquete_io(paquete,*(datos_interfaz->fd_conexion_con_interfaz)) == (-1) ){ //devuelve -1 la interfaz había cerrado la conexion
                 push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz

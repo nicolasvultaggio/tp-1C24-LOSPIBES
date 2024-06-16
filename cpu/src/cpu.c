@@ -403,9 +403,9 @@ void ejecutar_jnz(pcb* PCB, char* registro, char* valor){
 
 void ejecutar_resize(char* tamanio){
 	
-	int ajuste_tamanio = atoi(tamanio);
+	uint32_t ajuste_tamanio = (uint32_t) atoi(tamanio);
 	t_paquete * paquete = crear_paquete(REAJUSTAR_TAMANIO_PROCESO);
-	agregar_a_paquete(paquete,&ajuste_tamanio,sizeof(int));
+	agregar_a_paquete(paquete,&ajuste_tamanio,sizeof(uint32_t));
 	agregar_a_paquete(paquete,&(PCB->PID),sizeof(int));
 	enviar_paquete(paquete,fd_cpu_dispatch);
 	
@@ -493,8 +493,12 @@ void ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, c
 	int tamanio_a_leer = atoi(registro_tamanio);stdin
 	*/ // son char pero palbras (osea EAX) igual registro tamaño
 
-	uint32_t * direccion_logica_i = capturar_registro(registro_direccion);
-	size_t tamanio_a_leer = size_registro(registro_tamanio);
+	uint32_t * p_direccion_logica_i = 	(uint32_t *) capturar_registro(registro_direccion);
+	//size_t tamanio_a_leer = size_registro(registro_tamanio); no, no es esto lo que tiene que hacer
+	uint32_t * p_tamanio_a_leer = (uint32_t *) capturar_registro(registro_tamanio);
+
+	uint32_t direccion_logica_i=*p_direccion_logica_i;
+	uint32_t tamanio_a_leer=*p_tamanio_a_leer;
 
 	t_list * traducciones = obtener_traducciones(direccion_logica_i,tamanio_a_leer);
 	
@@ -504,7 +508,7 @@ void ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, c
 
 	agregar_a_paquete(paquete,"IO_STDIN_READ",strlen("IO_STDIN_READ")+1);
 	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
-	agregar_a_paquete(paquete,&tamanio_a_leer,sizeof(int));
+	agregar_a_paquete(paquete,&tamanio_a_leer,sizeof(uint32_t));
 	empaquetar_traducciones(paquete,traducciones);
 	enviar_paquete(paquete,fd_cpu_dispatch);
 	sem_post(&sem_recibir_pcb);
@@ -521,17 +525,21 @@ void ejecutar_io_stdout_write(char * nombre_interfaz, char * registro_direccion,
 	int tamanio_a_leer = atoi(registro_tamanio);
 	*/ // son char pero palbras (osea EAX) igual registro tamaño
 
-	uint32_t * direccion_logica_i = capturar_registro(registro_direccion);
-	size_t tamanio_a_escribir = size_registro(registro_tamanio);
+	uint32_t * p_direccion_logica_i = 	(uint32_t *) capturar_registro(registro_direccion);
+	//size_t tamanio_a_leer = size_registro(registro_tamanio); no, no es esto lo que tiene que hacer
+	uint32_t * p_tamanio_a_leer = (uint32_t *) capturar_registro(registro_tamanio);
+
+	uint32_t direccion_logica_i=*p_direccion_logica_i;
+	uint32_t tamanio_a_escribir=*p_tamanio_a_leer;
 
 	t_list * traducciones = obtener_traducciones(direccion_logica_i,tamanio_a_escribir);
-	
+
 	t_paquete * paquete = crear_paquete(INTERFAZ); //no uso enviar_pcb porque no me sirve, necesito enviar una lista de cosas
 	empaquetar_pcb(paquete, PCB, SOLICITAR_STDIN);
 	empaquetar_recursos(paquete, PCB->recursos_asignados);
 	agregar_a_paquete(paquete,"IO_STDOUT_WRITE",strlen("IO_STDOUT_WRITE")+1);
 	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
-	agregar_a_paquete(paquete,&tamanio_a_escribir,sizeof(int));
+	agregar_a_paquete(paquete,&tamanio_a_escribir,sizeof(uint32_t));
 	empaquetar_traducciones(paquete,traducciones);
 	enviar_paquete(paquete,fd_cpu_dispatch);
 	sem_post(&sem_recibir_pcb);
@@ -646,7 +654,7 @@ uint32_t convU8toU32(uint8_t *number) {
 
 /* FUNCIONES stdin_read y stout_write */
 
-t_list * obtener_traducciones(uint32_t * direccion_logica_i, int tamanio_a_leer){ //cambio los tipos de datos de DL y tamanio por el siguiente ejemplo
+t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_leer){ //cambio los tipos de datos de DL y tamanio por el siguiente ejemplo
 	/*
 	SET EAX 30 
 	MOV_IN EBX EAX
@@ -656,10 +664,10 @@ t_list * obtener_traducciones(uint32_t * direccion_logica_i, int tamanio_a_leer)
     Entonces tengo que leer desde el byte 30 hasta el 33
 	*/
 	/* EAX es uint32_t y el tamanio a leer es sizeof(EBX) y EBX es sizeof*/
-	int direccion_logica_f = direccion_logica_i + tamanio_a_leer -1;
+	uint32_t direccion_logica_f = direccion_logica_i + tamanio_a_leer -1;
 
-	int pagina_inicial = direccion_logica_i / tam_pagina;
-	int pagina_final = direccion_logica_f / tam_pagina;
+	int pagina_inicial = (int) direccion_logica_i /  tam_pagina;
+	int pagina_final = (int) direccion_logica_f /  tam_pagina;
 
 	// int numero_de_paginas_a_traducir = pagina_final - pagina_inicial + 1;
     t_list * lista_traducciones = list_create();
@@ -668,23 +676,23 @@ t_list * obtener_traducciones(uint32_t * direccion_logica_i, int tamanio_a_leer)
 		for (int i = pagina_inicial; i<=pagina_final;i++){
 			if(i == pagina_inicial){
 				nodo_lectura_escritura * traduccion_inicial = malloc(sizeof(nodo_lectura_escritura));
-				int offset = direccion_logica_i % TAM_PAGINA; 
+				uint32_t offset = direccion_logica_i % ((uint32_t) TAM_PAGINA); 
 				traduccion_inicial->direccion_fisica = MMU(direccion_logica_i);
-				traduccion_inicial->bytes = TAM_PAGINA - offset;
+				traduccion_inicial->bytes = (uint32_t)TAM_PAGINA - offset;
 				list_add(lista_traducciones,traduccion_inicial);
 				// free(traduccion_inicial); si me liberas este espacio en memoria, pierdo el dato, sería al pedo agregarlo en memoria
 			}else{
 				if(i == pagina_final){
 					nodo_lectura_escritura * traduccion_final = malloc(sizeof(nodo_lectura_escritura));
-					int offset = direccion_logica_f % TAM_PAGINA; //ultimo byte que se escribe en ese marco
-					traduccion_final->direccion_fisica = MMU(pagina_final*TAM_PAGINA); //se empieza a escribir desde la direccion logica que da inicio a esa pagina
+					uint32_t offset = direccion_logica_f % ((uint32_t)TAM_PAGINA); //ultimo byte que se escribe en ese marco
+					traduccion_final->direccion_fisica = MMU( (uint32_t)(pagina_final*TAM_PAGINA)); //se empieza a escribir desde la direccion logica que da inicio a esa pagina
 					traduccion_final->bytes = offset+1; //por cuanto se escribe?
 					list_add(lista_traducciones,traduccion_final);
 					//free(traduccion_final); si me liberas este espacio en memoria, pierdo el dato, sería al pedo agregarlo en memoria
 				}else{
 					nodo_lectura_escritura * traduccion_intermedia = malloc(sizeof(nodo_lectura_escritura));
-					traduccion_intermedia->direccion_fisica = MMU(i*TAM_PAGINA);
-					traduccion_intermedia->bytes = TAM_PAGINA;
+					traduccion_intermedia->direccion_fisica = MMU((uint32_t)(i*TAM_PAGINA));
+					traduccion_intermedia->bytes = (uint32_t) TAM_PAGINA;
 					list_add(lista_traducciones,traduccion_intermedia);
 					//free(traduccion_intermedia); si me liberas este espacio en memoria, pierdo el dato, sería al pedo agregarlo en memoria
 				}
@@ -692,9 +700,9 @@ t_list * obtener_traducciones(uint32_t * direccion_logica_i, int tamanio_a_leer)
 		}
 	}else{
 		nodo_lectura_escritura * traduccion_inicial = malloc(sizeof(nodo_lectura_escritura));
-		int offset = direccion_logica_i % TAM_PAGINA; 
+		uint32_t offset = direccion_logica_i % ((uint32_t) TAM_PAGINA); 
 		traduccion_inicial->direccion_fisica = MMU(direccion_logica_i);
-		traduccion_inicial->bytes = TAM_PAGINA - offset;
+		traduccion_inicial->bytes = ((uint32_t)TAM_PAGINA) - offset;
 		list_add(lista_traducciones,traduccion_inicial);
 		//free(traduccion_inicial); si me liberas este espacio en memoria, pierdo el dato, sería al pedo agregarlo en memoria
 	}
@@ -718,10 +726,10 @@ uint32_t recibir_lectura_memoria(){
 
 /* TRADUCCION LOGICA A FISICA */
 
-int MMU(uint32_t direccion_logica){
+uint32_t MMU(uint32_t direccion_logica){
 	int marco;
-	int numero_pagina = floor(direccion_logica / TAM_PAGINA); //ya de por si redondea para abajo, posiblemente floor sea innecesario
-	int desplazamiento =  direccion_logica % TAM_PAGINA;
+	int numero_pagina = floor((int)direccion_logica / TAM_PAGINA); //ya de por si redondea para abajo, posiblemente floor sea innecesario
+	uint32_t desplazamiento =  direccion_logica % (uint32_t)TAM_PAGINA;
 
 	switch (MAX_TLB_ENTRY)
 	{
@@ -735,7 +743,7 @@ int MMU(uint32_t direccion_logica){
 
 	log_info(logger_cpu,  "PID: %d - OBTENER MARCO - Página: %d - Marco: %d", PCB->pid, numero_pagina, marco); //log ob
 
-	return marco *TAM_PAGINA + desplazamiento;
+	return ((uint32_t) marco) *((uint32_t)TAM_PAGINA) + desplazamiento; //devuelve ya la direccion fisica
 }
 
 void inicializar_tlb(){

@@ -79,7 +79,7 @@ void empaquetar_pcb(t_paquete* paquete, pcb* un_PCB, motivo_desalojo MOTIVO){
 	un_PCB->motivo = MOTIVO ; //faltaba esto no? si no el motivo se pasa al pedo por parametro
 
 	//Sergio: no seria mas facil hacer un agregar_a_paquete(paquete,un_PCB,sizeof(pcb)); y listo? creo que como esta ahora seria un uso de memoria inecesario
-
+	//Nico:no, no podes, por serializacion, repasate la guia, no podes enviar todo un struct de una, tenes que agregar todos los datos uno x uno
 	agregar_a_paquete(paquete, &(un_PCB->PID), sizeof(int));
 	agregar_a_paquete(paquete, &(un_PCB->PC), sizeof(uint32_t));
 	agregar_a_paquete(paquete, &(un_PCB->QUANTUM), sizeof(int));
@@ -149,14 +149,12 @@ void empaquetar_recursos(t_paquete* paquete, t_list* lista_de_recursos){
 	}
 }
 void empaquetar_traducciones(t_paquete* paquete, t_list* lista_de_traducciones){
-	int cantidad_de_traducciones = list_size(lista_de_traducciones);
+	int cantidad_de_traducciones =  list_size(lista_de_traducciones);
 	agregar_a_paquete(paquete, &(cantidad_de_traducciones), sizeof(int));//Agregamos la cantidad de traducciones
 	for(int i = 0; i<cantidad_de_traducciones; i++){
 		nodo_lectura_escritura* traduccion = list_get(lista_de_traducciones, i);
-		agregar_a_paquete(paquete, &traduccion->direccion_fisica, sizeof(int));
-		agregar_a_paquete(paquete, &traduccion->bytes, sizeof(int));
-
-		
+		agregar_a_paquete(paquete, &(traduccion->direccion_fisica), sizeof(uint32_t));
+		agregar_a_paquete(paquete, &(traduccion->bytes), sizeof(uint32_t));
 	}
 }
 
@@ -190,19 +188,19 @@ t_list* desempaquetar_recursos(t_list* paquete, int cantidad){
 	free(cantidad_recursos);
 	return recursos;
 }
-t_list * desempaquetar_traducciones(t_list* paquete, int cantidad){
+t_list * desempaquetar_traducciones(t_list* paquete, int index_cantidad){
 	t_list* traducciones = list_create();
-	int* cantidad_traducciones = list_get(paquete, cantidad);
-	int i = cantidad + 1; 
+	int* cantidad_traducciones = list_get(paquete, index_cantidad);
+	int i = index_cantidad + 1; 
 
-	while(i - cantidad - 1 < (*cantidad_traducciones* 2)){
+	while(i - index_cantidad - 1 < (*cantidad_traducciones* 2)){
 		nodo_lectura_escritura* traduccion = malloc(sizeof(nodo_lectura_escritura));
-		int* una_direccion_fisica = (int*) list_get(paquete, i); //nombe del primero
+		uint32_t* una_direccion_fisica = (uint32_t*) list_get(paquete, i); //nombe del primero
 		traduccion->direccion_fisica = *una_direccion_fisica;
 		free(una_direccion_fisica);
 		i++;
 
-		int* _bytes = (int*) list_get(paquete, i);
+		uint32_t* _bytes = (uint32_t*) list_get(paquete, i);
 		traduccion->bytes = *_bytes;
 		free(_bytes);
 		i++; // para pasar al nombre del siguiente recurso
