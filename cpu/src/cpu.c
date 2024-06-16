@@ -252,25 +252,45 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 
 	*/
 
-	uint32_t * direccion_logica = capturar_registro(DIRECCION);
+	uint32_t * direccion_logica = (uint32_t *)capturar_registro(DIRECCION);
 	size_t size_reg = size_registro(DATOS);
-	t_list * traducciones = obtener_traducciones(direccion_logica, size_reg);
-	t_paquete * paquete = crear_paquete(LECTURA_MEMORIA); //no uso enviar_pcb porque no me sirve, necesito enviar una lista de cosas
-	agregar_a_paquete(paquete,&size_reg,sizeof(int));
-	empaquetar_traducciones(paquete,traducciones);//bien sergio carajo lo entendiste
-	enviar_paquete(paquete,fd_conexion_memoria);
-	eliminar_paquete(paquete);
-	
-	uint32_t lectura = recibir_lectura_memoria(); 									
+	uint32_t uint32_t_size_reg = (uint32_t) size_reg;
+	t_list * traducciones = obtener_traducciones(*direccion_logica, uint32_t_size_reg);
+	//ojo estas traducciones no se empaquetan, las otras si porque necesitabamos mandarlas al kernel
+	int cantidad_de_traducciones = list_size(traducciones);
 
-	if(size_reg == 4){
-		setear_registro(PCB, DATOS, 0, lectura);
-	}else if(size_reg == 1){
-		setear_registro(PCB, DATOS, (uint8_t)lectura, 0);
+	//
+	for (int i=0;i<cantidad_de_traducciones;i++){
+		nodo_lectura_escritura * traduccion = list_get(traducciones,i);
+        
+        //empaquetamos datos y los enviamos a memoria
+        t_paquete * paquete2 = crear_paquete(LECTURA_MEMORIA);
+        agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(uint32_t));
+        agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(uint32_t));
+        enviar_paquete(paquete2,fd_conexion_memoria);
+        eliminar_paquete(paquete2);
+
+        //recibimos respuesta de memoria, escribimos en el buffer
+        int cod_op;
+	    recv(fd_conexion_memoria, &cod_op, sizeof(int), MSG_WAITALL); //al pedo, esta nada mas para que podamos recibir el codop antes del paquete
+        t_list * lista = recibir_paquete(fd_conexion_memoria);
+        char * string_leido = (char*) list_get(lista,0);
+        list_destroy(lista);
+
+        memcpy((PUNTERO A REGISTRO DEL PCB),string_leido,(size_t)traduccion->bytes);//detalle: no guardamos caracter nulo
+    
+        offset+=traduccion->bytes;
 	}
 	
-	nodo_lectura_escritura * traduccion = malloc(sizeof(nodo_lectura_escritura));
+	//uint32_t lectura = recibir_lectura_memoria(); 									
 
+	//if(size_reg == 4){
+	//	setear_registro(PCB, DATOS, 0, lectura);
+	//}else if(size_reg == 1){
+	//	setear_registro(PCB, DATOS, (uint8_t)lectura, 0);
+	//}
+	//¿cual es la gracia de las direccion logicas? que lo que copia no esta todo de una, entcones por eso parte por cada traduccion de una sola pagina y lee
+	// PREGUNTAR EN EL FORO: CUANDO HACEMOS MOV_IN Y MOV_OUT, PUEDEN ESTAR EN DISTINTAS PAGINAS? DADO ESE CASO NO HARÍA FALTA EMPAQUETAR
 	traduccion = list_get(traducciones,0);
 
 	log_info(logger_cpu, "PID: %d - LEER - Direccion Fisica: %d - Valor: %d ", PCB->PID, traduccion->direccion_fisica, lectura);	
@@ -304,10 +324,10 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 
 	
 
-	uint32_t * direccion_logica = capturar_registro(DIRECCION);
-	uint32_t * datos = capturar_registro(DATOS);
+	uint32_t * direccion_logica = (uint32_t *)capturar_registro(DIRECCION);
+	uint32_t * datos = (uint32_t *)capturar_registro(DATOS);
 	size_t size_reg = size_registro(DATOS);
-	t_list * traducciones = obtener_traducciones(direccion_logica, size_reg);
+	t_list * traducciones = obtener_traducciones(*direccion_logica, (uint32_t *)size_reg);
 	t_paquete * paquete = crear_paquete(ESCRITURA_MEMORIA);
 	agregar_a_paquete(paquete,&size_reg,sizeof(int));
 	agregar_a_paquete(paquete,datos,size_reg);
