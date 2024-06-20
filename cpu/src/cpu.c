@@ -251,15 +251,19 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 	se guardo en memoria como 4 bytes, algo así:
 
 	*/
+	//uint32_t son 4 bytes
+	//uint8_t son 1 byte
 
-	uint32_t * direccion_logica = (uint32_t *)capturar_registro(DIRECCION);
+	void * direccion_logica = capturar_registro(DIRECCION);
 	size_t size_reg = size_registro(DATOS);
 	uint32_t uint32_t_size_reg = (uint32_t) size_reg;
-	t_list * traducciones = obtener_traducciones(*direccion_logica, uint32_t_size_reg);
-	//ojo estas traducciones no se empaquetan, las otras si porque necesitabamos mandarlas al kernel
+	t_list * traducciones = obtener_traducciones( (uint32_t) (*direccion_logica), uint32_t_size_reg);
+	//ojo estas traducciones no se empaquetan, las otras si porque necesitabamos mandarlas al kernel, estas mandamos una por una a memoria
 	int cantidad_de_traducciones = list_size(traducciones);
 
-	//
+	void * buffer = malloc(size_reg); // 1 byte si es un uint8_t, 4 si es un uint32_t
+	size_t offset =0;
+
 	for (int i=0;i<cantidad_de_traducciones;i++){
 		nodo_lectura_escritura * traduccion = list_get(traducciones,i);
         
@@ -274,31 +278,33 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
         int cod_op;
 	    recv(fd_conexion_memoria, &cod_op, sizeof(int), MSG_WAITALL); //al pedo, esta nada mas para que podamos recibir el codop antes del paquete
         t_list * lista = recibir_paquete(fd_conexion_memoria);
-        char * string_leido = (char*) list_get(lista,0);
+        void * bytes_leidos = list_get(lista,0);
         list_destroy(lista);
 
-        memcpy((PUNTERO A REGISTRO DEL PCB),string_leido,(size_t)traduccion->bytes);//detalle: no guardamos caracter nulo
-    
-        offset+=traduccion->bytes;
+		log_info(logger_cpu, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s", PCB->PID, traduccion->direccion_fisica, bytes_leidos);
+		
+        memcpy((buffer+offset),bytes_leidos,(size_t)traduccion->bytes);//estaríamos guardando caracteres
+
+        offset+=(size_t) (traduccion->bytes);
+
+		traduccion_destroyer(traduccion);
 	}
 	
-	//uint32_t lectura = recibir_lectura_memoria(); 									
 
-	//if(size_reg == 4){
-	//	setear_registro(PCB, DATOS, 0, lectura);
-	//}else if(size_reg == 1){
-	//	setear_registro(PCB, DATOS, (uint8_t)lectura, 0);
-	//}
-	//¿cual es la gracia de las direccion logicas? que lo que copia no esta todo de una, entcones por eso parte por cada traduccion de una sola pagina y lee
-	// PREGUNTAR EN EL FORO: CUANDO HACEMOS MOV_IN Y MOV_OUT, PUEDEN ESTAR EN DISTINTAS PAGINAS? DADO ESE CASO NO HARÍA FALTA EMPAQUETAR
-	traduccion = list_get(traducciones,0);
-
-	log_info(logger_cpu, "PID: %d - LEER - Direccion Fisica: %d - Valor: %d ", PCB->PID, traduccion->direccion_fisica, lectura);	
+	void * p_regsitro_datos = capturar_registro(DATOS);
 	
-	free(traduccion);
+	memcpy(p_regsitro_datos, buffer, size_reg);
+
+	
+	free(buffer);
+
 	list_destroy(traducciones);
 
+	es_exit=false; //siempre mofificar
+	es_bloqueante=false; //modificar siempre que es_exit = false
+
 	check_interrupt();
+
 	return;
 }
 
@@ -322,29 +328,53 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 
 	*/
 
+	void * direccion_logica = capturar_registro(DIRECCION);
+	size_t size_reg = size_registro(DATOS);//TAMANIO A ESCRIBIR
+	void * dato_a_escribir = capturar_registro(DATOS); //LITERLAMENTE LO QUE VAMOS A ESCRIBIR
+	uint32_t uint32_t_size_reg = (uint32_t) size_reg;
+	t_list * traducciones = obtener_traducciones( (uint32_t) (*direccion_logica), uint32_t_size_reg);
+	//ojo estas traducciones no se empaquetan, las otras si porque necesitabamos mandarlas al kernel, estas mandamos una por una a memoria
 	
-
-	uint32_t * direccion_logica = (uint32_t *)capturar_registro(DIRECCION);
-	uint32_t * datos = (uint32_t *)capturar_registro(DATOS);
-	size_t size_reg = size_registro(DATOS);
-	t_list * traducciones = obtener_traducciones(*direccion_logica, (uint32_t *)size_reg);
-	t_paquete * paquete = crear_paquete(ESCRITURA_MEMORIA);
-	agregar_a_paquete(paquete,&size_reg,sizeof(int));
-	agregar_a_paquete(paquete,datos,size_reg);
-	empaquetar_traducciones(paquete,traducciones);
-	enviar_paquete(paquete,fd_conexion_memoria);
-	eliminar_paquete(paquete);
+	int cantidad_de_traducciones = list_size(traducciones);
+	size_t offset=0;
 	
-	nodo_lectura_escritura * traduccion = malloc(sizeof(nodo_lectura_escritura));
+	for (int i=0;i<cantidad_de_traducciones;i++){
 
-	traduccion = list_get(traducciones,0);
+		nodo_lectura_escritura * traduccion = list_get(traducciones,i);
 
-	uint32_t lectura = recibir_lectura_memoria(); 	
+		t_paquete * paquete = crear_paquete(ESCRITURA_MEMORIA);
+		agregar_a_paquete(paquete,&(traduccion->direccion_fisica),sizeof(uint32_t));//direccion fisica
+		agregar_a_paquete(paquete,&(traduccion->bytes),sizeof(uint32_t));//cantidad de bytes a escribir
+		agregar_a_paquete(paquete,dato_a_escribir+offset,(int)(traduccion->bytes));//dato a escribir
+		enviar_paquete(paquete,fd_conexion_memoria);
+		eliminar_paquete(paquete);
 
-	log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica: %d - Valor: %d ", PCB->PID, traduccion->direccion_fisica, lectura);	
+		int cod_op;
+	    recv(fd_conexion_memoria, &cod_op, sizeof(int), MSG_WAITALL); //al pedo, esta nada mas para que podamos recibir el codop antes del paquete
+        t_list * lista = recibir_paquete(fd_conexion_memoria);
+        void * rta_memoria = list_get(lista,0);
+        list_destroy(lista);
+
+		char escrito[((int)(traduccion->bytes))+1];
+		memcpy(escrito,dato_a_escribir+offset,(size_t)(traduccion->bytes));
+		escrito[((int)(traduccion->bytes))+1]='\0';
+		if(!strcmp((char*)rta_memoria,"Ok")){
+			log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica: %d - Valor: %s", PCB->PID, traduccion->direccion_fisica, escrito);
+		}else{
+			log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica: %d - Valor: %s : FALLO", PCB->PID, traduccion->direccion_fisica, escrito);
+		}
+		
+		free(rta_memoria);
+
+		offset+=(size_t)(traduccion->bytes);
+
+		traduccion_destroyer(traduccion);
+	}
 	
-	free(traduccion);
 	list_destroy(traducciones);
+	
+	es_exit=false; //siempre mofificar
+	es_bloqueante=false; //modificar siempre que es_exit = false
 
 	check_interrupt();
 
@@ -354,8 +384,8 @@ void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
 	
 	size_t size_origen = 0, size_destino = 0;
 	
-	uint8_t destino = malloc()
-//UINT32 foo = some_uint8;
+	uint8_t destino = malloc();
+
 	uint8_t * destino8 = capturar_registro(destinoregistro);
 	uint8_t * origen8 = capturar_registro(origenregistro);
 	uint32_t * destino32 = capturar_registro(destinoregistro);
