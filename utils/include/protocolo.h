@@ -145,8 +145,9 @@ typedef enum {
 	/* MEMORIA - CPU / CPU - MEMORIA */	
 	SOLICITAR_INSTRUCCION,
 	PROXIMA_INSTRUCCION,
-	LECTURA_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
-	ESCRITURA_MEMORIA, //esta puede ser tambien de alguna interfaz, pero debe hacer lo mismo que si es de memoria
+	LECTURA_MEMORIA, //STDOUT
+	ESCRITURA_MEMORIA, //STDIN
+	ESCRIBIR_REGISTRO,
 	REAJUSTAR_TAMANIO_PROCESO,//puede ser reducir o ampliaR
 	SIZE_PAGE, // memoria envia el tamaño de la pagina cargada en su respectivo config
 	SOLICITUD_MARCO,
