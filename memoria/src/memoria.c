@@ -513,13 +513,13 @@ void procesar_escritura_en_memoria(int cliente_socket){ //esto es para las inter
 	uint32_t bytes = *p_bytes;
 	free(p_bytes);
 
-	char *string_a_escribir = (char *) list_get(lista,2);
+	void *a_escribir = list_get(lista,2);
 
 	list_destroy(lista);
 
-	memcpy(memoriaPrincipal+direccion_fisica,string_a_escribir,bytes); //OJO, nosotros no escribimos en memoria con caracter nulo, por eso no es strlen(string_a_escribir)+1
+	memcpy(memoriaPrincipal+direccion_fisica,a_escribir,bytes); //OJO, nosotros no escribimos en memoria con caracter nulo, por eso no es strlen(string_a_escribir)+1
 
-	free(string_a_escribir);
+	free(a_escribir);
 
 	char * rta = "Ok";
 	t_paquete * paquete = crear_paquete(ESCRITURA_MEMORIA); //podría ser cualquier codigo de operacion, no me importa
