@@ -181,24 +181,29 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			check_interrupt();
 			break;
 		case IO_STDOUT_WRITE:
-			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDIN_READ %s %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
+			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDOUT_WRITE %s %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
 			ejecutar_io_stdout_write(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3);
 			check_interrupt();
 			break;
 		case IO_FS_CREATE:
-			//ejecutar_io_fs_create();
+			ejecutar_io_fs_create(instruccion->parametro1,instruccion->parametro2);
+			check_interrupt();
 			break;
 		case IO_FS_DELETE:
-			//ejecutar_io_fs_delete();
+			ejecutar_io_fs_delete(instruccion->parametro1,instruccion->parametro2);
+			check_interrupt();
 			break;
 		case IO_FS_TRUNCATE:
-			//ejecutar_io_fs_truncate();
+			ejecutar_io_fs_truncate(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3);
+			check_interrupt();
 			break;
 		case IO_FS_WRITE:
-			//ejecutar_io_fs_write();
+			ejecutar_io_fs_write(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3,instruccion->parametro4,instruccion->parametro5);
+			check_interrupt();
 			break;
 		case IO_FS_READ:
-			//ejecutar_io_fs_read();
+			ejecutar_io_fs_read(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3,instruccion->parametro4,instruccion->parametro5);
+			check_interrupt();
 			break;
 		case EXIT:
 			ejecutar_exit(PCB);
@@ -378,6 +383,129 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 
 	check_interrupt();
 
+}
+
+void ejecutar_io_fs_create(char * nombre_interfaz,char * nombre_archivo){
+	t_paquete * paquete = crear_paquete(INTERFAZ); 
+	empaquetar_pcb(paquete, PCB, FS_CREATE);
+	empaquetar_recursos(paquete, PCB->recursos_asignados);
+	
+	agregar_a_paquete(paquete,"IO_FS_CREATE",strlen("IO_FS_CREATE")+1);//OJO ACA NO ESTA BIEN: para mas adelante: en realidad debería empaquetarse literalmente el recibido por el pseudocodigo, si no no podríamos detectar errores
+	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
+	agregar_a_paquete(paquete,nombre_archivo,strlen(nombre_archivo)+1);
+	
+	enviar_paquete(paquete,fd_cpu_dispatch);
+	sem_post(&sem_recibir_pcb);
+	eliminar_paquete(paquete);
+	es_exit=false;  //siempre modificar
+	es_bloqueante=true; //modificar siempre que es_exit = false
+	es_wait = false;  //modificar si se pone a bloqueante = true
+	es_resize = false; //modificar si se pone bloqueante = true
+
+}
+void ejecutar_io_fs_delete(char * nombre_interfaz,char * nombre_archivo){
+	t_paquete * paquete = crear_paquete(INTERFAZ); 
+	empaquetar_pcb(paquete, PCB, FS_DELETE);
+	empaquetar_recursos(paquete, PCB->recursos_asignados);
+	
+	agregar_a_paquete(paquete,"IO_FS_DELETE",strlen("IO_FS_DELETE")+1);//OJO ACA NO ESTA BIEN: para mas adelante: en realidad debería empaquetarse literalmente el recibido por el pseudocodigo, si no no podríamos detectar errores
+	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
+	agregar_a_paquete(paquete,nombre_archivo,strlen(nombre_archivo)+1);
+
+	enviar_paquete(paquete,fd_cpu_dispatch);
+	sem_post(&sem_recibir_pcb);
+	eliminar_paquete(paquete);
+	es_exit=false;  //siempre modificar
+	es_bloqueante=true; //modificar siempre que es_exit = false
+	es_wait = false;  //modificar si se pone a bloqueante = true
+	es_resize = false; //modificar si se pone bloqueante = true
+}
+
+void ejecutar_io_fs_truncate(char * nombre_interfaz,char * nombre_archivo,char * registro_tamanio){
+	
+	uint32_t * p_tamanio =(uint32_t*) capturar_registro(registro_tamanio);
+	uint32_t tamanio = *p_tamanio;
+	
+	t_paquete * paquete = crear_paquete(INTERFAZ); 
+	empaquetar_pcb(paquete, PCB, FS_TRUNCATE);
+	empaquetar_recursos(paquete, PCB->recursos_asignados);
+
+	agregar_a_paquete(paquete,"IO_FS_TRUNCATE",strlen("IO_FS_TRUNCATE")+1);//OJO ACA NO ESTA BIEN: para mas adelante: en realidad debería empaquetarse literalmente el recibido por el pseudocodigo, si no no podríamos detectar errores
+	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
+	agregar_a_paquete(paquete,nombre_archivo,strlen(nombre_archivo)+1);
+	agregar_a_paquete(paquete,&tamanio,sizeof(uint32_t));
+
+	enviar_paquete(paquete,fd_cpu_dispatch);
+	sem_post(&sem_recibir_pcb);
+	eliminar_paquete(paquete);
+	es_exit=false;  //siempre modificar
+	es_bloqueante=true; //modificar siempre que es_exit = false
+	es_wait = false;  //modificar si se pone a bloqueante = true
+	es_resize = false; //modificar si se pone bloqueante = true
+
+}
+void ejecutar_io_fs_write(char * nombre_interfaz,char * nombre_archivo,char * registro_direccion,char * registro_tamanio , char * registro_puntero_archivo){
+	//leer memoria y escribir en archivo
+	uint32_t * p_direccion_logica_i = 	(uint32_t *) capturar_registro(registro_direccion);
+	uint32_t * p_tamanio_a_leer = (uint32_t *) capturar_registro(registro_tamanio);
+	uint32_t * p_puntero_archivo = (uint32_t *) capturar_registro(registro_tamanio);
+	uint32_t direccion_logica_i=*p_direccion_logica_i;
+	uint32_t tamanio_a_leer=*p_tamanio_a_leer;
+	uint32_t puntero_archivo=*p_puntero_archivo;
+
+	t_list * traducciones = obtener_traducciones(direccion_logica_i,tamanio_a_leer);
+
+	t_paquete * paquete = crear_paquete(INTERFAZ); 
+	empaquetar_pcb(paquete, PCB, FS_WRITE);
+	empaquetar_recursos(paquete, PCB->recursos_asignados);
+	
+	agregar_a_paquete(paquete,"IO_FS_WRITE",strlen("IO_FS_WRITE")+1);//OJO ACA NO ESTA BIEN: para mas adelante: en realidad debería empaquetarse literalmente el recibido por el pseudocodigo, si no no podríamos detectar errores
+	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
+	agregar_a_paquete(paquete,nombre_archivo,strlen(nombre_archivo)+1);
+	agregar_a_paquete(paquete,&tamanio_a_leer,sizeof(uint32_t));
+	agregar_a_paquete(paquete,&puntero_archivo,sizeof(uint32_t));
+	
+	empaquetar_traducciones(paquete,traducciones);
+	
+	enviar_paquete(paquete,fd_cpu_dispatch);
+	sem_post(&sem_recibir_pcb);
+	eliminar_paquete(paquete);
+	es_exit=false;  //siempre modificar
+	es_bloqueante=true; //modificar siempre que es_exit = false
+	es_wait = false;  //modificar si se pone a bloqueante = true
+	es_resize = false; //modificar si se pone bloqueante = true
+	
+}
+void ejecutar_io_fs_read(char * nombre_interfaz,char * nombre_archivo,char * registro_direccion,char * registro_tamanio , char * registro_puntero_archivo){
+	//leer archivo y escribir en memoria
+	uint32_t * p_direccion_logica_i = 	(uint32_t *) capturar_registro(registro_direccion);
+	uint32_t * p_tamanio_a_escribir = (uint32_t *) capturar_registro(registro_tamanio);
+	uint32_t * p_puntero_archivo = (uint32_t *) capturar_registro(registro_tamanio);
+	uint32_t direccion_logica_i=*p_direccion_logica_i;
+	uint32_t tamanio_a_escribir=*p_tamanio_a_escribir;
+	uint32_t puntero_archivo=*p_puntero_archivo;
+
+	t_list * traducciones = obtener_traducciones(direccion_logica_i,tamanio_a_escribir);
+
+	t_paquete * paquete = crear_paquete(INTERFAZ); 
+	empaquetar_pcb(paquete, PCB, FS_READ);
+	empaquetar_recursos(paquete, PCB->recursos_asignados);
+	
+	agregar_a_paquete(paquete,"IO_FS_READ",strlen("IO_FS_READ")+1);//OJO ACA NO ESTA BIEN: para mas adelante: en realidad debería empaquetarse literalmente el recibido por el pseudocodigo, si no no podríamos detectar errores
+	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
+	agregar_a_paquete(paquete,nombre_archivo,strlen(nombre_archivo)+1);
+	agregar_a_paquete(paquete,&tamanio_a_escribir,sizeof(uint32_t));
+	agregar_a_paquete(paquete,&puntero_archivo,sizeof(uint32_t));
+	
+	empaquetar_traducciones(paquete,traducciones);
+	
+	enviar_paquete(paquete,fd_cpu_dispatch);
+	sem_post(&sem_recibir_pcb);
+	eliminar_paquete(paquete);
+	es_exit=false;  //siempre modificar
+	es_bloqueante=true; //modificar siempre que es_exit = false
+	es_wait = false;  //modificar si se pone a bloqueante = true
+	es_resize = false; //modificar si se pone bloqueante = true
 }
 
 void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
