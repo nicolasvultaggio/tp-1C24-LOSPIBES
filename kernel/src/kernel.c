@@ -706,6 +706,191 @@ void atender_vuelta_dispatch(){
                         sem_post(&sem_procesos_exit);
                         //OJO, tiene que haber un hilo del planificador a largo plazo que a los procesos de exit se encargue de pedirle a la memoria que libere las estructuras
                         break;
+                        case FS_CREATE: //le agrego a todo _fc al final para que compile bien
+                            char * instruccion_fc = list_get(lista,final_pcb+1); //devuelve el puntero al dato del elemento de la lista original 
+                            char * nombre_interfaz_fc=list_get(lista,final_pcb+2); //devuelve el puntero al dato del elemento de la lista original
+                            char * nombre_archivo_fc=list_get(lista,final_pcb+3); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
+                            element_interfaz * interfaz__fc = interfaz_existe_y_esta_conectada(nombre_interfaz_fc); //puntero al elemento original de la lista, ojo
+                            if(interfaz__fc){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
+                                if(dialFS_acepta_instruccion(interfaz__fc)){
+                                    free(instruccion_fc); //ya no me importa la instruccion, (ya se cual es)
+                                    free(nombre_interfaz_fc); //ya no me importa el nombre
+                                    //debemos mantener la referencia a tiempo_a_esperar
+                                    list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
+                                    pcb_block_dialFS* info_de_bloqueo = malloc(sizeof(pcb_block_dialFS));//falta liberar
+                                    info_de_bloqueo->el_pcb = pcb_actualizado ; //simplemente otra referencia 
+                                    info_de_bloqueo->instruccion_fs = FS_CREATE;
+                                    info_de_bloqueo->tamanio_lectura_o_escritura_memoria=0; //no importa
+                                    info_de_bloqueo->traducciones=NULL; //no importa
+                                    info_de_bloqueo->parametros= list_create();
+                                    list_add(info_de_bloqueo->parametros,nombre_archivo_fc);
+                                    cambiar_estado(pcb_actualizado,BLOCKED);
+                                    push_con_mutex(nombre_interfaz_fc->cola_bloqueados,info_de_bloqueo,interfaz_fc->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                    push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block); 
+                                    sem_post(interfaz_fc->sem_procesos_blocked); 
+                                    break;
+                                }
+                            }
+                            //finalizar proceso
+                            free(instruccion_fc); 
+                            free(nombre_interfaz_fc); 
+                            free(nombre_archivo_fc); 
+                            list_destroy(lista); 
+                            cambiar_estado(pcb_actualizado,EXITT);
+                            pcb_actualizado->motivo = INTERFAZ_INVALIDA; // Asi notificamos porq verga finalizo
+                            push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+                            sem_post(&sem_procesos_exit);
+                            break;
+                        case FS_DELETE:
+                            char * instruccion_fsd = list_get(lista,final_pcb+1); //devuelve el puntero al dato del elemento de la lista original 
+                            char * nombre_interfaz_fsd=list_get(lista,final_pcb+2); //devuelve el puntero al dato del elemento de la lista original
+                            char * nombre_archivo_fsd=list_get(lista,final_pcb+3); // falta liberar si es necesario, o va a haber que meter la info en un dato pcb_block, 
+                            element_interfaz * interfaz_fsd = interfaz_existe_y_esta_conectada(nombre_interfaz_fsd); //puntero al elemento original de la lista, ojo
+                            if(interfaz_fsd){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
+                                if(dialFS_acepta_instruccion(interfaz_fsd)){
+                                    free(instruccion_fsd); //ya no me importa la instruccion, (ya se cual es)
+                                    free(nombre_interfaz_fsd); //ya no me importa el nombre
+                                    //debemos mantener la referencia a tiempo_a_esperar
+                                    list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
+                                    pcb_block_dialFS* info_de_bloqueo = malloc(sizeof(pcb_block_dialFS));//falta liberar
+                                    info_de_bloqueo->el_pcb = pcb_actualizado ; //simplemente otra referencia 
+                                    info_de_bloqueo->instruccion_fs = FS_DELETE;
+                                    info_de_bloqueo->tamanio_lectura_o_escritura_memoria=0; //no importa
+                                    info_de_bloqueo->traducciones=NULL; //no importa
+                                    info_de_bloqueo->parametros= list_create();
+                                    list_add(info_de_bloqueo->parametros,nombre_archivo_fsd);
+                                    cambiar_estado(pcb_actualizado,BLOCKED);
+                                    push_con_mutex(nombre_interfaz_fsd->cola_bloqueados,info_de_bloqueo,interfaz_fsd->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                    push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block); 
+                                    sem_post(interfaz_fsd->sem_procesos_blocked); 
+                                    break;
+                                }
+                            }
+                            //finalizar proceso
+                            free(instruccion_fsd); 
+                            free(nombre_interfaz_fsd); 
+                            free(nombre_archivo_fsd); 
+                            list_destroy(lista); 
+                            cambiar_estado(pcb_actualizado,EXITT);
+                            pcb_actualizado->motivo = INTERFAZ_INVALIDA; // Asi notificamos porq verga finalizo
+                            push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+                            sem_post(&sem_procesos_exit);
+                            break;
+                        case FS_TRUNCATE:
+                            char * instruccion_fst = list_get(lista,final_pcb+1); 
+                            char * nombre_interfaz_fst=list_get(lista,final_pcb+2); 
+                            char * nombre_archivo_fst=list_get(lista,final_pcb+3);
+                            uint32_t * tamanio_fst = list_get(lista,final_pcb+4); 
+                            element_interfaz * interfaz_fst = interfaz_existe_y_esta_conectada(nombre_interfaz_fst); //puntero al elemento original de la lista, ojo
+                            if(interfaz_fst){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
+                                if(dialFS_acepta_instruccion(interfaz_fst)){
+                                    free(instruccion_fst); //ya no me importa la instruccion, (ya se cual es)
+                                    free(nombre_interfaz_fst); //ya no me importa el nombre
+                                    list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
+                                    pcb_block_dialFS* info_de_bloqueo = malloc(sizeof(pcb_block_dialFS));//falta liberar
+                                    info_de_bloqueo->el_pcb = pcb_actualizado ; //simplemente otra referencia 
+                                    info_de_bloqueo->instruccion_fs = FS_TRUNCATE;
+                                    info_de_bloqueo->tamanio_lectura_o_escritura_memoria=0; //no importa
+                                    info_de_bloqueo->traducciones=NULL; //no importa
+                                    info_de_bloqueo->parametros= list_create();
+                                    list_add(info_de_bloqueo->parametros,nombre_archivo_fst);
+                                    list_add(info_de_bloqueo->parametros,tamanio_fst);
+                                    cambiar_estado(pcb_actualizado,BLOCKED);
+                                    push_con_mutex(nombre_interfaz_fst->cola_bloqueados,info_de_bloqueo,interfaz_fst->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                    push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block); 
+                                    sem_post(interfaz_fst->sem_procesos_blocked); 
+                                    break;
+                                }
+                            }
+                            //finalizar proceso
+                            free(instruccion_fst); 
+                            free(nombre_interfaz_fst); 
+                            free(nombre_archivo_fst); 
+                            free(tamanio_fst); 
+                            list_destroy(lista); 
+                            cambiar_estado(pcb_actualizado,EXITT);
+                            pcb_actualizado->motivo = INTERFAZ_INVALIDA; // Asi notificamos porq verga finalizo
+                            push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+                            sem_post(&sem_procesos_exit);
+                            break;
+                        case FS_WRITE:
+                            char * instruccion_fsw = list_get(lista,final_pcb+1); 
+                            char * nombre_interfaz_fsw=list_get(lista,final_pcb+2); 
+                            char * nombre_archivo_fsw=list_get(lista,final_pcb+3);
+                            uint32_t * tamanio_fsw = list_get(lista,final_pcb+4); 
+                            uint32_t * puntero_archivo_fsw = list_get(lista,final_pcb+5); 
+                            t_list * traducciones_fsw = desempaquetar_traducciones(lista,final_pcb+6);
+                            element_interfaz * interfaz_fsw = interfaz_existe_y_esta_conectada(nombre_interfaz_fsw); //puntero al elemento original de la lista, ojo
+                            if(interfaz_fsw){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
+                                if(dialFS_acepta_instruccion(interfaz_fsw)){
+                                    free(instruccion_fsw); //ya no me importa la instruccion, (ya se cual es)
+                                    free(nombre_interfaz_fsw); //ya no me importa el nombre
+                                    list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
+                                    pcb_block_dialFS* info_de_bloqueo = malloc(sizeof(pcb_block_dialFS));//falta liberar
+                                    info_de_bloqueo->el_pcb = pcb_actualizado ; //simplemente otra referencia 
+                                    info_de_bloqueo->instruccion_fs = FS_WRITE;
+                                    info_de_bloqueo->tamanio_lectura_o_escritura_memoria= *tamanio_fsw; //no importa
+                                    info_de_bloqueo->traducciones=traducciones_fsw; //no importa
+                                    info_de_bloqueo->parametros= list_create();
+                                    list_add(info_de_bloqueo->parametros,nombre_archivo_fsw);
+                                    list_add(info_de_bloqueo->parametros,puntero_archivo_fsw);
+                                    cambiar_estado(pcb_actualizado,BLOCKED);
+                                    push_con_mutex(nombre_interfaz_fsw->cola_bloqueados,info_de_bloqueo,interfaz_fsw->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                    push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block); 
+                                    sem_post(interfaz_fsw->sem_procesos_blocked); 
+                                    break;
+                                }
+                            }
+                            //finalizar proceso
+                            free(instruccion_fsw); 
+                            free(nombre_interfaz_fsw); 
+                            free(nombre_archivo_fsw); 
+                            free(tamanio_fsw); 
+                            list_destroy(lista); 
+                            cambiar_estado(pcb_actualizado,EXITT);
+                            pcb_actualizado->motivo = INTERFAZ_INVALIDA; // Asi notificamos porq verga finalizo
+                            push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+                            sem_post(&sem_procesos_exit);
+                            break;
+                        case FS_READ:
+                            char * instruccion_fsr = list_get(lista,final_pcb+1); 
+                            char * nombre_interfaz_fsr=list_get(lista,final_pcb+2); 
+                            char * nombre_archivo_fsr=list_get(lista,final_pcb+3);
+                            uint32_t * tamanio_fsr = list_get(lista,final_pcb+4); 
+                            uint32_t * puntero_archivo_fsr = list_get(lista,final_pcb+5); 
+                            t_list * traducciones_fsr = desempaquetar_traducciones(lista,final_pcb+6);
+                            element_interfaz * interfaz_fsr = interfaz_existe_y_esta_conectada(nombre_interfaz_fsr); //puntero al elemento original de la lista, ojo
+                            if(interfaz_fsr){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
+                                if(dialFS_acepta_instruccion(interfaz_fsr)){
+                                    free(instruccion_fsr); //ya no me importa la instruccion, (ya se cual es)
+                                    free(nombre_interfaz_fsr); //ya no me importa el nombre
+                                    list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
+                                    pcb_block_dialFS* info_de_bloqueo = malloc(sizeof(pcb_block_dialFS));//falta liberar
+                                    info_de_bloqueo->el_pcb = pcb_actualizado ; //simplemente otra referencia 
+                                    info_de_bloqueo->instruccion_fs = FS_READ;
+                                    info_de_bloqueo->tamanio_lectura_o_escritura_memoria= *tamanio_fsr; //no importa
+                                    info_de_bloqueo->traducciones=traducciones_fsr; //no importa
+                                    info_de_bloqueo->parametros= list_create();
+                                    list_add(info_de_bloqueo->parametros,nombre_archivo_fsr);
+                                    list_add(info_de_bloqueo->parametros,puntero_archivo_fsr);
+                                    cambiar_estado(pcb_actualizado,BLOCKED);
+                                    push_con_mutex(nombre_interfaz_fsr->cola_bloqueados,info_de_bloqueo,interfaz_fsr->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                    push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block); 
+                                    sem_post(interfaz_fsr->sem_procesos_blocked); 
+                                    break;
+                                }
+                            }
+                            //finalizar proceso
+                            free(instruccion_fsr); 
+                            free(nombre_interfaz_fsr); 
+                            free(nombre_archivo_fsr); 
+                            free(tamanio_fsr); 
+                            list_destroy(lista); 
+                            cambiar_estado(pcb_actualizado,EXITT);
+                            pcb_actualizado->motivo = INTERFAZ_INVALIDA; // Asi notificamos porq verga finalizo
+                            push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+                            sem_post(&sem_procesos_exit);
+                            break;
                 }
                 break;
             }
@@ -873,6 +1058,9 @@ bool STDIN_acepta_instruccion(char * instruccion){return !strcmp("IO_STDIN_READ"
 
 bool STDOUT_acepta_instruccion(char * instruccion){return !strcmp("IO_STDOUT_WRITE",instruccion);}
 
+bool dialFS_acepta_instruccion(char * instruccion){
+    return !strcmp("IO_FS_CREATE",instruccion) || !strcmp("IO_FS_DELETE",instruccion) || !strcmp("IO_FS_TRUNCATE",instruccion) || !strcmp("IO_FS_WRITE",instruccion) || !strcmp("IO_FS_READ",instruccion) ;
+}
 // ¿Como es esta coordinacion?
 // Suponete que A sea "despachar" y B sea "recibir respuesta"
 // queremos que la ejecucion sea A-B-A-B-A-B-A-B 

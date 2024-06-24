@@ -39,6 +39,14 @@ typedef struct{
     t_list * traducciones;
 }pcb_block_STDOUT;
 
+
+typedef struct{
+    pcb * el_pcb;
+    int instruccion_fs;
+    uint32_t tamanio_lectura_o_escritura_memoria;
+    t_list * traducciones;
+    t_list * parametros;
+}pcb_block_dialFS ;
 typedef struct{
 	char* nombreRecurso;
 	int id;
@@ -193,6 +201,7 @@ void liberar_datos_interfaz(element_interfaz * datos_interfaz);
 
 bool STDIN_acepta_instruccion(char * instruccion);
 bool STDOUT_acepta_instruccion(char * instruccion);
+bool dialFS_acepta_instruccion(char * instruccion);
 
 bool debe_planificar;
 bool esta_planificando;
