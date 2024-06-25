@@ -352,6 +352,7 @@ void inicializar_archivos(){
 }
 
 void abrir_bitmap(){
+                // en realidad a este path le vamos a tener que sumar el path base creo, pero no se, lo vemos cuando hagamos las pruebas, ahora no importa
     int fd = open(path_bitmap, O_RDWR);
     // uso open ya que a la hora de mapear el archivo con mmap este usa el fd del archivo y open te lo da directo, fopen te da el puntero al archivo
     tamanio_bitmap = ceil(block_count/8); //.h Cantidad de bloques / tamanio de bloques = tamanio del bitmap en bytes. CEIL redondea para arriba 
@@ -364,6 +365,7 @@ void abrir_bitmap(){
 }
 
 void abrir_archivo_bloques(){
+                // en realidad a este path le vamos a tener que sumar el path base creo, pero no se, lo vemos cuando hagamos las pruebas, ahora no importa
     int fd = open(path_bloques, O_RDWR);
     tamanio_bloques = block_size * block_count;
 
