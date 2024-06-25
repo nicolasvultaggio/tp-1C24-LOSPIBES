@@ -66,7 +66,7 @@ void leer_configuraciones(){
         log_info(logger_io,"Tipo de interfaz desconocido");
     }    
     
-    switch(type_interfaz){
+    switch(type_interfaz){ // Hay algunas que se leen en todos los casos pero la repeticion de logica nos chupa la cabeza de la chota
         case GENERICA:
             tiempo_unidad_trabajo = atoi(config_get_string_value(config_io,"TIEMPO_UNIDAD_TRABAJO"));
             ip_kernel = config_get_string_value(config_io,"IP_KERNEL");
@@ -89,6 +89,17 @@ void leer_configuraciones(){
             log_info(logger_io,"Tipo de interfaz iniciada: %s", tipo_de_interfaz);
             break;
         case DIALFS:
+            tiempo_unidad_trabajo = atoi(config_get_string_value(config_io,"TIEMPO_UNIDAD_TRABAJO"));
+            ip_kernel = config_get_string_value(config_io,"IP_KERNEL");
+            puerto_kernel = config_get_string_value(config_io,"PUERTO_KERNEL");
+            ip_memoria = config_get_string_value(config_io,"IP_MEMORIA");
+            puerto_memoria = config_get_string_value(config_io,"PUERTO_MEMORIA");
+            path_base_dialfs = config_get_string_value(config_io,"PATH_BASE_DIALFS");
+            block_size = atoi(config_get_string_value(config_io,"BLOCK_SIZE"));
+            block_count = atoi(config_get_string_value(config_io,"BLOCK_COUNT"));
+            retraso_compactacion = atoi(config_get_string_value(config_io,"RETRASO_COMPACTACION"));
+            path_bitmap = config_get_string_value(config_io,"PATH_BITMAP");
+            path_bloques = config_get_string_value(config_io,"PATH_BLOQUES");
             log_info(logger_io,"Tipo de interfaz iniciada: %s", tipo_de_interfaz);
             break;
         default:
@@ -327,9 +338,38 @@ void atender_STDOUT(){
     
 
 
-void atender_DIALFS(){ // hoy, 2/5/2024, a las 20:07, esuchando JIMMY FALLON de Luchito, empiezo la funcion mas dificil de las interfaces, suerte loko
+void atender_DIALFS(){ // hoy, 2/5/2024, a las 20:07, esuchando JIMMY FALLON de Luchito, empiezo la funcion mas dificil de las interfaces, suerte loko 
+                    // hoy, 25/6/2024, a las 11:48 escuchando Not Like us de kendrick (RIP Drake), continuamos esta verga gomosa
+   
    // char * instruccion = recibir_instruccion_de_kernel();
     //free(instruccion);
+    inicializar_archivos();//.h 
+}
+
+void inicializar_archivos(){
+    abrir_bitmap();//.h
+    abrir_archivo_bloques();//.h
+}
+
+void abrir_bitmap(){
+    int fd = open(path_bitmap, O_RDWR);
+    // uso open ya que a la hora de mapear el archivo con mmap este usa el fd del archivo y open te lo da directo, fopen te da el puntero al archivo
+    tamanio_bitmap = ceil(block_count/8); //.h Cantidad de bloques / tamanio de bloques = tamanio del bitmap en bytes. CEIL redondea para arriba 
+
+    buffer_bitmap = mmap(NULL, tamanio_bitmap, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    //parametros mmap(donde se mapea(NULL = elegimos q el sist elija) , tamanio, permisos, dejamos q los cambios que se hacen en memoria se reflejen en el archivo FUNDAMENTAL, fs, desplazamiento)
+    bitmap = bitarray_create_with_mode(buffer_bitmap, tamanio_bitmap, LSB_FIRST);
+
+    close(fd);
+}
+
+void abrir_archivo_bloques(){
+    int fd = open(path_bloques, O_RDWR);
+    tamanio_bloques = block_size * block_count;
+
+    buffer_bloques = mmap(NULL, tamanio_bloques, PROT_READ | PROT_WRITE, MAP_SHARED, fd,0);
+
+    close(fd); 
 }
 
 void avisar_operacion_realizada_kernel(){

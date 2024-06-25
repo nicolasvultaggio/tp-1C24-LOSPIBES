@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <fcntl.h>
+#include <sys/mman.h>
 #include <../../utils/include/hello.h>
 #include <../../utils/include/socket.h>
 #include <../../utils/include/protocolo.h>
@@ -17,6 +19,19 @@ char* puerto_kernel;
 char* ip_memoria;
 char* puerto_memoria;
 int tiempo_unidad_trabajo;
+char* path_base_dialfs;
+int block_size;
+int block_count;
+int retraso_compactacion;
+char* path_bitmap;
+char* path_bloques;
+
+int tamanio_bitmap;
+int tamanio_bloques;
+void* buffer_bitmap;
+void* buffer_bloques;
+t_bitarray* bitmap; 
+
 char* mensaje_ok_memoria;
 char* mensaje_ok_kernel;
 
@@ -42,6 +57,11 @@ void atender_GENERICA();
 void atender_STDIN();
 void atender_STDOUT();
 void atender_DIALFS();
+
+void atender_DIALFS();
+void inicializar_archivos();
+void abrir_bitmap();
+void abrir_archivo_bloques();
 
 void avisar_operacion_realizada_kernel();
 
