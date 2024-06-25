@@ -1276,6 +1276,7 @@ void procesar_conexion_interfaz(void * arg){
         atender_interfaz_STDOUT(datos_interfaz);
         break;
     default:
+        atender_interfaz_dialFS(datos_interfaz);
         break;
     }
     
@@ -1355,10 +1356,66 @@ void atender_interfaz_STDOUT(element_interfaz * datos_interfaz){
                 }else if(notificacion  == (-1) ){ //recibir operacion devuelve -1 en caso de que se haya desconectado la interfaz
                 push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
                 liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
-                }else if(!notificacion){
+                }else if(!notificacion){ //ANALIZAR, no debería invocarse a liberar_pcb block stdout? analizar para stdin y generica tambien
                 push_con_mutex(cola_exit,proceso_a_atender->el_pcb,&mutex_lista_exit);//finalizo el proceso si la memoria me dijo que no pudo escribir 
                 sem_post(&sem_procesos_exit);
                 list_destroy_and_destroy_elements(proceso_a_atender->traducciones,(void*)traduccion_destroyer);
+                }
+            }
+            eliminar_paquete(paquete);
+        }
+    }
+}
+
+void atender_interfaz_dialFS(element_interfaz * datos_interfaz){
+    while(1){ //este es para que se pueda pausar y reanudar planificacion 
+        while(leer_debe_planificar_con_mutex()){ // genera algo de espera activa cuando debe_planificar = 0;
+            sem_wait(datos_interfaz->sem_procesos_blocked);
+            pcb_block_dialFS * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,datos_interfaz->mutex_procesos_blocked);//agarra el primero de la cola de blocked 
+            //contenido del paquete de instruccion
+            
+            //nombre del archivo estara en todos los paquetes
+            char * p_nombre_archivo=list_get(proceso_a_atender->parametros,0); // lista parametros contiene el nombre del archivo en el primer elemento
+            size_t tamanio_nombre_archivo = strlen(p_nombre_archivo);
+
+            t_paquete * paquete = crear_paquete(INSTRUCCION);// paquet creado, ahora agregamos el contenido segund el tipo de instruccion
+            agregar_a_paquete(paquete,p_nombre_archivo,tamanio_nombre_archivo+1); //sabemos que el nombre del archivo estará sí o sí
+            
+            switch(proceso_a_atender->instruccion_fs){
+                case FS_CREATE:  //orden: NOMBRE_ARCHIVO 
+                   //fs no necesita nada más
+                    break;
+                case FS_DELETE: //orden: NOMBRE_ARCHIVO 
+                   //fs no necesita nada más
+                    break;
+                case FS_READ: //orden: NOMBRE_ARCHIVO / PUNTERO_ARCHIVO / TRADUCCIONES
+                    agregar_a_paquete(paquete,&(proceso_a_atender->tamanio_lectura_o_escritura_memoria),sizeof(uint32_t));
+                    agregar_a_paquete(paquete,list_get(proceso_a_atender->parametros,1),sizeof(uint32_t));
+                    empaquetar_traducciones(paquete,proceso_a_atender->traducciones);
+                    break;
+                case FS_WRITE: //NOMBRE_ARCHIVO / PUNTERO_ARCHIVO / TRADUCCIONES
+                    agregar_a_paquete(paquete,&(proceso_a_atender->tamanio_lectura_o_escritura_memoria),sizeof(uint32_t));
+                    agregar_a_paquete(paquete,list_get(proceso_a_atender->parametros,1),sizeof(uint32_t));
+                    empaquetar_traducciones(paquete,proceso_a_atender->traducciones);
+                    break;
+                case FS_TRUNCATE: //NOMBRE_ARCHIVO / NUEVO TAMANIO
+                    agregar_a_paquete(paquete,list_get(proceso_a_atender->parametros,1),sizeof(uint32_t));
+                    break;
+            }
+
+            //paquete ya esta armado
+            if (enviar_paquete_io(paquete,*(datos_interfaz->fd_conexion_con_interfaz)) == (-1) ){ //devuelve -1 la interfaz había cerrado la conexion
+                push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
+                liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
+            }else{ //Que devuelve la interfaz al realizar la operacion?
+                int notificacion = recibir_operacion(*(datos_interfaz->fd_conexion_con_interfaz),logger_kernel,datos_interfaz->nombre);
+                if(notificacion == 1 ){ 
+                    procesar_vuelta_blocked_a_ready( proceso_a_atender,DIALFS);
+                }else if(notificacion  == (-1) ){ //recibir operacion devuelve -1 en caso de que se haya desconectado la interfaz
+                push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
+                liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
+                }else if(!notificacion){ //la interfaz fs no cerro, pero fallo escritura, entonces termina proceso
+                liberar_pcb_block_dialFS((void*)proceso_a_atender);//elimino solo este, no todo el resto de los procesos bloqueados
                 }
             }
             eliminar_paquete(paquete);
@@ -1488,6 +1545,8 @@ void liberar_datos_interfaz(element_interfaz * datos_interfaz){ // se invoca cua
         list_destroy(datos_interfaz->cola_bloqueados);
         break;
     default:
+        list_iterate(datos_interfaz->cola_bloqueados,(void*)liberar_pcb_block_dialFS);
+        list_destroy(datos_interfaz->cola_bloqueados);
         break;
     }
     
@@ -1528,3 +1587,15 @@ void liberar_pcb_block_STDOUT(void * pcb_bloqueado){
     //falta solicitar a memoria liberar las estructuras de ese proceso
     free(pcb_bloqueado_c); //nodo liberado, solo queda destruir la lista
 }
+
+void liberar_pcb_block_dialFS(void * pcb_bloqueado){
+    pcb_block_dialFS * pcb_bloqueado_c = (pcb_block_dialFS*) pcb_bloqueado;
+    list_destroy_and_destroy_elements(pcb_bloqueado_c->traducciones,(void*)traduccion_destroyer);
+    list_destroy_and_destroy_elements(pcb_bloqueado_c->parametros,(void*)free);
+    cambiar_estado(pcb_bloqueado_c->el_pcb,EXITT);
+    push_con_mutex(cola_exit,pcb_bloqueado_c->el_pcb,&mutex_lista_exit);
+    sem_post(&sem_procesos_exit);
+    //falta solicitar a memoria liberar las estructuras de ese proceso
+    free(pcb_bloqueado_c); //nodo liberado, solo queda destruir la lista
+}
+

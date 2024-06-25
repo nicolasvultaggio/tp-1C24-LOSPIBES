@@ -42,7 +42,7 @@ typedef struct{
 
 typedef struct{
     pcb * el_pcb;
-    int instruccion_fs;
+    int instruccion_fs;// CREATE/ DELETE /READ /WRITE / TRUNCATE
     uint32_t tamanio_lectura_o_escritura_memoria;
     t_list * traducciones;
     t_list * parametros;
@@ -192,11 +192,13 @@ char * preguntar_nombre_interfaz(int un_fd);
 void atender_interfaz_generica(element_interfaz * datos_interfaz);
 void atender_interfaz_STDIN(element_interfaz * datos_interfaz);
 void atender_interfaz_STDOUT(element_interfaz * datos_interfaz);
+void atender_interfaz_dialFS(element_interfaz * datos_interfaz);
 void procesar_vuelta_blocked_a_ready(void * proceso_a_atender,vuelta_type tipo);
 size_t enviar_paquete_io(t_paquete* paquete, int socket_cliente);
 void liberar_pcb_block_gen(void * pcb_bloqueado);
 void liberar_pcb_block_STDIN(void * pcb_bloqueado);
 void liberar_pcb_block_STDOUT(void * pcb_bloqueado);
+void liberar_pcb_block_dialFS(void * pcb_bloqueado);
 void liberar_datos_interfaz(element_interfaz * datos_interfaz);
 
 bool STDIN_acepta_instruccion(char * instruccion);
