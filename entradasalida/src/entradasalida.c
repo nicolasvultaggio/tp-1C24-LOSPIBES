@@ -25,6 +25,8 @@ int main(int argc, char* argv[]) {
     
     leer_configuraciones();//eso, guarda toda la info necesaria del archivo de las configuraciones
     
+    inicializar_archivos();
+
     if(iniciar_conexiones()){
         log_info(logger_io,"Error al iniciar conexión al Kernel");
         terminar_programa();
@@ -426,8 +428,7 @@ void escribir_metadata(t_config * metadata,char * key, int valor){// si no exist
 
     return;
     
-}
-
+} 
 int leer_metadata(t_config * metadata, char* key){
 
     int respuesta = config_get_int_value(metadata,key);
@@ -494,13 +495,14 @@ void abrir_bitmap(){
 }
 
 void abrir_archivo_bloques(){
- // en realidad a este path le vamos a tener que sumar el path base creo, pero no se, lo vemos cuando hagamos las pruebas, ahora no importa
-    int fd = open(path_bloques, O_RDWR);
+    //en realidad a este path le vamos a tener que sumar el path base creo, pero no se, lo vemos cuando hagamos las pruebas, ahora no importa
+    int fd = open(path_bloques, O_RDWR); //path_blques no es "./bloques.dat", no se si hace falta parametrizarlo
     tamanio_bloques = block_size * block_count;
 
     buffer_bloques = mmap(NULL, tamanio_bloques, PROT_READ | PROT_WRITE, MAP_SHARED, fd,0);
 
     close(fd); 
+
 }
 
 void avisar_operacion_realizada_kernel(){
