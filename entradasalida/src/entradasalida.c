@@ -395,13 +395,19 @@ void atender_DIALFS(){
 void create_file(char * name_file){
     
     int nro_bloque; //debemos buscar en el bitmap alguno libre
-    
-    t_config * new_metadata = config_create(name_file);//este ese el elemento de la lista
 
+    char ruta_relativa[strlen(name_file)+2+1]="./";//dos para el "./" y uno para el '\0'
+
+    strcat(ruta_relativa+2, name_file);
+
+    t_config * new_metadata = config_create(ruta_relativa);//este ese el elemento de la lista
+
+    //el metadata se crea en el wd
     escribir_metadata(new_metadata,"BLOQUE_INICIAL", nro_bloque);
     escribir_metadata(new_metadata, "TAMANIO_ARCHIVO",0);
 
-    //queda sin bloques asignados men
+    fcb * new_fcb = malloc(sizeof(fcb));
+    new_fcb->metadata = new_metadata;
 
     //falta asignar el bloque
 }

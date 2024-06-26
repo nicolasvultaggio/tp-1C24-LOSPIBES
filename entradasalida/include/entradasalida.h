@@ -11,6 +11,14 @@
 #include <commons/config.h>
 #include <commons/log.h>
 
+
+typedef struct{
+    t_config * metadata;
+    int bloque_inicial;
+    int tamanio_archivo;
+}fcb;
+
+
 int fd_conexion_kernel;//socket para enviar a kernel
 int fd_conexion_memoria;//socket para enviar a memoria
 
@@ -74,7 +82,9 @@ void read_file(uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traduc
 void write_file(uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
 
 
-int contar_digitos(int numero)
+int contar_digitos(int numero);
+char * intTOString(int numero);
 //mover a protocolo asi kernel lo conoce tambien
+
 
 #endif
