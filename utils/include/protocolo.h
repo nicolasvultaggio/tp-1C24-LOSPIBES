@@ -253,7 +253,7 @@ void* serializar_paquete(t_paquete* paquete, int bytes);
 void eliminar_paquete(t_paquete* paquete);
 void iterator(char* value, t_log *logger);
 void traduccion_destroyer(void * traduccion);
-t_list * desempaquetar_traducciones(t_list* paquete, int index_cantidad)
+t_list * desempaquetar_traducciones(t_list* paquete, int index_cantidad);
 /* SENDS */
 void enviar_mensaje(char* mensaje, int socket_cliente);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);

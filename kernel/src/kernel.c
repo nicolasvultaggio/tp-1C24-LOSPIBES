@@ -564,7 +564,7 @@ void atender_vuelta_dispatch(){
             op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");
             t_list * lista = recibir_paquete(fd_conexion_dispatch); 
             pcb* pcb_actualizado = guardar_datos_del_pcb(lista);
-            int final_pcb = fin_pcb(lista); //Te devuelve el numero del elemento de la lista donde esta el ultimo osea del final del pcb
+            int final_pcb = fin_pcb(lista); //Te devuelve el numero del elemento de la lista donde esta el ultimo recurso, osea del final del pcb
             switch(codop){
                 case PCB_ACTUALIZADO:
 		        switch(pcb_actualizado -> motivo){
@@ -725,7 +725,7 @@ void atender_vuelta_dispatch(){
                                     info_de_bloqueo->parametros= list_create();
                                     list_add(info_de_bloqueo->parametros,nombre_archivo_fc);
                                     cambiar_estado(pcb_actualizado,BLOCKED);
-                                    push_con_mutex(nombre_interfaz_fc->cola_bloqueados,info_de_bloqueo,interfaz_fc->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                    push_con_mutex(interfaz_fc->cola_bloqueados,info_de_bloqueo,interfaz_fc->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
                                     push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block); 
                                     sem_post(interfaz_fc->sem_procesos_blocked); 
                                     break;
@@ -760,7 +760,7 @@ void atender_vuelta_dispatch(){
                                     info_de_bloqueo->parametros= list_create();
                                     list_add(info_de_bloqueo->parametros,nombre_archivo_fsd);
                                     cambiar_estado(pcb_actualizado,BLOCKED);
-                                    push_con_mutex(nombre_interfaz_fsd->cola_bloqueados,info_de_bloqueo,interfaz_fsd->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                    push_con_mutex(interfaz_fsd->cola_bloqueados,info_de_bloqueo,interfaz_fsd->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
                                     push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block); 
                                     sem_post(interfaz_fsd->sem_procesos_blocked); 
                                     break;
@@ -796,7 +796,7 @@ void atender_vuelta_dispatch(){
                                     list_add(info_de_bloqueo->parametros,nombre_archivo_fst);
                                     list_add(info_de_bloqueo->parametros,tamanio_fst);
                                     cambiar_estado(pcb_actualizado,BLOCKED);
-                                    push_con_mutex(nombre_interfaz_fst->cola_bloqueados,info_de_bloqueo,interfaz_fst->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                    push_con_mutex(interfaz_fst->cola_bloqueados,info_de_bloqueo,interfaz_fst->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
                                     push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block); 
                                     sem_post(interfaz_fst->sem_procesos_blocked); 
                                     break;
@@ -835,7 +835,7 @@ void atender_vuelta_dispatch(){
                                     list_add(info_de_bloqueo->parametros,nombre_archivo_fsw);
                                     list_add(info_de_bloqueo->parametros,puntero_archivo_fsw);
                                     cambiar_estado(pcb_actualizado,BLOCKED);
-                                    push_con_mutex(nombre_interfaz_fsw->cola_bloqueados,info_de_bloqueo,interfaz_fsw->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                    push_con_mutex(interfaz_fsw->cola_bloqueados,info_de_bloqueo,interfaz_fsw->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
                                     push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block); 
                                     sem_post(interfaz_fsw->sem_procesos_blocked); 
                                     break;
@@ -874,7 +874,7 @@ void atender_vuelta_dispatch(){
                                     list_add(info_de_bloqueo->parametros,nombre_archivo_fsr);
                                     list_add(info_de_bloqueo->parametros,puntero_archivo_fsr);
                                     cambiar_estado(pcb_actualizado,BLOCKED);
-                                    push_con_mutex(nombre_interfaz_fsr->cola_bloqueados,info_de_bloqueo,interfaz_fsr->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                    push_con_mutex(interfaz_fsr->cola_bloqueados,info_de_bloqueo,interfaz_fsr->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
                                     push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block); 
                                     sem_post(interfaz_fsr->sem_procesos_blocked); 
                                     break;
@@ -1327,9 +1327,7 @@ void atender_interfaz_STDIN(element_interfaz * datos_interfaz){
                 push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
                 liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
                 }else if(!notificacion){
-                    push_con_mutex(cola_exit,proceso_a_atender->el_pcb,&mutex_lista_exit);//finalizo el proceso si la memoria me dijo que no pudo escribir 
-                    sem_post(&sem_procesos_exit);
-                    list_destroy_and_destroy_elements(proceso_a_atender->traducciones,(void*)traduccion_destroyer);
+                   liberar_pcb_block_STDIN((void*)proceso_a_atender);
                 }
             }
             eliminar_paquete(paquete);
@@ -1346,20 +1344,19 @@ void atender_interfaz_STDOUT(element_interfaz * datos_interfaz){
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
             agregar_a_paquete(paquete,proceso_a_atender->tamanio_escritura,sizeof(uint32_t));
             empaquetar_traducciones(paquete,proceso_a_atender->traducciones);
+            
             if (enviar_paquete_io(paquete,*(datos_interfaz->fd_conexion_con_interfaz)) == (-1) ){ //devuelve -1 la interfaz había cerrado la conexion
                 push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
                 liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
             }else{ //Que devuelve la interfaz al realizar la operacion?
                 int notificacion = recibir_operacion(*(datos_interfaz->fd_conexion_con_interfaz),logger_kernel,datos_interfaz->nombre);
-                if(notificacion == 1 ){ 
+                if(notificacion == 1 ){ //caso exitoso
                     procesar_vuelta_blocked_a_ready( proceso_a_atender,STDOUT);
                 }else if(notificacion  == (-1) ){ //recibir operacion devuelve -1 en caso de que se haya desconectado la interfaz
                 push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
                 liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
                 }else if(!notificacion){ //ANALIZAR, no debería invocarse a liberar_pcb block stdout? analizar para stdin y generica tambien
-                push_con_mutex(cola_exit,proceso_a_atender->el_pcb,&mutex_lista_exit);//finalizo el proceso si la memoria me dijo que no pudo escribir 
-                sem_post(&sem_procesos_exit);
-                list_destroy_and_destroy_elements(proceso_a_atender->traducciones,(void*)traduccion_destroyer);
+                liberar_pcb_block_STDOUT((void*)proceso_a_atender);//total ya lo habiamos popeado
                 }
             }
             eliminar_paquete(paquete);
@@ -1372,7 +1369,7 @@ void atender_interfaz_dialFS(element_interfaz * datos_interfaz){
         while(leer_debe_planificar_con_mutex()){ // genera algo de espera activa cuando debe_planificar = 0;
             sem_wait(datos_interfaz->sem_procesos_blocked);
             pcb_block_dialFS * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,datos_interfaz->mutex_procesos_blocked);//agarra el primero de la cola de blocked 
-            //contenido del paquete de instruccion
+            //Ahora, contenido del paquete de instruccion
             
             //nombre del archivo estara en todos los paquetes
             char * p_nombre_archivo=list_get(proceso_a_atender->parametros,0); // lista parametros contiene el nombre del archivo en el primer elemento
@@ -1414,7 +1411,7 @@ void atender_interfaz_dialFS(element_interfaz * datos_interfaz){
                 }else if(notificacion  == (-1) ){ //recibir operacion devuelve -1 en caso de que se haya desconectado la interfaz
                 push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
                 liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
-                }else if(!notificacion){ //la interfaz fs no cerro, pero fallo escritura, entonces termina proceso
+                }else if(!notificacion){ //la interfaz fs no cerro, pero fallo operacion, entonces termina proceso
                 liberar_pcb_block_dialFS((void*)proceso_a_atender);//elimino solo este, no todo el resto de los procesos bloqueados
                 }
             }

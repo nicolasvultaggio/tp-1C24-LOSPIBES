@@ -135,7 +135,8 @@ int fin_pcb(t_list* lista){
     int cantidad_de_recursos = *final; //OJO DEVUELVE UN PUNTERO
     int cantidad_de_atributos_recursos = cantidad_de_recursos * 2;
 
-    return cantidad_de_recursos + cantidad_de_atributos_recursos;
+    //return cantidad_de_recursos + cantidad_de_atributos_recursos; 
+	return 15 + cantidad_de_atributos_recursos -1; //TOMI FIJATE SI esta corrección está mejor
 }
 
 
@@ -168,7 +169,7 @@ t_list* desempaquetar_recursos(t_list* paquete, int cantidad){
 //SEGUNDA
 // 6-4 < 6 -> 2 < 6 -> faltan 2 recursos (2 nombres + 2 instancias)
 
-	while(i - cantidad - 1 < (*cantidad_recursos* 2)){
+	while(i - cantidad - 1 < ((*cantidad_recursos)* 2)){
 		recurso_asignado* recurso_asignado = malloc(sizeof(recurso_asignado));
 		char* nombre = list_get(paquete, i); //nombe del primero
 		recurso_asignado->nombreRecurso = malloc(strlen(nombre) + 1);
@@ -185,7 +186,7 @@ t_list* desempaquetar_recursos(t_list* paquete, int cantidad){
 //		free(recurso_asignado->nombre_recurso);
 	}
 
-	free(cantidad_recursos);
+	free(cantidad_recursos); //¿hay que hacerle free?
 	return recursos;
 }
 t_list * desempaquetar_traducciones(t_list* paquete, int index_cantidad){
@@ -193,7 +194,7 @@ t_list * desempaquetar_traducciones(t_list* paquete, int index_cantidad){
 	int* cantidad_traducciones = list_get(paquete, index_cantidad);
 	int i = index_cantidad + 1; 
 
-	while(i - index_cantidad - 1 < (*cantidad_traducciones* 2)){
+	while(i - index_cantidad - 1 < ((*cantidad_traducciones)* 2)){
 		nodo_lectura_escritura* traduccion = malloc(sizeof(nodo_lectura_escritura));
 		uint32_t* una_direccion_fisica = (uint32_t*) list_get(paquete, i); //nombe del primero
 		traduccion->direccion_fisica = *una_direccion_fisica;
