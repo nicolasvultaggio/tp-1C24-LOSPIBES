@@ -322,7 +322,7 @@ void atender_STDOUT(){
     
     buffer[tam+1]='\0'; // agregamos '\0' solo para escribir por pantalla (necesario para printf)
 
-    printf("%s",buffer);
+    printf("\n%s\n",buffer);
 
     list_destroy_and_destroy_elements(traducciones,(void*)traduccion_destroyer);
 
@@ -338,13 +338,91 @@ void atender_STDOUT(){
     
 
 
-void atender_DIALFS(){ // hoy, 2/5/2024, a las 20:07, esuchando JIMMY FALLON de Luchito, empiezo la funcion mas dificil de las interfaces, suerte loko 
-                    // hoy, 25/6/2024, a las 11:48 escuchando Not Like us de kendrick (RIP Drake), continuamos esta verga gomosa
+void atender_DIALFS(){ 
+// hoy, 2/5/2024, a las 20:07, esuchando JIMMY FALLON de Luchito, empiezo la funcion mas dificil de las interfaces, suerte loko 
+// hoy, 25/6/2024, a las 11:48 escuchando Not Like us de kendrick (RIP Drake), continuamos esta verga gomosa
    
-   // char * instruccion = recibir_instruccion_de_kernel();
-    //free(instruccion);
-    inicializar_archivos();//.h 
+    //inicializar_archivos(); ESTO NO DEBERÍA ESTAR ACA, DEBERÍA SER A PENAS SE INICIALIZE LA INTERFAZ
+
+    t_list * lista = recibir_paquete(fd_conexion_kernel);
+
+    int operacion = *list_get(lista,0); //siempre el primero
+    free(list_get(lista,0));
+
+    char * nombre_archivo_operacion = list_get(lista,1); //siempre el segundo
+
+    switch(operacion){
+        case FS_CREATE:
+            
+            create_file(nombre_archivo_operacion);  
+            
+            break;
+        case FS_DELETE: 
+            
+            delete_file(nombre_archivo_operacion);
+            
+            break;
+        case FS_READ:
+            
+            uint32_t tamanio_lectura = *list_get(lista,2);
+            uint32_t puntero_archivo_r = *list_get(lista,3);
+            t_list * traducciones_r = desempaquetar_traducciones(lista,4);
+            
+            read_file(tamanio_lectura,puntero_archivo_r,traducciones_r);
+            
+            free(list_get(lista,2));
+            free(list_get(lista,3));
+            list_destroy_and_destroy_elements(traducciones_r,(void*)traduccion_destroyer);
+            
+            break;
+        case FS_WRITE:
+            
+            uint32_t tamanio_escritura = *list_get(lista,2);
+            uint32_t puntero_archivo_w = *list_get(lista,3);
+            t_list * traducciones_w = desempaquetar_traducciones(lista,4);
+            
+            write_file(tamanio_escritura,puntero_archivo_w,traducciones_r);
+            
+            free(list_get(lista,2));
+            free(list_get(lista,3));
+            list_destroy_and_destroy_elements(traducciones_w,(void*)traduccion_destroyer);
+            
+            break;
+        case FS_TRUNCATE:
+            uint32_t nuevo_tamanio_archivo = *list_get(lista,2);
+            
+            truncate_file(nombre_archivo_operacion,nuevo_tamanio_archivo);
+            
+            free(list_get(lista,2));
+            break;
+    }
+
+    free(nombre_archivo_operacion);
+    list_destroy(lista);
+
+
 }
+
+void create_file(char * name_file){
+
+}
+
+void delete_file(char * name_file){
+    
+}
+
+void truncate_file(char * name_file,uint32_t nuevo_tamanio){
+
+}
+
+void read_file(uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones){
+
+}
+
+void write_file(uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones){
+
+}
+
 
 void inicializar_archivos(){
     abrir_bitmap();//.h
@@ -365,7 +443,7 @@ void abrir_bitmap(){
 }
 
 void abrir_archivo_bloques(){
-                // en realidad a este path le vamos a tener que sumar el path base creo, pero no se, lo vemos cuando hagamos las pruebas, ahora no importa
+ // en realidad a este path le vamos a tener que sumar el path base creo, pero no se, lo vemos cuando hagamos las pruebas, ahora no importa
     int fd = open(path_bloques, O_RDWR);
     tamanio_bloques = block_size * block_count;
 

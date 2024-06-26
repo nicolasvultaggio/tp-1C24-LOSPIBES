@@ -66,6 +66,12 @@ void abrir_archivo_bloques();
 void avisar_operacion_realizada_kernel();
 
 
+void create_file(char * name_file);
+void delete_file(char * name_file);
+void truncate_file(char * name_file,uint32_t nuevo_tamanio);
+void read_file(uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones);
+void write_file(uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
+
 //mover a protocolo asi kernel lo conoce tambien
 
 #endif

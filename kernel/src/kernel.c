@@ -1376,6 +1376,7 @@ void atender_interfaz_dialFS(element_interfaz * datos_interfaz){
             size_t tamanio_nombre_archivo = strlen(p_nombre_archivo);
 
             t_paquete * paquete = crear_paquete(INSTRUCCION);// paquet creado, ahora agregamos el contenido segund el tipo de instruccion
+            agregar_a_paquete(paquete,&(proceso_a_atender->instruccion_fs),sizeof(int));
             agregar_a_paquete(paquete,p_nombre_archivo,tamanio_nombre_archivo+1); //sabemos que el nombre del archivo estará sí o sí
             
             switch(proceso_a_atender->instruccion_fs){
