@@ -62,7 +62,8 @@ void atender_DIALFS();
 void inicializar_archivos();
 void abrir_bitmap();
 void abrir_archivo_bloques();
-
+void escribir_metadata(char * name_file, int nro_bloque,int tamanio_archivo);
+int leer_metadata(char * name_file, char *key);
 void avisar_operacion_realizada_kernel();
 
 
@@ -72,6 +73,8 @@ void truncate_file(char * name_file,uint32_t nuevo_tamanio);
 void read_file(uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones);
 void write_file(uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
 
+
+int contar_digitos(int numero)
 //mover a protocolo asi kernel lo conoce tambien
 
 #endif

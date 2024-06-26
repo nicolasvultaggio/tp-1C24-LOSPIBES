@@ -34,17 +34,6 @@ int main(int argc, char* argv[]) {
     //Ponerse a esperar solicitudes de Kernel
 
     atender_kernel(); //hilo principal
-    //la validacion de la instruccion la hace el kernel, una io recibe la operacion solo si el kernel verificó que la conoce => no hace falta verificarla
-    //en principio, GEN, STDIN, STDOUT siempre escuchan a kernel constantemente, para devolver respuesta, iniciativa de operacion nunca de interfaz
-    // GEN: NO SE COMUNICA CON MEMORIA -- no me preocupo por eso, solo espera un tiempillo
-    // STDIN: se recibe de kernel la indicacion de ponerse a leer algo por teclado
-    //        eso ingresado tendra un tamaño (que tambien se recibe por parametro)
-    //        debe enviarle a memoria eso que se leyó para guardar en la direccion logica indicada
-    //         ==> envia algo a memoria pero no necesita una respuesta, solo dice: guardalo en tal lado
-    // STDOUT: se conecta a memoria para obtener el contenido de una direccion fisica, memoria debe devolverle ese valor
-    //         y se imprime ese valor por pantalla, en esta interfaz
-    //         ==> envia algo a memoria y espera su respuesta
-    // IMPORTANTE: que se le DEVUELVE al kernel como respuesta? un flag diciendole que ya se hizo la operacion.
     
     terminar_programa();
 
@@ -404,7 +393,40 @@ void atender_DIALFS(){
 }
 
 void create_file(char * name_file){
+    
+    int nro_bloque; //debemos buscar en el bitmap alguno libre
+    
+    t_config * new_metadata = config_create(name_file);//este ese el elemento de la lista
 
+    escribir_metadata(new_metadata,"BLOQUE_INICIAL", nro_bloque);
+    escribir_metadata(new_metadata, "TAMANIO_ARCHIVO",0);
+
+    //queda sin bloques asignados men
+
+    //falta asignar el bloque
+}
+
+char * intTOString(int numero){
+    char buffer[contar_digitos(numero)+1];//uno más para el '\0'
+    sprintf(buffer, "%d", numero);
+    return buffer;
+}
+
+void escribir_metadata(t_config * metadata,char * key, int valor){// si no existe lo crea (y escribe), y si ya existe, lo borra y vuelve a escribir
+
+    char * valor_como_char = intTOString(valor);
+
+    config_set_value(metadata,key,valor_como_char);
+
+    return;
+    
+}
+
+int leer_metadata(t_config * metadata, char* key){
+
+    int respuesta = config_get_int_value(metadata,key);
+
+    return respuesta;
 }
 
 void delete_file(char * name_file){
@@ -423,6 +445,29 @@ void write_file(uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * tra
 
 }
 
+int contar_digitos(int numero) {
+    int digitos = 0;
+
+    // Maneja el caso especial para 0
+    if (numero == 0) {
+        return 1;
+    }
+
+    // Si el número es negativo, conviértelo a positivo
+    if (numero < 0) {
+        numero = -numero;
+    }
+
+    // Cuenta los dígitos
+    while (numero > 0) {
+        numero /= 10;
+        digitos++;
+    }
+
+    return digitos;
+}
+
+
 
 void inicializar_archivos(){
     abrir_bitmap();//.h
@@ -430,7 +475,7 @@ void inicializar_archivos(){
 }
 
 void abrir_bitmap(){
-                // en realidad a este path le vamos a tener que sumar el path base creo, pero no se, lo vemos cuando hagamos las pruebas, ahora no importa
+    // en realidad a este path le vamos a tener que sumar el path base creo, pero no se, lo vemos cuando hagamos las pruebas, ahora no importa
     int fd = open(path_bitmap, O_RDWR);
     // uso open ya que a la hora de mapear el archivo con mmap este usa el fd del archivo y open te lo da directo, fopen te da el puntero al archivo
     tamanio_bitmap = ceil(block_count/8); //.h Cantidad de bloques / tamanio de bloques = tamanio del bitmap en bytes. CEIL redondea para arriba 
