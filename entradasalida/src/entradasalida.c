@@ -357,7 +357,7 @@ void atender_DIALFS(){
             uint32_t puntero_archivo_r = *list_get(lista,3);
             t_list * traducciones_r = desempaquetar_traducciones(lista,4);
             
-            read_file(tamanio_lectura,puntero_archivo_r,traducciones_r);
+            read_file(nombre_archivo_operacion, tamanio_lectura,puntero_archivo_r,traducciones_r);
             
             free(list_get(lista,2));
             free(list_get(lista,3));
@@ -370,7 +370,7 @@ void atender_DIALFS(){
             uint32_t puntero_archivo_w = *list_get(lista,3);
             t_list * traducciones_w = desempaquetar_traducciones(lista,4);
             
-            write_file(tamanio_escritura,puntero_archivo_w,traducciones_r);
+            write_file(nombre_archivo_operacion, tamanio_escritura,puntero_archivo_w,traducciones_r);
             
             free(list_get(lista,2));
             free(list_get(lista,3));
@@ -442,12 +442,78 @@ void truncate_file(char * name_file,uint32_t nuevo_tamanio){
 
 }
 
-void read_file(uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones){
+void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones){
+//                                                                      ^ creo que a este seria mejor ponele posicion_a_escribir para que se entienda mas.  
+
+    //Esto es PSEUDOCODIGO, porq ahora no tengo mucho timepo asi q voy poniendo masmoenos como va a ser pero NO CREO QUE VAYA A TENER MUCHO SENTIDO. EN un rato lo acomodo todo, quedo bastante hecho igual 
+
 
 }
 
-void write_file(uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones){
+void write_file(char* nombre_archivo, uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones){
+//                                                                      ^ creo que a este seria mejor ponele posicion_a_escribir para que se entienda mas.  
 
+    //Esto es PSEUDOCODIGO, porq ahora no tengo mucho timepo asi q voy poniendo masmoenos como va a ser pero NO CREO QUE VAYA A TENER MUCHO SENTIDO. EN un rato lo acomodo todo, quedo bastante hecho igual 
+
+
+    //Buscamos el archivo en la lista de FCBs
+    fcb* archivo = buscar_archivo(nombre_archivo);//FALTA IMPLEMENTAR
+    
+    //Le pedimos a memoria que nos pase los valores que estan en las direcciones de la lsita de traducciones
+
+    // EL codigo de abajo lo saque de STDOUT. TODAVIA NO ESTA NADA MODIFICADO PERO CREO Q LO VAMOS A USAR. 
+    char tam = tamanio_escritura;
+    char buffer[tam+1];
+    
+    uint32_t offset=0;
+    int cantidad_de_traducciones = list_size(traducciones);
+    bool operacion_exitosa=true;
+
+    for(int i =0; i<cantidad_de_traducciones && operacion_exitosa ; i++){
+        
+        //preparamos datos a enviar
+        nodo_lectura_escritura * traduccion = list_get(traducciones,i);
+        
+        //empaquetamos datos y los enviamos a memoria
+        t_paquete * paquete2 = crear_paquete(LECTURA_MEMORIA);
+        agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(uint32_t));
+        agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(uint32_t));
+        enviar_paquete(paquete2,fd_conexion_memoria);
+        eliminar_paquete(paquete2);
+
+        //recibimos respuesta de memoria, escribimos en el buffer
+        int cod_op;
+	    recv(fd_conexion_memoria, &cod_op, sizeof(int), MSG_WAITALL); //al pedo, esta nada mas para que podamos recibir el codop antes del paquete
+        t_list * lista = recibir_paquete(fd_conexion_memoria);
+        char * string_leido = (char*) list_get(lista,0);
+        list_destroy(lista);
+
+        memcpy(buffer+offset,string_leido,(size_t)traduccion->bytes);//detalle: no guardamos caracter nulo
+    
+        offset+=traduccion->bytes;
+    }
+
+
+    //FALTA ESCRIBIR DATOS. Esta funcion va a estar bien bacana wey
+    escribir_archivo(archivo, puntero_archivo, buffer, tamanio_escritura);// FALTA IMPLEMENTAR
+    //ESTA FUNCION VA A TENER QUE:
+    //1. BUSCAR LA POSICION DEL BLOQUE DONDE VAMOS A ESCRIBIR
+    //2. FIJARSE SI ENTRA LO QUE VAMOS A ESCRIBIR EN EL BLOQUE ENCONTRADO (?) -> SEGUN JUAN NO HACIA FALTA PORQ UN AYUDANTE LE DIJO QUE NUNCA IBAN A HACER WRITE ANTES DE TRUNCAR, PERO SI NO ES MUY DIFICIL LO IMPLEMENTARIA PARA LA FACHA
+    //3. ESCRIBIR EL ARCHIVO
+
+
+
+    list_destroy_and_destroy_elements(traducciones,(void*)traduccion_destroyer);
+
+    if(operacion_exitosa){
+        int a =1;
+        send(fd_conexion_kernel,&a,sizeof(int),0); // le avisa al kernel que la lectura fue exitosa
+    }else{
+        int b = 0; 
+        send(fd_conexion_kernel,&b,sizeof(int),0); 
+    }
+    
+    
 }
 
 int contar_digitos(int numero) {
