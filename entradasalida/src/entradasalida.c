@@ -411,11 +411,8 @@ void create_file(char * name_file){
     if( nro_bloque != -1){//si encontro un bloque libre
         char ruta_relativa[strlen(name_file)+2+1]="./";//dos para el "./" y uno para el '\0'
 
-<<<<<<< HEAD
         memcpy(ruta_relativa,"./",3);
 
-=======
->>>>>>> 286979c (Agrego escribir_archivo)
         strcat(ruta_relativa+2, name_file);
 
         t_config * new_metadata = config_create(ruta_relativa);//este ese el elemento de la lista
@@ -478,7 +475,6 @@ void truncate_file(char * name_file,uint32_t nuevo_tamanio){
 }
 
 void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones){
-<<<<<<< HEAD
 //                                                                      ^ creo que a este seria mejor ponele posicion_a_escribir para que se entienda mas.  
     
     //buscamos leer el archivo
@@ -537,8 +533,6 @@ void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_ar
         send(fd_conexion_kernel,&b,sizeof(int),0); //le avisa al kernel que la escritura salio mal
     }
 
-=======
->>>>>>> d2ca4d52e35a7b32384f93efe5be50c39e430e2b
 }
 
 
