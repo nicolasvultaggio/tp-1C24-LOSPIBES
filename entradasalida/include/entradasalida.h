@@ -17,6 +17,7 @@ typedef struct{
     char * nombre_archivo; //para buscar archivo por nombre
     int bloque_inicial; //para facilitar escritura y lectura
     int tamanio_archivo; //son los bytes asignados desde el ultimo truncate, siempre, no necesariamente, es la cantidad de bytes escritos, podemos hacer truncate sin escribir
+    //modificar tamanio_archivo en truncate solamente, no cuando escribimos
 }fcb;
 
 t_list * lista_fcbs;
@@ -72,28 +73,19 @@ void atender_DIALFS();
 void inicializar_archivos();
 void abrir_bitmap();
 void abrir_archivo_bloques();
-void escribir_metadata(char * name_file, int nro_bloque,int tamanio_archivo);
-int leer_metadata(char * name_file, char *key);
+void escribir_metadata(t_config * metadata,char * key, int valor)
+int leer_metadata(t_config * metadata, char* key);
 void avisar_operacion_realizada_kernel();
 
 
 void create_file(char * name_file);
 void delete_file(char * name_file);
 void truncate_file(char * name_file,uint32_t nuevo_tamanio);
-<<<<<<< HEAD
-fcb * buscar_archivo(char * name_file);
+fcb * buscar_archivo(char * name_file); //esta raro porque usa funciones anidadas
 void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones);
-bool pertenece_a_archivo(fcb* archivo, uint32_t posicion);
+bool bytes_pertenecen_a_archivo(fcb* archivo, uint32_t posicion, uint32_t tamanio_operacion);
 void write_file(char* nombre_archivo, uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
 void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer);
-=======
-void read_file(uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones);
-void write_file(uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
-fcb * buscar_archivo(char * name_file);
-bool pertenece_a_archivo(fcb* archivo, uint32_t posicion);
-bool escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer);
-
->>>>>>> 73760841839533dd08b520e5c7c1163b02158c2c
 
 int contar_digitos(int numero);
 char * intTOString(int numero);

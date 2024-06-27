@@ -465,10 +465,7 @@ void escribir_metadata(t_config * metadata,char * key, int valor){// si no exist
     
 } 
 int leer_metadata(t_config * metadata, char* key){
-
-    int respuesta = config_get_int_value(metadata,key);
-
-    return respuesta;
+    return config_get_int_value(metadata,key);
 }
 
 void delete_file(char * name_file){
@@ -569,6 +566,11 @@ void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posic
 
     //Soy Nico: creo que es mejor verificar lo que vayamos a pedir ANTES de pedirle las cosas a memoria, porque si al final no puede, pedimos todo a memoria al pedo.
 
+    if(!bytes_pertenecen_a_archivo(archivo,posicion_a_escribir,tamanio_escritura)){
+        log_info(logger_io,"FALLO AL ESCRIBIR: %s. SEGMENTATION FAULT. Estos bytes no le pertenecen al archivo.");
+        operacion_exitosa=false;
+    }
+
     for(int i =0; i<cantidad_de_traducciones && operacion_exitosa ; i++){
         
         //preparamos datos a enviar
@@ -596,7 +598,11 @@ void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posic
     buffer[tam+1]='\0'; // Lo agrego por las dudas que tenga q usar alguna funcion de cadena de caracteres. en STDOUT se usaba para poder hacer printf
 
     //FALTA ESCRIBIR DATOS. Esta funcion va a estar bien bacana wey
-    operacion_exitosa = escribir_archivo(archivo, posicion_a_escribir, buffer);// FALTA IMPLEMENTAR
+
+    if (operacion_exitosa){
+        escribir_archivo(archivo, posicion_a_escribir, buffer);//como ya no hace la verificacion, no devuelve bool
+    }
+    
     //ESTA FUNCION VA A TENER QUE:
     //1. BUSCAR LA POSICION DEL BLOQUE DONDE VAMOS A ESCRIBIR
     //2. ESCRIBIR EL ARCHIVO - ya hicimos la verificacin mas arriba
@@ -618,21 +624,17 @@ bool bytes_pertenecen_a_archivo(fcb* archivo, uint32_t posicion, uint32_t tamani
     return (posicion + tamanio_operacion) < archivo->tamanio_archivo;
 }
 
-bool escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){    
+void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){    
     //Hay que verificar que TODOS los bytes que se van a leer o escribir pertenezcan al tamaño asignado al archivo.
     //Como hacemos esto? posicion_a_escribir + tamanio_operacion < tamanio_Archivo
+    // NICO- ACTUALIZO, esta funcion, como indica el nombre, solo escribe, no hace ninguna verificacion,esta se hizo previamente
     
     int posicion_bloque = archivo->bloque_inicial;
     int tamanio_buffer = strlen(buffer);
 
-    if(!bytes_pertenecen_a_archivo(archivo,posicion_a_escribir,tamanio_buffer)){
-        log_info(logger_io,"FALLO AL ESCRIBIR: %s. SEGMENTATION FAULT. Estos bytes no le pertenecen al archivo.");
-        return false;
-    }
+    /* ME PARECE QUE ESTO YA NO HACE FALTA VERIFICARLO, por las dudas no lo borro porque soy medio daun
 
     int espacio_disponible = archivo->tamanio_archivo - posicion_a_escribir;
-    
-    /* ME PARECE QUE ESTO YA NO HACE FALTA VERIFICARLO, por las dudas no lo borro porque soy medio daun
     if (tamanio_buffer > espacio_disponible){
         log_info(logger_io,"No hay espacio disponible para escribir en el archivo, si desea escribir en esa posicion debe escribir algo menor a: %d", espacio_disponible);
         return false;
@@ -645,7 +647,7 @@ bool escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){
 
     msync(posicion_a_escribir_en_bloques,tamanio_bloques,MS_SYNC);
 
-    return true;
+    return;
 }
 
 int contar_digitos(int numero) {
