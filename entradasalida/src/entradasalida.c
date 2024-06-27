@@ -581,7 +581,7 @@ void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posic
     buffer[tam+1]='\0'; // Lo agrego por las dudas que tenga q usar alguna funcion de cadena de caracteres. 
 
     //FALTA ESCRIBIR DATOS. Esta funcion va a estar bien bacana wey
-    escribir_archivo(archivo, posicion_a_escribir, buffer);// FALTA IMPLEMENTAR
+    operacion_exitosa = escribir_archivo(archivo, posicion_a_escribir, buffer);// FALTA IMPLEMENTAR
     //ESTA FUNCION VA A TENER QUE:
     //1. BUSCAR LA POSICION DEL BLOQUE DONDE VAMOS A ESCRIBIR
     //2. FIJARSE SI ENTRA LO QUE VAMOS A ESCRIBIR EN EL BLOQUE ENCONTRADO (?) -> SEGUN JUAN NO HACIA FALTA PORQ UN AYUDANTE LE DIJO QUE NUNCA IBAN A HACER WRITE ANTES DE TRUNCAR, PERO SI NO ES MUY DIFICIL LO IMPLEMENTARIA PARA LA FACHA
@@ -608,7 +608,7 @@ bool pertenece_a_archivo(fcb* archivo, uint32_t posicion){
     
 }
 
-void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){    
+bool escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){    
     //Hay que verificar que: 
     //1. La posicion pertenezca al archivo 
     //2. Y lo q vaya a escribir entra en el bloque 
@@ -617,8 +617,7 @@ void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){
     
     if(!pertenece_a_archivo(archivo,posicion_a_escribir)){
         log_info(logger_io,"La posicion que paso para escribir no pertenece al archivo");
-        //avisarle a kernel 
-        return;
+        return false;
     }
 
     int espacio_disponible = archivo->tamanio_archivo - posicion_a_escribir;
@@ -626,16 +625,15 @@ void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){
 
     if (tamanio_buffer > espacio_disponible){
         log_info(logger_io,"No hay espacio disponible para escribir en el archivo, si desea escribir en esa posicion debe escribir algo menor a: %d", espacio_disponible);
-        //avisarle a kernel 
-        return;
+        return false;
     }
     
-    void* posicion_a_escribir_en_bloques = buffer_bloques + archivo->bloque_inicial + (int) posicion_a_escribir;
+    void* posicion_a_escribir_en_bloques = buffer_bloques + ((archivo->bloque_inicial)*block_size) + (int) posicion_a_escribir;
     memcpy(posicion_a_escribir_en_bloques, buffer, tamanio_buffer);
 
     msync(posicion_a_escribir_en_bloques,tamanio_bloques,MS_SYNC);
 
-
+    return true;
 }
 
 int contar_digitos(int numero) {

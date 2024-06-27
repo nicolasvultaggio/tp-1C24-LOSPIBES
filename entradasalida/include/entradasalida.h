@@ -80,18 +80,12 @@ void avisar_operacion_realizada_kernel();
 void create_file(char * name_file);
 void delete_file(char * name_file);
 void truncate_file(char * name_file,uint32_t nuevo_tamanio);
-<<<<<<< HEAD
 void read_file(uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones);
 void write_file(uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
 fcb * buscar_archivo(char * name_file);
-=======
-void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones);
-
 bool pertenece_a_archivo(fcb* archivo, uint32_t posicion);
+bool escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer);
 
-void write_file(char* nombre_archivo, uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
-void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer);
->>>>>>> d2ca4d52e35a7b32384f93efe5be50c39e430e2b
 
 int contar_digitos(int numero);
 char * intTOString(int numero);
