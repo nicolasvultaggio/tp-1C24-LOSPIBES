@@ -493,7 +493,7 @@ void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_ar
     uint32_t offset;
     int cantidad_de_traducciones;
 
-    operacion_exitosa = pertenece_a_archivo(fcb_file,puntero_archivo);//lo pone en false si no cumple
+    operacion_exitosa = pertenece_a_archivo(fcb_file,puntero_archivo,tamanio_lectura);//lo pone en false si no cumple
 
     if(operacion_exitosa){
 
@@ -616,35 +616,24 @@ void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posic
 }
 
 bool pertenece_a_archivo(fcb* archivo, uint32_t posicion, uint32_t tamanio_operacion){
-    //int cantidadDeBloquesArchivo = ceil(archivo->tamanio_archivo / block_size);
-    //return ((int)posicion <= cantidadDeBloquesArchivo && (int)posicion >= archivo->bloque_inicial)
-    int tamanio = archivo->tamanio_archivo;
-    return archivo->
+    return (posicion + tamanio_operacion) < archivo->tamanio_archivo;
 }
 
-<<<<<<< HEAD
-void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){
-=======
 bool escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){    
->>>>>>> 73760841839533dd08b520e5c7c1163b02158c2c
     //Hay que verificar que: 
     //1. La posicion pertenezca al archivo 
     //2. Y lo q vaya a escribir entra en el bloque 
     
     int posicion_bloque = archivo->bloque_inicial;
-    
-    if(!pertenece_a_archivo(archivo,posicion_a_escribir)){
-<<<<<<< HEAD
+    int tamanio_buffer = strlen(buffer);
 
-    }
-
-=======
+    if(!pertenece_a_archivo(archivo,posicion_a_escribir,tamanio_buffer)){
         log_info(logger_io,"La posicion que paso para escribir no pertenece al archivo");
         return false;
     }
 
     int espacio_disponible = archivo->tamanio_archivo - posicion_a_escribir;
-    int tamanio_buffer = strlen(buffer);
+    
 
     if (tamanio_buffer > espacio_disponible){
         log_info(logger_io,"No hay espacio disponible para escribir en el archivo, si desea escribir en esa posicion debe escribir algo menor a: %d", espacio_disponible);
@@ -657,7 +646,6 @@ bool escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){
     msync(posicion_a_escribir_en_bloques,tamanio_bloques,MS_SYNC);
 
     return true;
->>>>>>> 73760841839533dd08b520e5c7c1163b02158c2c
 }
 
 int contar_digitos(int numero) {
