@@ -13,11 +13,14 @@
 
 
 typedef struct{
-    t_config * metadata; //para usar funciones de las commons sobre el metadata
+    t_config * metadata; //para usar funciones de las commons sobre el metadata, MODIFICAR SIEMPRE DESPUES DE MODIFICAR LOS DE ABAJO
     char * nombre_archivo; //para buscar archivo por nombre
-    int bloque_inicial; //para facilitar escritura y lectura
-    int tamanio_archivo; //son los bytes asignados desde el ultimo truncate, siempre, no necesariamente, es la cantidad de bytes escritos, podemos hacer truncate sin escribir
-    //modificar tamanio_archivo en truncate solamente, no cuando escribimos
+    int bloque_inicial; //para facilitar escritura y lectura; SOLO MODIFICAR EN TRUNCATE
+    int tamanio_archivo; 
+    //COSAS IMPORTANTES SOBRE TAMANIO ARCHIVO
+    //SIEMPRE son los bytes asignados desde el ultimo truncate. NO necesariamente son la cantidad bytes que escribio el proceso. Podemos hacer truncate y despues no escribir nada.
+    //modificar tamanio_archivo en truncate solamente, no cuando escribimos.
+    //siempre que hagamos truncate se modifica tamanio_archivo
 }fcb;
 
 t_list * lista_fcbs;

@@ -408,36 +408,42 @@ fcb * buscar_archivo(char * name_file){
 void create_file(char * name_file){
     
     int nro_bloque = (int)buscar_primer_bloque_libre(); //debemos buscar en el bitmap alguno libre
-    if( nro_bloque != -1){//si encontro un bloque libre
-        char ruta_relativa[strlen(name_file)+2+1];//dos para el "./" y uno para el '\0'
 
-        memcpy(ruta_relativa,"./",3);
-
-        strcat(ruta_relativa+2, name_file);
-
-        FILE * f;
+    if( nro_bloque != (-1)){//si encontro un bloque libre
         
+        //actualiza el bitmap
+        bitarray_set_bit(bitmap, (off_t) nro_bloque);
+
+        //formamos ruta relativa
+        char ruta_relativa[strlen(name_file)+2+1];//dos para el "./" y uno para el '\0'
+        memcpy(ruta_relativa,"./",3);
+        strcat(ruta_relativa+2, name_file);
+        
+        //creamos archivo de texto para poder relacionarlo al t_config (si el archivo no existe, config_create devuelve null)
+        FILE * f;
         f = fopen(ruta_relativa, "w");
         fclose(f); 
 
-        t_config * new_metadata = config_create(ruta_relativa);//este ese el elemento de la lista
+        //lo guardamos en el config
+        t_config * new_metadata = config_create(ruta_relativa);
 
-        //el metadata se crea en el wd
+        //escribimos valores iniciales
         escribir_metadata(new_metadata,"BLOQUE_INICIAL", nro_bloque);
         escribir_metadata(new_metadata, "TAMANIO_ARCHIVO",0);
 
+        //acomodamos todos los datos en la estructura creada
         fcb * new_fcb = malloc(sizeof(fcb));
         new_fcb->metadata = new_metadata;
         new_fcb->bloque_inicial = nro_bloque;
         new_fcb->nombre_archivo=name_file;
         new_fcb->tamanio_archivo=0;
         
-        bitarray_set_bit(bitmap, (off_t) nro_bloque);//actualiza el bitmap
-
-
+        //agregamos a la lista de fcbs
         list_add(lista_fcbs,new_fcb);
     }
 
+    return;
+    
 }
 
 off_t buscar_primer_bloque_libre() {
@@ -448,7 +454,7 @@ off_t buscar_primer_bloque_libre() {
         }
     }
 
-    return -1; // devuelve -1 porque no se encontró ningún bloque
+    return (-1); // devuelve (-1) porque no se encontró ningún bloque
 };
 
 char * intTOString(int numero){
@@ -700,17 +706,17 @@ void abrir_bitmap(){
     tamanio_bitmap = ceil(block_count / 8);
 
     // Verificar si el archivo existe
-    if(access(path_bitmap, F_OK) == -1){ // acces verifica que el archivo EXISTA
+    if(access(path_bitmap, F_OK) == (-1)){ // acces verifica que el archivo EXISTA
         // Si el archivo no existe, hay que crearlo. Con OPEN tambien podemos crearlo si le ponemos el flag o_create.
         log_info(logger_io, "El archivo bitmap no existe, creamos uno nuevo.");
         //Como se lee este open? Si existe abrilo con permiso de lectura y escritura -> es la parte de open(path_bitmap, O_RDWR) | si no existe crealo y dale permiso de lectura y escritura la parte de open(lo anterior| o_create, s_irsusr | siwusr)
         fd = open(path_bitmap, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-        if (fd == -1) {
+        if (fd == (-1)) {
             log_error(logger_io, "No pude crear el archivo bitmap");
             exit(1);
         }
 
-        if (ftruncate(fd, tamanio_bitmap) == -1) { // Una vez creado le damos el tamanio del bitmap(esto vi en el foro que esta bien, ese seria el tamanio)
+        if (ftruncate(fd, tamanio_bitmap) == (-1)) { // Una vez creado le damos el tamanio del bitmap(esto vi en el foro que esta bien, ese seria el tamanio)
             log_error(logger_io, "No puedo agrandar el archivo");
             close(fd);
             exit(1);
@@ -718,7 +724,7 @@ void abrir_bitmap(){
     } else {
         //si el archivo existe solamente lo creamos
         fd = open(path_bitmap, O_RDWR); 
-        if (fd == -1) {
+        if (fd == (-1)) {
             log_error(logger_io, "No pude abrir el archivo bitmap");
             exit(1);
         }
@@ -745,16 +751,16 @@ void abrir_archivo_bloques(){
     tamanio_bloques = block_size * block_count;
 
     // Verificar si el archivo existe
-    if(access(path_bloques, F_OK) == -1){// acces verifica que el archivo EXISTA
+    if(access(path_bloques, F_OK) == (-1)){// acces verifica que el archivo EXISTA
         // El archivo no existe, hay que crearlo (TODA LA EXPLICACION DEL OPEN ESTA ARRIBA, ANDA A LEERLO LA CONCHA DE TU RENEGRIDA MADRE)
         log_info(logger_io, "El archivo de bloques no existe, creamos uno nuevo");
         fd = open(path_bloques, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-        if (fd == -1) {
+        if (fd == (-1)) {
             log_error(logger_io, "No pude crear el archivo de bloques");
             exit(1);
         }
         // Le damos mas focking tamanio
-        if (ftruncate(fd, tamanio_bloques) == -1) {
+        if (ftruncate(fd, tamanio_bloques) == (-1)) {
             log_error(logger_io, "No pude redimensionar el archivo de bloques");
             close(fd);
             exit(1);
@@ -762,7 +768,7 @@ void abrir_archivo_bloques(){
     } else {
         // si existe simplemente hay que abrirlo
         fd = open(path_bloques, O_RDWR);
-        if (fd == -1) {
+        if (fd == (-1)) {
             log_error(logger_io, "No pude abrir el archivo de bloques");
             exit(1);
         }
