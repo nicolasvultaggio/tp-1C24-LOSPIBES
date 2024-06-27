@@ -332,8 +332,6 @@ void atender_STDOUT(){
 void atender_DIALFS(){ 
 // hoy, 2/5/2024, a las 20:07, esuchando JIMMY FALLON de Luchito, empiezo la funcion mas dificil de las interfaces, suerte loko 
 // hoy, 25/6/2024, a las 11:48 escuchando Not Like us de kendrick (RIP Drake), continuamos esta verga gomosa
-   
-    //inicializar_archivos(); ESTO NO DEBERÍA ESTAR ACA, DEBERÍA SER A PENAS SE INICIALIZE LA INTERFAZ
 
     t_list * lista = recibir_paquete(fd_conexion_kernel);
 
@@ -482,28 +480,90 @@ void inicializar_archivos(){
 }
 
 void abrir_bitmap(){
-    // en realidad a este path le vamos a tener que sumar el path base creo, pero no se, lo vemos cuando hagamos las pruebas, ahora no importa
-    int fd = open(path_bitmap, O_RDWR);
-    // uso open ya que a la hora de mapear el archivo con mmap este usa el fd del archivo y open te lo da directo, fopen te da el puntero al archivo
-    tamanio_bitmap = ceil(block_count/8); //.h Cantidad de bloques / tamanio de bloques = tamanio del bitmap en bytes. CEIL redondea para arriba 
+    int fd;
+    tamanio_bitmap = ceil(block_count / 8);
 
+    // Verificar si el archivo existe
+    if(access(path_bitmap, F_OK) == -1){ // acces verifica que el archivo EXISTA
+        // Si el archivo no existe, hay que crearlo. Con OPEN tambien podemos crearlo si le ponemos el flag o_create.
+        log_info(logger_io, "El archivo bitmap no existe, creamos uno nuevo.");
+        //Como se lee este open? Si existe abrilo con permiso de lectura y escritura -> es la parte de open(path_bitmap, O_RDWR) | si no existe crealo y dale permiso de lectura y escritura la parte de open(lo anterior| o_create, s_irsusr | siwusr)
+        fd = open(path_bitmap, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+        if (fd == -1) {
+            log_error(logger_io, "No pude crear el archivo bitmap");
+            exit(1);
+        }
+
+        if (ftruncate(fd, tamanio_bitmap) == -1) { // Una vez creado le damos el tamanio del bitmap(esto vi en el foro que esta bien, ese seria el tamanio)
+            log_error(logger_io, "No puedo agrandar el archivo");
+            close(fd);
+            exit(1);
+        }
+    } else {
+        //si el archivo existe solamente lo creamos
+        fd = open(path_bitmap, O_RDWR); 
+        if (fd == -1) {
+            log_error(logger_io, "No pude abrir el archivo bitmap");
+            exit(1);
+        }
+    }
+
+    // Mapear el archivo a memoria
+    // BOrre la explicacion de mmap con esta implementacion, si alguno tiene alguna duda de como esta hecho pregunte.
     buffer_bitmap = mmap(NULL, tamanio_bitmap, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    //parametros mmap(donde se mapea(NULL = elegimos q el sist elija) , tamanio, permisos, dejamos q los cambios que se hacen en memoria se reflejen en el archivo FUNDAMENTAL, fs, desplazamiento)
+    if (buffer_bitmap == MAP_FAILED) {
+        log_error(logger_io, "Error al mapear el archivo bitmap.");
+        close(fd);
+        exit(1);
+    }
+
+    // Crear el bitarray con el buffer mapeado
     bitmap = bitarray_create_with_mode(buffer_bitmap, tamanio_bitmap, LSB_FIRST);
 
     close(fd);
 }
 
+
 void abrir_archivo_bloques(){
-    //en realidad a este path le vamos a tener que sumar el path base creo, pero no se, lo vemos cuando hagamos las pruebas, ahora no importa
-    int fd = open(path_bloques, O_RDWR); //path_blques no es "./bloques.dat", no se si hace falta parametrizarlo
+    int fd;
     tamanio_bloques = block_size * block_count;
 
-    buffer_bloques = mmap(NULL, tamanio_bloques, PROT_READ | PROT_WRITE, MAP_SHARED, fd,0);
+    // Verificar si el archivo existe
+    if(access(path_bloques, F_OK) == -1){// acces verifica que el archivo EXISTA
+        // El archivo no existe, hay que crearlo (TODA LA EXPLICACION DEL OPEN ESTA ARRIBA, ANDA A LEERLO LA CONCHA DE TU RENEGRIDA MADRE)
+        log_info(logger_io, "El archivo de bloques no existe, creamos uno nuevo");
+        fd = open(path_bloques, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+        if (fd == -1) {
+            log_error(logger_io, "No pude crear el archivo de bloques");
+            exit(1);
+        }
+        // Le damos mas focking tamanio
+        if (ftruncate(fd, tamanio_bloques) == -1) {
+            log_error(logger_io, "No pude redimensionar el archivo de bloques");
+            close(fd);
+            exit(1);
+        }
+    } else {
+        // si existe simplemente hay que abrirlo
+        fd = open(path_bloques, O_RDWR);
+        if (fd == -1) {
+            log_error(logger_io, "No pude abrir el archivo de bloques");
+            exit(1);
+        }
+    }
 
-    close(fd); 
+    // Mapear el archivo a memoria
+    buffer_bloques = mmap(NULL, tamanio_bloques, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (buffer_bloques == MAP_FAILED) {
+        log_error(logger_io, "Error al mapear el archivo de bloques.");
+        close(fd);
+        exit(1);
+    }
 
+    close(fd);
 }
+
+
 
 void avisar_operacion_realizada_kernel(){
     int a=1;
