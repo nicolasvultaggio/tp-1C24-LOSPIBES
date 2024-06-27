@@ -370,7 +370,7 @@ void atender_DIALFS(){
             uint32_t puntero_archivo_w = *list_get(lista,3);
             t_list * traducciones_w = desempaquetar_traducciones(lista,4);
             
-            write_file(nombre_archivo_operacion, tamanio_escritura,puntero_archivo_w,traducciones_r);
+            write_file(nombre_archivo_operacion, tamanio_escritura,puntero_archivo_w,traducciones_w);
             
             free(list_get(lista,2));
             free(list_get(lista,3));
@@ -463,26 +463,21 @@ void truncate_file(char * name_file,uint32_t nuevo_tamanio){
 }
 
 void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones){
-//                                                                      ^ creo que a este seria mejor ponele posicion_a_escribir para que se entienda mas.  
-
-    //Esto es PSEUDOCODIGO, porq ahora no tengo mucho timepo asi q voy poniendo masmoenos como va a ser pero NO CREO QUE VAYA A TENER MUCHO SENTIDO. EN un rato lo acomodo todo, quedo bastante hecho igual 
-
-
 }
 
-void write_file(char* nombre_archivo, uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones){
+
+void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posicion_a_escribir,t_list * traducciones){
 //                                                                      ^ creo que a este seria mejor ponele posicion_a_escribir para que se entienda mas.  
 
     //Esto es PSEUDOCODIGO, porq ahora no tengo mucho timepo asi q voy poniendo masmoenos como va a ser pero NO CREO QUE VAYA A TENER MUCHO SENTIDO. EN un rato lo acomodo todo, quedo bastante hecho igual 
-
 
     //Buscamos el archivo en la lista de FCBs
     fcb* archivo = buscar_archivo(nombre_archivo);//FALTA IMPLEMENTAR
     
     //Le pedimos a memoria que nos pase los valores que estan en las direcciones de la lsita de traducciones
-
     // EL codigo de abajo lo saque de STDOUT. TODAVIA NO ESTA NADA MODIFICADO PERO CREO Q LO VAMOS A USAR. 
-    char tam = tamanio_escritura;
+
+    int tam = tamanio_escritura;
     char buffer[tam+1];
     
     uint32_t offset=0;
@@ -513,9 +508,10 @@ void write_file(char* nombre_archivo, uint32_t tamanio_escritura,uint32_t punter
         offset+=traduccion->bytes;
     }
 
+    buffer[tam+1]='\0'; // Lo agrego por las dudas que tenga q usar alguna funcion de cadena de caracteres. 
 
     //FALTA ESCRIBIR DATOS. Esta funcion va a estar bien bacana wey
-    escribir_archivo(archivo, puntero_archivo, buffer, tamanio_escritura);// FALTA IMPLEMENTAR
+    escribir_archivo(archivo, posicion_a_escribir, buffer);// FALTA IMPLEMENTAR
     //ESTA FUNCION VA A TENER QUE:
     //1. BUSCAR LA POSICION DEL BLOQUE DONDE VAMOS A ESCRIBIR
     //2. FIJARSE SI ENTRA LO QUE VAMOS A ESCRIBIR EN EL BLOQUE ENCONTRADO (?) -> SEGUN JUAN NO HACIA FALTA PORQ UN AYUDANTE LE DIJO QUE NUNCA IBAN A HACER WRITE ANTES DE TRUNCAR, PERO SI NO ES MUY DIFICIL LO IMPLEMENTARIA PARA LA FACHA
@@ -534,6 +530,25 @@ void write_file(char* nombre_archivo, uint32_t tamanio_escritura,uint32_t punter
     }
     
     
+}
+
+bool pertenece_a_archivo(fcb* archivo, uint32_t posicion){
+    int cantidadDeBloquesArchivo = ceil(archivo->tamanio_archivo / block_size);
+    return ((int)posicion <= cantidadDeBloquesArchivo && (int)posicion >= archivo->bloque_inicial)
+    
+}
+
+void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){
+    //Hay que verificar que: 
+    //1. La posicion pertenezca al archivo 
+    //2. Y lo q vaya a escribir entra en el bloque 
+    
+    int posicion_bloque = archivo->bloque_inicial;
+    
+    if(!pertenece_a_archivo(archivo,posicion_a_escribir)){
+
+    }
+
 }
 
 int contar_digitos(int numero) {

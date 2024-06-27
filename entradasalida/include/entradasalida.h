@@ -81,8 +81,11 @@ off_t buscar_primer_bloque_libre();
 void delete_file(char * name_file);
 void truncate_file(char * name_file,uint32_t nuevo_tamanio);
 void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones);
-void write_file(char* nombre_archivo, uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
 
+bool pertenece_a_archivo(fcb* archivo, uint32_t posicion);
+
+void write_file(char* nombre_archivo, uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
+void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer);
 
 int contar_digitos(int numero);
 char * intTOString(int numero);
