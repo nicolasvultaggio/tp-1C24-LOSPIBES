@@ -560,12 +560,14 @@ void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posic
     //Le pedimos a memoria que nos pase los valores que estan en las direcciones de la lsita de traducciones
     // EL codigo de abajo lo saque de STDOUT. TODAVIA NO ESTA NADA MODIFICADO PERO CREO Q LO VAMOS A USAR. 
 
-    int tam = tamanio_escritura;
+    int tam =(int) tamanio_escritura;
     char buffer[tam+1];
     
     uint32_t offset=0;
     int cantidad_de_traducciones = list_size(traducciones);
     bool operacion_exitosa=true;
+
+    //Soy Nico: creo que es mejor verificar lo que vayamos a pedir ANTES de pedirle las cosas a memoria, porque si al final no puede, pedimos todo a memoria al pedo.
 
     for(int i =0; i<cantidad_de_traducciones && operacion_exitosa ; i++){
         
@@ -591,16 +593,13 @@ void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posic
         offset+=traduccion->bytes;
     }
 
-    buffer[tam+1]='\0'; // Lo agrego por las dudas que tenga q usar alguna funcion de cadena de caracteres. 
+    buffer[tam+1]='\0'; // Lo agrego por las dudas que tenga q usar alguna funcion de cadena de caracteres. en STDOUT se usaba para poder hacer printf
 
     //FALTA ESCRIBIR DATOS. Esta funcion va a estar bien bacana wey
     operacion_exitosa = escribir_archivo(archivo, posicion_a_escribir, buffer);// FALTA IMPLEMENTAR
     //ESTA FUNCION VA A TENER QUE:
     //1. BUSCAR LA POSICION DEL BLOQUE DONDE VAMOS A ESCRIBIR
-    //2. FIJARSE SI ENTRA LO QUE VAMOS A ESCRIBIR EN EL BLOQUE ENCONTRADO (?) -> SEGUN JUAN NO HACIA FALTA PORQ UN AYUDANTE LE DIJO QUE NUNCA IBAN A HACER WRITE ANTES DE TRUNCAR, PERO SI NO ES MUY DIFICIL LO IMPLEMENTARIA PARA LA FACHA
-    //3. ESCRIBIR EL ARCHIVO
-
-
+    //2. ESCRIBIR EL ARCHIVO - ya hicimos la verificacin mas arriba
 
     list_destroy_and_destroy_elements(traducciones,(void*)traduccion_destroyer);
 
@@ -620,28 +619,29 @@ bool bytes_pertenecen_a_archivo(fcb* archivo, uint32_t posicion, uint32_t tamani
 }
 
 bool escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){    
-    //Hay que verificar que: 
-    //1. La posicion pertenezca al archivo 
-    //2. Y lo q vaya a escribir entra en el bloque 
+    //Hay que verificar que TODOS los bytes que se van a leer o escribir pertenezcan al tamaño asignado al archivo.
+    //Como hacemos esto? posicion_a_escribir + tamanio_operacion < tamanio_Archivo
     
     int posicion_bloque = archivo->bloque_inicial;
     int tamanio_buffer = strlen(buffer);
 
     if(!bytes_pertenecen_a_archivo(archivo,posicion_a_escribir,tamanio_buffer)){
-        log_info(logger_io,"La posicion que paso para escribir no pertenece al archivo");
+        log_info(logger_io,"FALLO AL ESCRIBIR: %s. SEGMENTATION FAULT. Estos bytes no le pertenecen al archivo.");
         return false;
     }
 
     int espacio_disponible = archivo->tamanio_archivo - posicion_a_escribir;
     
-
+    /* ME PARECE QUE ESTO YA NO HACE FALTA VERIFICARLO, por las dudas no lo borro porque soy medio daun
     if (tamanio_buffer > espacio_disponible){
         log_info(logger_io,"No hay espacio disponible para escribir en el archivo, si desea escribir en esa posicion debe escribir algo menor a: %d", espacio_disponible);
         return false;
     }
-    
+    */
+
     void* posicion_a_escribir_en_bloques = buffer_bloques + ((archivo->bloque_inicial)*block_size) + (int) posicion_a_escribir;
-    memcpy(posicion_a_escribir_en_bloques, buffer, tamanio_buffer);
+    
+    memcpy(posicion_a_escribir_en_bloques, buffer, tamanio_buffer); //importante: no escribimos el '\0' en el archivo.
 
     msync(posicion_a_escribir_en_bloques,tamanio_bloques,MS_SYNC);
 
