@@ -431,7 +431,9 @@ void create_file(char * name_file){
         new_fcb->bloque_inicial = nro_bloque;
         new_fcb->nombre_archivo=name_file;
         new_fcb->tamanio_archivo=0;
-        //falta asignar el bloque
+        
+        bitarray_set_bit(bitmap, (off_t) nro_bloque);//actualiza el bitmap
+
 
         list_add(lista_fcbs,new_fcb);
     }
@@ -470,6 +472,19 @@ int leer_metadata(t_config * metadata, char* key){
 
 void delete_file(char * name_file){
     
+
+    //1) ambiar cada bit en el bitmap del archivo en un 0
+    //para eso necesito la estructura que relacionaba bits con el archivo
+
+    //2) eliminar de la lista de fcb el fcb del archivo y hacerle free
+    fcb * fcb_file = buscar_archivo(name_file);
+    //list_remove_element(lista_fcbs, fcb_file);//no devuelve bool esto?
+
+
+    //3) actualizar metadata
+    //para ello tengo que acceder a la metadata del archivo
+
+
 }
 
 void truncate_file(char * name_file,uint32_t nuevo_tamanio){
