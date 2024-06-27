@@ -392,6 +392,19 @@ void atender_DIALFS(){
 
 }
 
+fcb * buscar_archivo(char * name_file){
+    
+    bool archivo_de_nombre(void* nc){
+        fcb * un_fcb = (fcb*) nc;
+        return !strcmp(un_fcb->nombre_archivo,name_file);
+    }
+
+    fcb * archivo_encontrado= list_find(lista_fcbs,(void*)archivo_de_nombre);
+    
+    return archivo_encontrado;
+
+}
+
 void create_file(char * name_file){
     
     int nro_bloque = (int)buscar_primer_bloque_libre(); //debemos buscar en el bitmap alguno libre
@@ -399,7 +412,7 @@ void create_file(char * name_file){
         char ruta_relativa[strlen(name_file)+2+1];//dos para el "./" y uno para el '\0'
 
         memcpy(ruta_relativa,"./",3);
-        
+
         strcat(ruta_relativa+2, name_file);
 
         FILE * f;
@@ -415,8 +428,12 @@ void create_file(char * name_file){
 
         fcb * new_fcb = malloc(sizeof(fcb));
         new_fcb->metadata = new_metadata;
-
+        new_fcb->bloque_inicial = nro_bloque;
+        new_fcb->nombre_archivo=name_file;
+        new_fcb->tamanio_archivo=0;
         //falta asignar el bloque
+
+        list_add(lista_fcbs,new_fcb);
     }
 
 }
@@ -464,9 +481,62 @@ void truncate_file(char * name_file,uint32_t nuevo_tamanio){
 
 void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones){
 //                                                                      ^ creo que a este seria mejor ponele posicion_a_escribir para que se entienda mas.  
+    
+    //buscamos leer el archivo
+    char buffer[tamanio_lectura];
 
-    //Esto es PSEUDOCODIGO, porq ahora no tengo mucho timepo asi q voy poniendo masmoenos como va a ser pero NO CREO QUE VAYA A TENER MUCHO SENTIDO. EN un rato lo acomodo todo, quedo bastante hecho igual 
+    fcb * fcb_file = buscar_archivo(nombre_archivo);
+   
+    int first_block = fcb_file->bloque_inicial;
 
+    uint32_t direccion_archivo_bloquesDAT = ((uint32_t)first_block)*((uint32_t)block_size)+puntero_archivo;
+    
+    //faltan verificaciones de tomi
+
+    memcpy(buffer,buffer_bloques+direccion_archivo_bloquesDAT,(size_t)tamanio_lectura);
+   
+   //ya leimos el archivo y guardamos los bytes en 'buffer'
+
+    uint32_t offset=0;
+    int cantidad_de_traducciones = list_size(traducciones);
+    bool operacion_exitosa=true;
+
+    for(int i =0; i<cantidad_de_traducciones && operacion_exitosa ; i++){
+        
+        //leemos bytes del buffer como indique esa traduccion
+        nodo_lectura_escritura * traduccion = list_get(traducciones,i);
+        char string_a_enviar[traduccion->bytes];
+        memcpy(string_a_enviar,buffer+offset,traduccion->bytes);//detalle: no guardamos '\0' en lo que le enviamos a memoria para que escriba
+        offset+=traduccion->bytes;
+        
+        //empaquetamos datos y los enviamos a memoria
+        t_paquete * paquete2 = crear_paquete(ESCRITURA_MEMORIA);
+        agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(uint32_t));
+        agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(uint32_t));//para que sepa cuantos bytes escribir
+        agregar_a_paquete(paquete2,string_a_enviar,traduccion->bytes);
+        enviar_paquete(paquete2,fd_conexion_memoria);
+        eliminar_paquete(paquete2);
+
+        //recibimos respuesta de memoria, si falló ALGUNA escritura, operacion fallida
+        int cod_op;
+	    recv(fd_conexion_memoria, &cod_op, sizeof(int), MSG_WAITALL); //al pedo, esta nada mas para que podamos recibir el codop antes del paquete
+        t_list * lista = recibir_paquete(fd_conexion_memoria);
+        char * rta = (char*) list_get(lista,0);
+        printf("%s\n",rta); //imprime "ok" en pantalla
+        operacion_exitosa = !strcmp(rta,"Ok"); //comparamos cada respuesta de memoria, alcanza con que alguna NO sea "Ok"
+        free(rta);
+        list_destroy(lista);
+    }
+
+    list_destroy_and_destroy_elements(traducciones,(void*)traduccion_destroyer);
+
+    if(operacion_exitosa){
+        int a =1;
+        send(fd_conexion_kernel,&a,sizeof(int),0); // le avisa al kernel que la escritura fue exitosa
+    }else{ //en teoria no debería entrar aca porque no falla en la escritura, ya lo controlo la MMU
+        int b = 0; //si falla al escribir en memoria finalizo el proceso
+        send(fd_conexion_kernel,&b,sizeof(int),0); //le avisa al kernel que la escritura salio mal
+    }
 
 }
 
@@ -563,6 +633,7 @@ int contar_digitos(int numero) {
 void inicializar_archivos(){
     abrir_bitmap();//.h
     abrir_archivo_bloques();//.h
+    lista_fcbs = list_create();
 }
 
 void abrir_bitmap(){

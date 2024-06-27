@@ -13,12 +13,13 @@
 
 
 typedef struct{
-    t_config * metadata;
-    char* nombre_archivo;
-    int bloque_inicial;
-    int tamanio_archivo;
+    t_config * metadata; //para usar funciones de las commons sobre el metadata
+    char * nombre_archivo; //para buscar archivo por nombre
+    int bloque_inicial; //para facilitar escritura y lectura
+    int tamanio_archivo; //para facilitar escritura y lectura
 }fcb;
 
+t_list * lista_fcbs;
 
 int fd_conexion_kernel;//socket para enviar a kernel
 int fd_conexion_memoria;//socket para enviar a memoria
@@ -77,12 +78,11 @@ void avisar_operacion_realizada_kernel();
 
 
 void create_file(char * name_file);
-off_t buscar_primer_bloque_libre();
 void delete_file(char * name_file);
 void truncate_file(char * name_file,uint32_t nuevo_tamanio);
-void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones);
-void write_file(char* nombre_archivo, uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
-
+void read_file(uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones);
+void write_file(uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
+fcb * buscar_archivo(char * name_file);
 
 int contar_digitos(int numero);
 char * intTOString(int numero);
