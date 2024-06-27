@@ -396,9 +396,16 @@ void create_file(char * name_file){
     
     int nro_bloque = (int)buscar_primer_bloque_libre(); //debemos buscar en el bitmap alguno libre
     if( nro_bloque != -1){//si encontro un bloque libre
-        char ruta_relativa[strlen(name_file)+2+1]="./";//dos para el "./" y uno para el '\0'
+        char ruta_relativa[strlen(name_file)+2+1];//dos para el "./" y uno para el '\0'
 
+        memcpy(ruta_relativa,"./",3);
+        
         strcat(ruta_relativa+2, name_file);
+
+        FILE * f;
+        
+        f = fopen(ruta_relativa, "w");
+        fclose(f); 
 
         t_config * new_metadata = config_create(ruta_relativa);//este ese el elemento de la lista
 
