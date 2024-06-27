@@ -394,23 +394,36 @@ void atender_DIALFS(){
 
 void create_file(char * name_file){
     
-    int nro_bloque; //debemos buscar en el bitmap alguno libre
+    int nro_bloque = (int)buscar_primer_bloque_libre(); //debemos buscar en el bitmap alguno libre
+    if( nro_bloque != -1){//si encontro un bloque libre
+        char ruta_relativa[strlen(name_file)+2+1]="./";//dos para el "./" y uno para el '\0'
 
-    char ruta_relativa[strlen(name_file)+2+1]="./";//dos para el "./" y uno para el '\0'
+        strcat(ruta_relativa+2, name_file);
 
-    strcat(ruta_relativa+2, name_file);
+        t_config * new_metadata = config_create(ruta_relativa);//este ese el elemento de la lista
 
-    t_config * new_metadata = config_create(ruta_relativa);//este ese el elemento de la lista
+        //el metadata se crea en el wd
+        escribir_metadata(new_metadata,"BLOQUE_INICIAL", nro_bloque);
+        escribir_metadata(new_metadata, "TAMANIO_ARCHIVO",0);
 
-    //el metadata se crea en el wd
-    escribir_metadata(new_metadata,"BLOQUE_INICIAL", nro_bloque);
-    escribir_metadata(new_metadata, "TAMANIO_ARCHIVO",0);
+        fcb * new_fcb = malloc(sizeof(fcb));
+        new_fcb->metadata = new_metadata;
 
-    fcb * new_fcb = malloc(sizeof(fcb));
-    new_fcb->metadata = new_metadata;
+        //falta asignar el bloque
+    }
 
-    //falta asignar el bloque
 }
+
+off_t buscar_primer_bloque_libre() {
+
+    for (off_t i = 0; i < tamanio_bitmap; i++) {
+        if (!bitarray_test_bit(bitmap, i)) {
+            return i; // devuelve la posicion dentro del bitmap del primer bloque libre que encontro
+        }
+    }
+
+    return -1; // devuelve -1 porque no se encontró ningún bloque
+};
 
 char * intTOString(int numero){
     char buffer[contar_digitos(numero)+1];//uno más para el '\0'

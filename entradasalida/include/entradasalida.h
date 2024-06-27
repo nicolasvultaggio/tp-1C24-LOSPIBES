@@ -77,6 +77,7 @@ void avisar_operacion_realizada_kernel();
 
 
 void create_file(char * name_file);
+off_t buscar_primer_bloque_libre();
 void delete_file(char * name_file);
 void truncate_file(char * name_file,uint32_t nuevo_tamanio);
 void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones);
