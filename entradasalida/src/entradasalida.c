@@ -614,7 +614,7 @@ bool pertenece_a_archivo(fcb* archivo, uint32_t posicion){
     
 }
 
-void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){
+void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){    
     //Hay que verificar que: 
     //1. La posicion pertenezca al archivo 
     //2. Y lo q vaya a escribir entra en el bloque 
