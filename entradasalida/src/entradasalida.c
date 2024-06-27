@@ -409,11 +409,16 @@ void create_file(char * name_file){
     
     int nro_bloque = (int)buscar_primer_bloque_libre(); //debemos buscar en el bitmap alguno libre
     if( nro_bloque != -1){//si encontro un bloque libre
-        char ruta_relativa[strlen(name_file)+2+1]="./";//dos para el "./" y uno para el '\0'
+        char ruta_relativa[strlen(name_file)+2+1];//dos para el "./" y uno para el '\0'
 
         memcpy(ruta_relativa,"./",3);
 
         strcat(ruta_relativa+2, name_file);
+
+        FILE * f;
+        
+        f = fopen(ruta_relativa, "w");
+        fclose(f); 
 
         t_config * new_metadata = config_create(ruta_relativa);//este ese el elemento de la lista
 
@@ -478,24 +483,32 @@ void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_ar
 //                                                                      ^ creo que a este seria mejor ponele posicion_a_escribir para que se entienda mas.  
     
     //buscamos leer el archivo
-    char buffer[tamanio_lectura];
 
     fcb * fcb_file = buscar_archivo(nombre_archivo);
    
-    int first_block = fcb_file->bloque_inicial;
-
-    uint32_t direccion_archivo_bloquesDAT = ((uint32_t)first_block)*((uint32_t)block_size)+puntero_archivo;
-    
-    //faltan verificaciones de tomi
-
-    memcpy(buffer,buffer_bloques+direccion_archivo_bloquesDAT,(size_t)tamanio_lectura);
-   
-   //ya leimos el archivo y guardamos los bytes en 'buffer'
-
-    uint32_t offset=0;
-    int cantidad_de_traducciones = list_size(traducciones);
     bool operacion_exitosa=true;
+    int first_block;
+    uint32_t direccion_archivo_bloquesDAT;
+    char buffer[tamanio_lectura];
+    uint32_t offset;
+    int cantidad_de_traducciones;
 
+    operacion_exitosa = pertenece_a_archivo(fcb_file,puntero_archivo);//lo pone en false si no cumple
+
+    if(operacion_exitosa){
+
+        first_block = fcb_file->bloque_inicial;
+
+        direccion_archivo_bloquesDAT = ((uint32_t)first_block)*((uint32_t)block_size)+puntero_archivo;
+    
+        memcpy(buffer,buffer_bloques+direccion_archivo_bloquesDAT,(size_t)tamanio_lectura);
+   
+        //ya leimos el archivo y guardamos los bytes en 'buffer'
+        offset=0;
+        cantidad_de_traducciones = list_size(traducciones);
+
+    }
+    
     for(int i =0; i<cantidad_de_traducciones && operacion_exitosa ; i++){
         
         //leemos bytes del buffer como indique esa traduccion
@@ -602,13 +615,14 @@ void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posic
     
 }
 
-bool pertenece_a_archivo(fcb* archivo, uint32_t posicion){
-    int cantidadDeBloquesArchivo = ceil(archivo->tamanio_archivo / block_size);
-    return ((int)posicion <= cantidadDeBloquesArchivo && (int)posicion >= archivo->bloque_inicial);
-    
+bool pertenece_a_archivo(fcb* archivo, uint32_t posicion, uint32_t tamanio_operacion){
+    //int cantidadDeBloquesArchivo = ceil(archivo->tamanio_archivo / block_size);
+    //return ((int)posicion <= cantidadDeBloquesArchivo && (int)posicion >= archivo->bloque_inicial)
+    int tamanio = archivo->tamanio_archivo;
+    return archivo->
 }
 
-void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){    
+void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){
     //Hay que verificar que: 
     //1. La posicion pertenezca al archivo 
     //2. Y lo q vaya a escribir entra en el bloque 
@@ -616,25 +630,8 @@ void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){
     int posicion_bloque = archivo->bloque_inicial;
     
     if(!pertenece_a_archivo(archivo,posicion_a_escribir)){
-        log_info(logger_io,"La posicion que paso para escribir no pertenece al archivo");
-        //avisarle a kernel 
-        return;
+
     }
-
-    int espacio_disponible = archivo->tamanio_archivo - posicion_a_escribir;
-    int tamanio_buffer = strlen(buffer);
-
-    if (tamanio_buffer > espacio_disponible){
-        log_info(logger_io,"No hay espacio disponible para escribir en el archivo, si desea escribir en esa posicion debe escribir algo menor a: %d", espacio_disponible);
-        //avisarle a kernel 
-        return;
-    }
-    
-    void* posicion_a_escribir_en_bloques = buffer_bloques + archivo->bloque_inicial + (int) posicion_a_escribir;
-    memcpy(posicion_a_escribir_en_bloques, buffer, tamanio_buffer);
-
-    msync(posicion_a_escribir_en_bloques,tamanio_bloques,MS_SYNC);
-
 
 }
 
