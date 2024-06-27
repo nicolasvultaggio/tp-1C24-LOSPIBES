@@ -493,7 +493,7 @@ void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_ar
     uint32_t offset;
     int cantidad_de_traducciones;
 
-    operacion_exitosa = pertenece_a_archivo(fcb_file,puntero_archivo,tamanio_lectura);//lo pone en false si no cumple
+    operacion_exitosa = bytes_pertenecen_a_archivo(fcb_file,puntero_archivo,tamanio_lectura);//lo pone en false si no cumple
 
     if(operacion_exitosa){
 
@@ -615,7 +615,7 @@ void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posic
     
 }
 
-bool pertenece_a_archivo(fcb* archivo, uint32_t posicion, uint32_t tamanio_operacion){
+bool bytes_pertenecen_a_archivo(fcb* archivo, uint32_t posicion, uint32_t tamanio_operacion){
     return (posicion + tamanio_operacion) < archivo->tamanio_archivo;
 }
 
@@ -627,7 +627,7 @@ bool escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){
     int posicion_bloque = archivo->bloque_inicial;
     int tamanio_buffer = strlen(buffer);
 
-    if(!pertenece_a_archivo(archivo,posicion_a_escribir,tamanio_buffer)){
+    if(!bytes_pertenecen_a_archivo(archivo,posicion_a_escribir,tamanio_buffer)){
         log_info(logger_io,"La posicion que paso para escribir no pertenece al archivo");
         return false;
     }
