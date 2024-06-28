@@ -478,19 +478,26 @@ int leer_metadata(t_config * metadata, char* key){
 
 void delete_file(char * name_file){
     
+    fcb * fcb_file = buscar_archivo(name_file);
 
-    //1) ambiar cada bit en el bitmap del archivo en un 0
-    //para eso necesito la estructura que relacionaba bits con el archivo
-
+    //actualiza bitmap
+    int bloque_inicial = fcb_file->bloque_inicial;
+    int tamanio = fcb_file->tamanio_archivo;
+    int cant_bloques = ceil((double)tamanio/block_size);
+    for (int i=0; i < cant_bloques; i++){
+        bitarray_clean_bit(bitmap,(off_t) bloque_inicial + i);
+    }
+    
     //2) eliminar de la lista de fcb el fcb del archivo y hacerle free
-    fcb * fcb_file = buscar_archivo(name_file); // Me parece que va a ser mejor buscar el FCB al principio ya que lo vas a necesitar para saber cuantos bits ocupa en el bitmap
-    //list_remove_element(lista_fcbs, fcb_file);//no devuelve bool esto? SI, True si lo pudo sacar, False si no lo encontro. Lo pones en un IF y fue. 
 
+    list_remove_element(lista_fcbs, fcb_file);
+    //free(fcb_file->nombre_archivo);
+    //free(fcb_file->bloque_inicial);
+    //free(fcb_file->tamanio_archivo);
+    //actualizo metadata y desp le hago free?
 
     //3) actualizar metadata
-    //para ello tengo que acceder a la metadata del archivo
-
-
+    
 }
 
 void truncate_file(char * name_file,uint32_t nuevo_tamanio){
