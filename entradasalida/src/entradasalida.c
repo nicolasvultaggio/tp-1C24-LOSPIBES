@@ -584,16 +584,17 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
     int espacios_libres = 0;
     int posicion_ultimo_bloque = fcb_file->bloque_inicial+cant_bloques_actual-1;
     int posicion_bloque_inicial = fcb_file->bloque_inicial * block_size;
+    tamanio_bitmap = ceil(block_count / 8);
     
     
-
+    //Calculo la cantidad de bloques dispnibles que hay entre lo que ocupa el bloque y lo que ocuparia cuando lo agrande.
     for (int i = 0; i < cantidad_de_bloques_a_agrandar; i++){
-        if (bitarray_test_bit(bitmap,(off_t)(posicion_ultimo_bloque + i))){
-            espacios_libres ++
+        if (!bitarray_test_bit(bitmap,(off_t)(posicion_ultimo_bloque + i))){
+            espacios_libres ++;
         }
     }
     
-    if(espacios_libres > cantidad_de_bloques_a_agrandar){//YO creo que nunca se va a dar esto pero bueno 
+    if(espacios_libres >= cantidad_de_bloques_a_agrandar){ //SI hay los sificientes espacios libres ocupo en el bitmap todo lo que me hayan pedido
         for(int i = 0; i < cantidad_de_bloques_a_agrandar; i++){
             bitarray_set_bit(bitmap,(off_t)(posicion_ultimo_bloque));
             posicion_ultimo_bloque ++;
@@ -603,7 +604,13 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
             }
         }
     }else{
-        //Aca saco el espacio que ocupaba el archivo que queremos mover
+        //Aca entra cuando no hay espacio suficiente
+
+        //COpio lo que se escribio en el archivo de bloques en un buffer auxiliar
+        uint32_t tamanio_a_copiar = posicion_bloque_inicial - posicion_ultimo_bloque + 1;
+        char* buffer_auxiliar_archivo = copiar_datos_desde_archivo(tamanio_actual,tamanio_a_copiar, posicion_bloque_inicial); // Acordarse de hacerle free
+
+        //Desocupo los espacios del bitmap
         for(int i = 0; i < cant_bloques_actual; i++){ 
             bitarray_clean_bit(bitmap,(off_t)(fcb_file->bloque_inicial + i));
             if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
@@ -611,12 +618,32 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
                 return false;
             }
         }
-        //Aca guardamos en un buffer auxiliar todo lo escrito
-        char* buffer_auxiliar_archivo = copiar_datos_desde_archivo(tamanio_actual,posicion_bloque_inicial,posicion_ultimo_bloque); // Acordarse de hacerle free
 
-        compactar(buffer_bloques, &ultimo_bloque_escrito); // NECESITAMOS SABER CUAL ES EL ULTIMO BLOQUE ESCRITO YA QUE A PARTIR DE AHI VAMOS A ESCRIBIR NOSOTROS. AVERIGUAR COMO HACERLO. 
+        //Busco cual es la ultima posicion ocupada en el bitmap, la voy a necesitar despues para usarla como bloque inicial del archivo
+        int posicion_ultimo_bloque_ocupado;
+        for (int i = tamanio_bitmap; i >= 0; i--)
+        {
+            if(bitarray_test_bit(bitmap,(off_t)i)){
+                posicion_ultimo_bloque_ocupado = i;
+                break;
+            }
+            
+        }
+        compactar(&posicion_ultimo_bloque_ocupado); //FALTA IMPLEMENTAR
         
-
+        
+        memcpy(buffer_bloques + posicion_ultimo_bloque_ocupado, buffer_auxiliar_archivo, tamanio_a_copiar);
+        for(int i = 0; i < cantidad_de_bloques_a_agrandar; i++){
+            bitarray_set_bit(bitmap,(off_t)(posicion_ultimo_bloque_ocupado));
+            posicion_ultimo_bloque ++;
+            if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
+                log_info(logger_io, "ERROR al sincronizar los cambios en linea:638") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
+                return false;
+            }
+        }
+        fcb_file->bloque_inicial = posicion_ultimo_bloque_ocupado;
+        char* nuevo_bloque_inicial = intTOString(posicion_ultimo_bloque_ocupado);
+        config_set_value(fcb_file->metadata,"BLOQUE_INICIAL",nuevo_bloque_inicial);
     }
 
     //Esto lo hace en ambos casos. No importa si hizo o no hizo compactacion. 
@@ -626,8 +653,7 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
 
 }
 
-char *copiar_datos_desde_archivo(uint32_t tamanio_actual, int posicion_inicial, int posicion_final){
-    uint32_t tamanio_a_copiar = posicion_final - posicion_inicial + 1;
+char *copiar_datos_desde_archivo(uint32_t tamanio_actual,  uint32_t tamanio_a_copiar, int posicion_inicial){
 
     char* buffer_destino = (char *)malloc(tamanio_a_copiar);
     memcpy(buffer_destino, buffer_bloques + posicion_inicial, tamanio_a_copiar);

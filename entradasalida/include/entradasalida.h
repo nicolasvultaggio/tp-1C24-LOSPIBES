@@ -84,7 +84,7 @@ void avisar_operacion_realizada_kernel();
 void create_file(char * name_file);
 void delete_file(char * name_file);
 void truncate_file(char * name_file,uint32_t nuevo_tamanio);
-char *copiar_datos_desde_archivo(uint32_t tamanio_actual, int posicion_inicial, int posicion_final);
+char *copiar_datos_desde_archivo(uint32_t tamanio_actual,  uint32_t tamanio_a_copiar, int posicion_inicial);
 
 
 fcb* buscar_archivo(char * name_file); //esta raro porque usa funciones anidadas
