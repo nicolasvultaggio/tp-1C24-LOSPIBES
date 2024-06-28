@@ -568,15 +568,8 @@ void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_ar
 
 
 void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posicion_a_escribir,t_list * traducciones){
-//                                                                      ^ creo que a este seria mejor ponele posicion_a_escribir para que se entienda mas.  
 
-    //Esto es PSEUDOCODIGO, porq ahora no tengo mucho timepo asi q voy poniendo masmoenos como va a ser pero NO CREO QUE VAYA A TENER MUCHO SENTIDO. EN un rato lo acomodo todo, quedo bastante hecho igual 
-
-    //Buscamos el archivo en la lista de FCBs
-    fcb* archivo = buscar_archivo(nombre_archivo);//FALTA IMPLEMENTAR
-    
-    //Le pedimos a memoria que nos pase los valores que estan en las direcciones de la lsita de traducciones
-    // EL codigo de abajo lo saque de STDOUT. TODAVIA NO ESTA NADA MODIFICADO PERO CREO Q LO VAMOS A USAR. 
+    fcb* archivo = buscar_archivo(nombre_archivo);
 
     int tam =(int) tamanio_escritura;
     char buffer[tam+1];
@@ -618,15 +611,10 @@ void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posic
 
     buffer[tam+1]='\0'; // Lo agrego por las dudas que tenga q usar alguna funcion de cadena de caracteres. en STDOUT se usaba para poder hacer printf
 
-    //FALTA ESCRIBIR DATOS. Esta funcion va a estar bien bacana wey
-
     if (operacion_exitosa){
         escribir_archivo(archivo, posicion_a_escribir, buffer);//como ya no hace la verificacion, no devuelve bool
     }
     
-    //ESTA FUNCION VA A TENER QUE:
-    //1. BUSCAR LA POSICION DEL BLOQUE DONDE VAMOS A ESCRIBIR
-    //2. ESCRIBIR EL ARCHIVO - ya hicimos la verificacin mas arriba
 
     list_destroy_and_destroy_elements(traducciones,(void*)traduccion_destroyer);
 
@@ -645,22 +633,9 @@ bool bytes_pertenecen_a_archivo(fcb* archivo, uint32_t posicion, uint32_t tamani
     return (posicion + tamanio_operacion) < archivo->tamanio_archivo;
 }
 
-void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){    
-    //Hay que verificar que TODOS los bytes que se van a leer o escribir pertenezcan al tamaño asignado al archivo.
-    //Como hacemos esto? posicion_a_escribir + tamanio_operacion < tamanio_Archivo
-    // NICO- ACTUALIZO, esta funcion, como indica el nombre, solo escribe, no hace ninguna verificacion,esta se hizo previamente
-    
+void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){  
     int posicion_bloque = archivo->bloque_inicial;
     int tamanio_buffer = strlen(buffer);
-
-    /* ME PARECE QUE ESTO YA NO HACE FALTA VERIFICARLO, por las dudas no lo borro porque soy medio daun
-
-    int espacio_disponible = archivo->tamanio_archivo - posicion_a_escribir;
-    if (tamanio_buffer > espacio_disponible){
-        log_info(logger_io,"No hay espacio disponible para escribir en el archivo, si desea escribir en esa posicion debe escribir algo menor a: %d", espacio_disponible);
-        return false;
-    }
-    */
 
     void* posicion_a_escribir_en_bloques = buffer_bloques + ((archivo->bloque_inicial)*block_size) + (int) posicion_a_escribir;
     
