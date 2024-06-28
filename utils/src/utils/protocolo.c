@@ -401,7 +401,7 @@ void enviar_liberar_proceso(pcb* un_pcb, int fd){
 	//oojo, esto de aca arriba esta mal, no hace falta enviar el pcb entero, solo el pid
 	//ademas esta mal enviado el pcb, no podes enviar un struct asi de una en un paquete nenedaun
 	t_paquete* paquete = crear_paquete(FINALIZAR_PROCESO);
-	agregar_a_paquete(paquete,&(un_pcb->PID),sizof(int));
+	agregar_a_paquete(paquete,&(un_pcb->PID),sizeof(int));
 	enviar_paquete(paquete,fd);
 	eliminar_paquete(paquete);
 

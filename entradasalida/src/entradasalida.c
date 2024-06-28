@@ -488,16 +488,14 @@ void delete_file(char * name_file){
         bitarray_clean_bit(bitmap,(off_t) bloque_inicial + i);
     }
     
-    //2) eliminar de la lista de fcb el fcb del archivo y hacerle free
-
+    //eliminar el fcb de la lista y destruirlo
     list_remove_element(lista_fcbs, fcb_file);
-    //free(fcb_file->nombre_archivo);
-    //free(fcb_file->bloque_inicial);
-    //free(fcb_file->tamanio_archivo);
-    //actualizo metadata y desp le hago free?
+    config_destroy(fcb_file->metadata);
+    free(fcb_file->nombre_archivo);
+    free(fcb_file->bloque_inicial);
+    free(fcb_file->tamanio_archivo);
+    free(fcb_file);
 
-    //3) actualizar metadata
-    
 }
 
 void truncate_file(char * name_file,uint32_t nuevo_tamanio){
