@@ -89,7 +89,7 @@ void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_ar
 bool bytes_pertenecen_a_archivo(fcb* archivo, uint32_t posicion, uint32_t tamanio_operacion);
 void write_file(char* nombre_archivo, uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
 void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer);
-
+off_t buscar_primer_bloque_libre();
 int contar_digitos(int numero);
 char * intTOString(int numero);
 //mover a protocolo asi kernel lo conoce tambien
