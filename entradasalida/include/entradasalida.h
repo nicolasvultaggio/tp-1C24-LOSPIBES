@@ -76,7 +76,7 @@ void atender_DIALFS();
 void inicializar_archivos();
 void abrir_bitmap();
 void abrir_archivo_bloques();
-void escribir_metadata(t_config * metadata,char * key, int valor)
+void escribir_metadata(t_config * metadata,char * key, int valor);
 int leer_metadata(t_config * metadata, char* key);
 void avisar_operacion_realizada_kernel();
 
@@ -89,7 +89,8 @@ void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_ar
 bool bytes_pertenecen_a_archivo(fcb* archivo, uint32_t posicion, uint32_t tamanio_operacion);
 void write_file(char* nombre_archivo, uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
 void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer);
-
+bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int cant_bloques_actual);
+bool achicar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques, int cant_bloques_actual);
 int contar_digitos(int numero);
 char * intTOString(int numero);
 //mover a protocolo asi kernel lo conoce tambien

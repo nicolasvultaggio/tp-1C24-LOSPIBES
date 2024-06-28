@@ -495,8 +495,62 @@ void delete_file(char * name_file){
 
 void truncate_file(char * name_file,uint32_t nuevo_tamanio){
 
+    fcb * fcb_file=buscar_archivo(name_file);
+    uint32_t tamanio_actual = (uint32_t)(fcb_file->tamanio_archivo);
+    //  ceil(tamanio_actual/block_size); ojo, así no anda, habría que convertir a double. CEIL agarra un numero y si tiene coma, lo redonde para arriba, pero al hacer la division con enteros, por ejemplo->  ceil(20/11) = ceil(1) = 1
+    int cant_bloques_actual = ceil((double)tamanio_actual/block_size);     
+    int nueva_cant_bloques = ceil((double)nuevo_tamanio/block_size);
+
+    if(cant_bloques_actual==0){ //en caso de que TAMANIO_ACTUAL =0 (siempre debe tener al menos un bloque asignado, aún si tamanio=0)
+        cant_bloques_actual =1;
+    }
+
+    if(nueva_cant_bloques==0){ //en caso de que NUEVO_TAMANIO =0 (siempre debe tener al menos un bloque asignado, aún si tamanio=0)
+        nueva_cant_bloques =1;
+    }
+    
+    bool operacion_exitosa=true;
+    
+    if (cant_bloques_actual<nueva_cant_bloques){
+        operacion_exitosa=agrandar(fcb_file,nuevo_tamanio,nueva_cant_bloques,cant_bloques_actual);
+    }else if(cant_bloques_actual>nueva_cant_bloques){
+        operacion_exitosa=achicar(fcb_file,nuevo_tamanio,nueva_cant_bloques,cant_bloques_actual);
+    }
+
+    if(operacion_exitosa){
+        int a =1;
+        send(fd_conexion_kernel,&a,sizeof(int),0); // le avisa al kernel que operacion tuvo exito
+    }else{ 
+        int b = 0; 
+        send(fd_conexion_kernel,&b,sizeof(int),0); //le avisa al kernel que la operacion salio mal
+    }
+
 }
 
+bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int cant_bloques_actual){
+    uint32_t tamanio_actual = (uint32_t)(fcb_file->tamanio_archivo);
+      
+   
+
+}
+
+bool achicar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques, int cant_bloques_actual){
+    uint32_t tamanio_actual = (uint32_t)(fcb_file->tamanio_archivo);
+     
+    int bloques_a_quitar = cant_bloques_actual-nueva_cant_bloques;//será positivo
+    int posicion_ultimo_bloque = fcb_file->bloque_inicial+cant_bloques_actual-1;
+
+    for (int i =0; i<bloques_a_quitar ;i++){
+        bitarray_clean_bit(buffer_bitmap,(off_t)posicion_ultimo_bloque);
+        posicion_ultimo_bloque--;
+    }
+    
+    //modificamos METAINFORMACION DEL ARCHIVO
+    fcb_file->tamanio_archivo=(int)nuevo_tamanio;
+    char * char_nuevo_tamanio = intTOString((int)nuevo_tamanio);
+    config_set_value(fcb_file->metadata,"TAMANIO_ARCHIVO",char_nuevo_tamanio);
+
+}
 void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones){
 //                                                                      ^ creo que a este seria mejor ponele posicion_a_escribir para que se entienda mas.  
     
