@@ -89,8 +89,12 @@ void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_ar
 bool bytes_pertenecen_a_archivo(fcb* archivo, uint32_t posicion, uint32_t tamanio_operacion);
 void write_file(char* nombre_archivo, uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
 void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer);
+<<<<<<< HEAD
 bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int cant_bloques_actual);
 bool achicar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques, int cant_bloques_actual);
+=======
+off_t buscar_primer_bloque_libre();
+>>>>>>> e564c11405b44df04c5e51d3e9cde218f59f8814
 int contar_digitos(int numero);
 char * intTOString(int numero);
 //mover a protocolo asi kernel lo conoce tambien

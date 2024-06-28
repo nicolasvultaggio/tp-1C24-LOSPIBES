@@ -446,7 +446,7 @@ void create_file(char * name_file){
     
 }
 
-off_t buscar_primer_bloque_libre() {
+off_t buscar_primer_bloque_libre() {// guarda que no estaba en el .h
 
     for (off_t i = 0; i < tamanio_bitmap; i++) {
         if (!bitarray_test_bit(bitmap, i)) {
@@ -478,22 +478,52 @@ int leer_metadata(t_config * metadata, char* key){
 
 void delete_file(char * name_file){
     
-
-    //1) ambiar cada bit en el bitmap del archivo en un 0
-    //para eso necesito la estructura que relacionaba bits con el archivo
-
-    //2) eliminar de la lista de fcb el fcb del archivo y hacerle free
     fcb * fcb_file = buscar_archivo(name_file);
-    //list_remove_element(lista_fcbs, fcb_file);//no devuelve bool esto?
 
+    //actualiza bitmap
+    int bloque_inicial = fcb_file->bloque_inicial;
+    int tamanio = fcb_file->tamanio_archivo;
+    int cant_bloques = ceil((double)tamanio/block_size);
+    for (int i=0; i < cant_bloques; i++){
+        bitarray_clean_bit(bitmap,(off_t) bloque_inicial + i);
+    }
+    
+    //2) eliminar de la lista de fcb el fcb del archivo y hacerle free
+
+    list_remove_element(lista_fcbs, fcb_file);
+    //free(fcb_file->nombre_archivo);
+    //free(fcb_file->bloque_inicial);
+    //free(fcb_file->tamanio_archivo);
+    //actualizo metadata y desp le hago free?
 
     //3) actualizar metadata
-    //para ello tengo que acceder a la metadata del archivo
-
-
+    
 }
 
 void truncate_file(char * name_file,uint32_t nuevo_tamanio){
+    /*
+    EN PAINT esta graficado, lo pongo aca para verlo mientras desarrollamos
+    REVISENLO BIEN Y ATENTOS PORQ SEGURAMENTE EN ALGO PIFIE, si en alguna implementacion no estan de acuerdo avisen y lo hablamos en ds
+    PASOS:
+    1. Buscar el archivo y obtenemos el valor del bloque inicial
+    2. Buscamos en el bitmap si se le puede asignar la cantidad de bloques que pidio (LO mas probable es que NO)
+    2.1 Si se puede, ocupamos esos bits en el bitmap, actualizamos el tamanio en el metada y en el fcb
+    2.2 No se puede, pasamos al paso 3.
+    3. Calculamos cuantos bloques ocupa y actualizamos en el bitmap esa cantidad de 1s por 0s
+    4. Buscamos en al archivo de bloques donde esta la info escita por el archivo y guardamos en un buffer auxiliar todo lo escrito (Puede ser que no haya nada escrito en esos bloques, pero no se si hay forma de comprobar eso me parece que si o si deberiamos desarrollar una funcion para chequearlo. Si se puede comprobar antes de copiar en el buffer comprobamos que haya cosas escritas)
+                                                                                                                                    ^Hay que ver bien esto
+    5. Ahora COMPACTAMOS. Movemos todos los bloques ocupados al principio para poder dejar la mayor cantidad de bloques continuos al final (ejemplo de como queadria el bitmap si tenemos 3 archivos q ocupan 1 bloque: 1110000000000). Pasos:
+    Vamos a tener 2 punteros. PunteroA(PA): Apunta al primer espacio libre. Puntero B(PB): Apunta al bloque inicial del archivo a mover.
+    Secuencia:
+    1. Recorremos con el PA el bitmap hasta encontrar el primer 0 (Importante guardar este valor ya que va a pasar a ser el bloque inicial del archivo a mover)
+    2. A partir de la posicion de PA, con PB buscamos el primer 1
+    3. PB nos va a dar la POSICION INICIAL de algun archivo, entonces, con ese valor buscamos en la lista de fcbs cual es el archivo que coincide con ese bloque inicial. (Importante guardar este valor para ir al archivo de bloques)
+    4. Calculamos cuantos bloques ocupa ese archivo (cantidad = N). 
+    5. Cambiamos N 1s por 0s a partir de la posicion de PB y tambien cambiamos N 0s por 1s a partir de la posicion de PA, esto quiere decir que nuestro archivo ya va a estar ocupando su nueva posicion.  
+    6. Buscamos en el archivo de bloques la posicion dada por PB y en un buffer escribimos los datos escritos en los N bloques que ocupa el archivo. (Puede ser que no haya nada escrito en esos bloques, pero no se si hay forma de comprobar eso me parece que si o si deberiamos desarrollar una funcion para chequearlo. Si se puede comprobar antes de copiar en el buffer comprobamos que haya cosas escritas)
+    7. BUscamos en el archivo de bloques la posicion dada por PA y escribimos lo que esta en el buffer. (NO importa si antes habia algo escrito en esos bloques ya que lo podemos sobreescribir sin problema)
+    8. Volvemos al paso 1 de la secuencia.
+    */
 
     fcb * fcb_file=buscar_archivo(name_file);
     uint32_t tamanio_actual = (uint32_t)(fcb_file->tamanio_archivo);
@@ -552,7 +582,6 @@ bool achicar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques, int ca
 
 }
 void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones){
-//                                                                      ^ creo que a este seria mejor ponele posicion_a_escribir para que se entienda mas.  
     
     //buscamos leer el archivo
 
@@ -632,8 +661,6 @@ void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posic
     int cantidad_de_traducciones = list_size(traducciones);
     bool operacion_exitosa=true;
 
-    //Soy Nico: creo que es mejor verificar lo que vayamos a pedir ANTES de pedirle las cosas a memoria, porque si al final no puede, pedimos todo a memoria al pedo.
-
     if(!bytes_pertenecen_a_archivo(archivo,posicion_a_escribir,tamanio_escritura)){
         log_info(logger_io,"FALLO AL ESCRIBIR: %s. SEGMENTATION FAULT. Estos bytes no le pertenecen al archivo.");
         operacion_exitosa=false;
@@ -663,10 +690,10 @@ void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posic
         offset+=traduccion->bytes;
     }
 
-    buffer[tam+1]='\0'; // Lo agrego por las dudas que tenga q usar alguna funcion de cadena de caracteres. en STDOUT se usaba para poder hacer printf
+    buffer[tam+1]='\0'; //En STDOUT se usaba para poder hacer printf. Sis pero para escribirlo necesito saber el tamanio por eso lo agrego 
 
     if (operacion_exitosa){
-        escribir_archivo(archivo, posicion_a_escribir, buffer);//como ya no hace la verificacion, no devuelve bool
+        escribir_archivo(archivo, posicion_a_escribir, buffer);
     }
     
 
@@ -693,7 +720,7 @@ void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){
 
     void* posicion_a_escribir_en_bloques = buffer_bloques + ((archivo->bloque_inicial)*block_size) + (int) posicion_a_escribir;
     
-    memcpy(posicion_a_escribir_en_bloques, buffer, tamanio_buffer); //importante: no escribimos el '\0' en el archivo.
+    memcpy(posicion_a_escribir_en_bloques, buffer, tamanio_buffer-1); //Ahi se escribe sin el \0
 
     msync(posicion_a_escribir_en_bloques,tamanio_bloques,MS_SYNC);
 
@@ -725,8 +752,8 @@ int contar_digitos(int numero) {
 
 
 void inicializar_archivos(){
-    abrir_bitmap();//.h
-    abrir_archivo_bloques();//.h
+    abrir_bitmap();
+    abrir_archivo_bloques();
     lista_fcbs = list_create();
 }
 
