@@ -84,8 +84,9 @@ void avisar_operacion_realizada_kernel();
 void create_file(char * name_file);
 void delete_file(char * name_file);
 void truncate_file(char * name_file,uint32_t nuevo_tamanio);
-char *copiar_datos_desde_archivo(uint32_t tamanio_actual,  uint32_t tamanio_a_copiar, int posicion_inicial);
-
+char *copiar_datos_desde_archivo( uint32_t tamanio_a_copiar, int posicion_inicial);
+fcb * buscar_archivo_por_bloque_inicial(int primero_bloque_archivo);
+int compactar(int tamanio_bitmap);
 
 fcb* buscar_archivo(char * name_file); //esta raro porque usa funciones anidadas
 void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones);

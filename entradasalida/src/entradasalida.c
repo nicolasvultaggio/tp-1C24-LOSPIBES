@@ -499,29 +499,7 @@ void delete_file(char * name_file){
 }
 
 void truncate_file(char * name_file,uint32_t nuevo_tamanio){
-    /*
-    EN PAINT esta graficado, lo pongo aca para verlo mientras desarrollamos
-    REVISENLO BIEN Y ATENTOS PORQ SEGURAMENTE EN ALGO PIFIE, si en alguna implementacion no estan de acuerdo avisen y lo hablamos en ds
-    PASOS:
-    1. Buscar el archivo y obtenemos el valor del bloque inicial
-    2. Buscamos en el bitmap si se le puede asignar la cantidad de bloques que pidio (LO mas probable es que NO)
-    2.1 Si se puede, ocupamos esos bits en el bitmap, actualizamos el tamanio en el metada y en el fcb
-    2.2 No se puede, pasamos al paso 3.
-    3. Calculamos cuantos bloques ocupa y actualizamos en el bitmap esa cantidad de 1s por 0s
-    4. Buscamos en al archivo de bloques donde esta la info escita por el archivo y guardamos en un buffer auxiliar todo lo escrito (Puede ser que no haya nada escrito en esos bloques, pero no se si hay forma de comprobar eso me parece que si o si deberiamos desarrollar una funcion para chequearlo. Si se puede comprobar antes de copiar en el buffer comprobamos que haya cosas escritas)
-                                                                                                                                    ^Hay que ver bien esto
-    5. Ahora COMPACTAMOS. Movemos todos los bloques ocupados al principio para poder dejar la mayor cantidad de bloques continuos al final (ejemplo de como queadria el bitmap si tenemos 3 archivos q ocupan 1 bloque: 1110000000000). Pasos:
-    Vamos a tener 2 punteros. PunteroA(PA): Apunta al primer espacio libre. Puntero B(PB): Apunta al bloque inicial del archivo a mover.
-    Secuencia:
-    1. Recorremos con el PA el bitmap hasta encontrar el primer 0 (Importante guardar este valor ya que va a pasar a ser el bloque inicial del archivo a mover)
-    2. A partir de la posicion de PA, con PB buscamos el primer 1
-    3. PB nos va a dar la POSICION INICIAL de algun archivo, entonces, con ese valor buscamos en la lista de fcbs cual es el archivo que coincide con ese bloque inicial. (Importante guardar este valor para ir al archivo de bloques)
-    4. Calculamos cuantos bloques ocupa ese archivo (cantidad = N). 
-    5. Cambiamos N 1s por 0s a partir de la posicion de PB y tambien cambiamos N 0s por 1s a partir de la posicion de PA, esto quiere decir que nuestro archivo ya va a estar ocupando su nueva posicion.  
-    6. Buscamos en el archivo de bloques la posicion dada por PB y en un buffer escribimos los datos escritos en los N bloques que ocupa el archivo. (Puede ser que no haya nada escrito en esos bloques, pero no se si hay forma de comprobar eso me parece que si o si deberiamos desarrollar una funcion para chequearlo. Si se puede comprobar antes de copiar en el buffer comprobamos que haya cosas escritas)
-    7. BUscamos en el archivo de bloques la posicion dada por PA y escribimos lo que esta en el buffer. (NO importa si antes habia algo escrito en esos bloques ya que lo podemos sobreescribir sin problema)
-    8. Volvemos al paso 1 de la secuencia.
-    */
+
 
     fcb * fcb_file=buscar_archivo(name_file);
     uint32_t tamanio_actual = (uint32_t)(fcb_file->tamanio_archivo);
@@ -555,27 +533,7 @@ void truncate_file(char * name_file,uint32_t nuevo_tamanio){
 
 }
 
-bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int cant_bloques_actual){
-    /*
-    PASOS:
-    2. Buscamos en el bitmap si se le puede asignar la cantidad de bloques que pidio (LO mas probable es que NO)+
-    2.1 Si se puede, ocupamos esos bits en el bitmap, actualizamos el tamanio en el metada y en el fcb+
-    2.2 No se puede, pasamos al paso 3.
-    3. Calculamos cuantos bloques ocupa y actualizamos en el bitmap esa cantidad de 1s por 0s 
-    4. Buscamos en al archivo de bloques donde esta la info escita por el archivo y guardamos en un buffer auxiliar todo lo escrito (Puede ser que no haya nada escrito en esos bloques, pero no se si hay forma de comprobar eso me parece que si o si deberiamos desarrollar una funcion para chequearlo. Si se puede comprobar antes de copiar en el buffer comprobamos que haya cosas escritas)
-                                                                                                                                    ^Hay que ver bien esto
-    5. Ahora COMPACTAMOS. Movemos todos los bloques ocupados al principio para poder dejar la mayor cantidad de bloques continuos al final (ejemplo de como queadria el bitmap si tenemos 3 archivos q ocupan 1 bloque: 1110000000000). Pasos:
-    Vamos a tener 2 punteros. PunteroA(PA): Apunta al primer espacio libre. Puntero B(PB): Apunta al bloque inicial del archivo a mover.
-    Secuencia:
-    1. Recorremos con el PA el bitmap hasta encontrar el primer 0 (Importante guardar este valor ya que va a pasar a ser el bloque inicial del archivo a mover)
-    2. A partir de la posicion de PA, con PB buscamos el primer 1
-    3. PB nos va a dar la POSICION INICIAL de algun archivo, entonces, con ese valor buscamos en la lista de fcbs cual es el archivo que coincide con ese bloque inicial. (Importante guardar este valor para ir al archivo de bloques)
-    4. Calculamos cuantos bloques ocupa ese archivo (cantidad = N). 
-    5. Cambiamos N 1s por 0s a partir de la posicion de PB y tambien cambiamos N 0s por 1s a partir de la posicion de PA, esto quiere decir que nuestro archivo ya va a estar ocupando su nueva posicion.  
-    6. Buscamos en el archivo de bloques la posicion dada por PB y en un buffer escribimos los datos escritos en los N bloques que ocupa el archivo. (Puede ser que no haya nada escrito en esos bloques, pero no se si hay forma de comprobar eso me parece que si o si deberiamos desarrollar una funcion para chequearlo. Si se puede comprobar antes de copiar en el buffer comprobamos que haya cosas escritas)
-    7. BUscamos en el archivo de bloques la posicion dada por PA y escribimos lo que esta en el buffer. (NO importa si antes habia algo escrito en esos bloques ya que lo podemos sobreescribir sin problema)
-    8. Volvemos al paso 1 de la secuencia.
-    */
+bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int cant_bloques_actual){    
 
     uint32_t tamanio_actual = (uint32_t)(fcb_file->tamanio_archivo);
     int cantidad_de_bloques_a_agrandar = nueva_cant_bloques - cant_bloques_actual;
@@ -592,9 +550,10 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
         }
     }
     
+    
     if(espacios_libres >= cantidad_de_bloques_a_agrandar){ //SI hay los sificientes espacios libres ocupo en el bitmap todo lo que me hayan pedido
         for(int i = 0; i < cantidad_de_bloques_a_agrandar; i++){
-            bitarray_set_bit(bitmap,(off_t)(posicion_ultimo_bloque));
+            bitarray_set_bit(bitmap,(off_t)(posicion_ultimo_bloque)+1);
             posicion_ultimo_bloque ++;
             if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
                 log_info(logger_io, "ERROR al sincronizar los cambios en linea:598") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
@@ -606,7 +565,7 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
 
         //COpio lo que se escribio en el archivo de bloques en un buffer auxiliar
         uint32_t tamanio_a_copiar = posicion_bloque_inicial - posicion_ultimo_bloque + 1;
-        char* buffer_auxiliar_archivo = copiar_datos_desde_archivo(tamanio_actual,tamanio_a_copiar, posicion_bloque_inicial); // Acordarse de hacerle free
+        char* buffer_auxiliar_archivo = copiar_datos_desde_archivo(tamanio_a_copiar, posicion_bloque_inicial); // Acordarse de hacerle free
 
         //Desocupo los espacios del bitmap
         for(int i = 0; i < cant_bloques_actual; i++){ 
@@ -616,20 +575,10 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
                 return false;
             }
         }
+        
+        int posicion_ultimo_bloque_ocupado = compactar(tamanio_bitmap); //FALTA IMPLEMENTAR
+        //usleep(tiemp) HACERLO. 
 
-        //Busco cual es la ultima posicion ocupada en el bitmap, la voy a necesitar despues para usarla como bloque inicial del archivo
-        int posicion_ultimo_bloque_ocupado;
-        for (int i = tamanio_bitmap; i >= 0; i--)
-        {
-            if(bitarray_test_bit(bitmap,(off_t)i)){
-                posicion_ultimo_bloque_ocupado = i;
-                break;
-            }
-            
-        }
-        compactar(&posicion_ultimo_bloque_ocupado); //FALTA IMPLEMENTAR
-        
-        
         memcpy(buffer_bloques + posicion_ultimo_bloque_ocupado, buffer_auxiliar_archivo, tamanio_a_copiar);
         for(int i = 0; i < cantidad_de_bloques_a_agrandar; i++){
             bitarray_set_bit(bitmap,(off_t)(posicion_ultimo_bloque_ocupado));
@@ -642,6 +591,8 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
         fcb_file->bloque_inicial = posicion_ultimo_bloque_ocupado;
         char* nuevo_bloque_inicial = intTOString(posicion_ultimo_bloque_ocupado);
         config_set_value(fcb_file->metadata,"BLOQUE_INICIAL",nuevo_bloque_inicial);
+
+        free(buffer_auxiliar_archivo);
     }
 
     //Esto lo hace en ambos casos. No importa si hizo o no hizo compactacion. 
@@ -651,12 +602,88 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
 
 }
 
-char *copiar_datos_desde_archivo(uint32_t tamanio_actual,  uint32_t tamanio_a_copiar, int posicion_inicial){
+char *copiar_datos_desde_archivo(uint32_t tamanio_a_copiar, int posicion_inicial){
 
     char* buffer_destino = (char *)malloc(tamanio_a_copiar);
     memcpy(buffer_destino, buffer_bloques + posicion_inicial, tamanio_a_copiar);
 
     return buffer_destino;
+
+}
+
+int compactar(int tamanio_bitmap){
+    /*
+    FALTA:
+    -Arreglar eso que le dije en los autios d elos tamanios de los buffer
+    -FIjarnos una solucion para los for esos, creo q con ese brake no se soluciona
+    -Devolver el valor del ultimo lugar ocupa. SOlo falta ponerle el return, la logica ya esta hecha. 
+    */
+    int primer_espacio_libre;
+    int primer_bloque_archivo;
+
+    //EL PRIMER FOR ES PARA BUSCAR BLOQUES LIBRES Y EL SEGUNDO FOR ES PARA BUSCAR BLOQUES OCUPADOS A PARTIR DEL BLOQUE LIBRE ENCONTRADO. 
+    for (int j = 0; j >= tamanio_bitmap; j++){
+        if(!bitarray_test_bit(bitmap,(off_t)j)){
+            primer_espacio_libre = j;
+            for (int i = 0; i >= tamanio_bitmap; i++){
+                if(bitarray_test_bit(bitmap,(off_t)(i + primer_espacio_libre))){
+                    primer_bloque_archivo = i;
+                    fcb* archivo_a_mover = buscar_archivo_por_bloque_inicial(primer_bloque_archivo);
+
+                    int bloques_a_mover = ceil((double)archivo_a_mover->tamanio_archivo/block_size); 
+
+                    int posicion_bloque_inicial = archivo_a_mover->bloque_inicial * block_size;
+                                    //Parece que estoy multiplicando y dividiendo por lo mismo pero no. Esto me va a dar la ultima posicion que ocupa el BLOQUE en el archivo de bloque
+                    int posicion_ultimo_bloque = ceil((double)archivo_a_mover->tamanio_archivo/block_size) * block_size;
+
+                    uint32_t tamanio_a_copiar = posicion_bloque_inicial - posicion_ultimo_bloque + 1;
+
+                    char* buffer_auxiliar_archivo = copiar_datos_desde_archivo(tamanio_a_copiar, posicion_bloque_inicial); // Acordarse de hacerle free
+
+                    memcpy(buffer_bloques + primer_espacio_libre, buffer_auxiliar_archivo, tamanio_a_copiar);   
+
+
+                    for(int i = 0; i < bloques_a_mover; i++){ //Ocupamos todos los espacios libres
+                        bitarray_set_bit(bitmap,(off_t)(primer_espacio_libre));
+                        primer_espacio_libre ++;
+                        if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
+                            log_info(logger_io, "ERROR al sincronizar los cambios en linea:685") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
+                            return false;
+                        }
+                    }
+
+                }else{
+                    break; //Creo q este brake tiene sentido pero no se
+                }
+            }
+        }  
+    }
+    
+   
+    
+    ///---------------------------ESTO DESPUES, TODAVIA NO LO JUNTE CON COMPACTAR-----------------
+    int posicion_ultimo_bloque_ocupado;
+        for (int i = tamanio_bitmap; i >= 0; i--)
+        {
+            if(bitarray_test_bit(bitmap,(off_t)i)){  //1111000011000100000000
+                posicion_ultimo_bloque_ocupado = i;  //             ^  
+                break;
+            }
+            
+        }
+    
+}
+
+fcb * buscar_archivo_por_bloque_inicial(int primero_bloque_archivo){
+    
+    bool archivo_de_bloque_inicial(void* nc){
+        fcb* un_fcb = (fcb*) nc;
+        return un_fcb->bloque_inicial == primero_bloque_archivo;
+    }
+
+    fcb* archivo_encontrado= list_find(lista_fcbs,(void*)archivo_de_nombre);
+    
+    return archivo_encontrado;
 
 }
 
