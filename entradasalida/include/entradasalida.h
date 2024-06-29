@@ -86,7 +86,7 @@ void delete_file(char * name_file);
 void truncate_file(char * name_file,uint32_t nuevo_tamanio);
 char *copiar_datos_desde_archivo( uint32_t tamanio_a_copiar, int posicion_inicial);
 fcb * buscar_archivo_por_bloque_inicial(int primero_bloque_archivo);
-int compactar(int tamanio_bitmap);
+int compactar();
 
 fcb* buscar_archivo(char * name_file); //esta raro porque usa funciones anidadas
 void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones);
@@ -100,6 +100,6 @@ char * intTOString(int numero);
 
 int hay_hueco_de_esa_cantidad_de_bloques_en_otro_lugar_del_bitmap(int nueva_cant_bloques);
 int buscar_0_a_partir_de(int posicion);
-int buscar_1_a_partir_de(int posicion);
+int buscar_posicion_fin_de_hueco(int posicion);
 
 #endif

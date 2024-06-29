@@ -538,7 +538,7 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
     uint32_t tamanio_actual = (uint32_t)(fcb_file->tamanio_archivo);
     int cantidad_de_bloques_a_agrandar = nueva_cant_bloques - cant_bloques_actual;
     int espacios_libres = 0;
-    int posicion_ultimo_bloque = fcb_file->bloque_inicial+cant_bloques_actual-1;
+    int posicion_ultimo_bloque = ceil((double)fcb_file->tamanio_archivo/block_size)*block_size;
     int posicion_bloque_inicial = fcb_file->bloque_inicial * block_size;
     
     
@@ -552,7 +552,7 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
     
     if(espacios_libres >= cantidad_de_bloques_a_agrandar){ //SI hay los suficientes espacios libres ocupo en el bitmap todo lo que me hayan pedido
         for(int i = 0; i < cantidad_de_bloques_a_agrandar; i++){
-            bitarray_set_bit(bitmap,(off_t)(posicion_ultimo_bloque)+1);
+            bitarray_set_bit(bitmap,(off_t)(posicion_ultimo_bloque));
             posicion_ultimo_bloque ++;
             if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
                 log_info(logger_io, "ERROR al sincronizar los cambios en linea:598") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
@@ -563,41 +563,42 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
         //Aca entra cuando no hay espacio suficiente
 
         //COpio lo que se escribio en el archivo de bloques en un buffer auxiliar
-        uint32_t tamanio_a_copiar = posicion_bloque_inicial - posicion_ultimo_bloque + 1;
+        uint32_t tamanio_a_copiar = ceil((double)archivo_a_mover->tamanio_archivo/block_size) * block_size;
         char* buffer_auxiliar_archivo = copiar_datos_desde_archivo(tamanio_a_copiar, posicion_bloque_inicial); // Acordarse de hacerle free
 
         //Desocupo los espacios del bitmap
         for(int i = 0; i < cant_bloques_actual; i++){ 
             bitarray_clean_bit(bitmap,(off_t)(fcb_file->bloque_inicial + i));
-            if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
-                log_info(logger_io, "ERROR al sincronizar los cambios en linea:606") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
+        }
+        if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
+                log_info(logger_io, "ERROR al sincronizar los cambios en linea:574") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
                 return false;
-            }
         }
         
-        int posicion_ultimo_bloque_ocupado;
+        int posicion_primer_bloque_nueva_ubicacion;
         
         int a=hay_hueco_de_esa_cantidad_de_bloques_en_otro_lugar_del_bitmap(nueva_cant_bloques);
 
         if(a!=(-1)){
-            posicion_ultimo_bloque =a;
+            posicion_primer_bloque_nueva_ubicacion = a;
         }else{//no tenemos ningun hueco con ese espacio, por lo tanto si o si va a haber que compactar
-            posicion_ultimo_bloque_ocupado = compactar(tamanio_bitmap); //FALTA IMPLEMENTAR
+            usleep(retraso_compactacion*1000);
+            posicion_primer_bloque_nueva_ubicacion = compactar(); 
         }
         
-        //usleep(tiemp) HACERLO. 
+        
         //tenemos la posicion del ultimo bloque ocupado=>sabemos donde volver a colocar el archivo
-        memcpy(buffer_bloques + posicion_ultimo_bloque_ocupado, buffer_auxiliar_archivo, tamanio_a_copiar);
+        memcpy(buffer_bloques + posicion_primer_bloque_nueva_ubicacion, buffer_auxiliar_archivo, tamanio_a_copiar);
         for(int i = 0; i < cantidad_de_bloques_a_agrandar; i++){
-            bitarray_set_bit(bitmap,(off_t)(posicion_ultimo_bloque_ocupado));
+            bitarray_set_bit(bitmap,(off_t)(posicion_primer_bloque_nueva_ubicacion));
             posicion_ultimo_bloque ++;
-            if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
-                log_info(logger_io, "ERROR al sincronizar los cambios en linea:638") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
-                return false;
-            }
         }
-        fcb_file->bloque_inicial = posicion_ultimo_bloque_ocupado;
-        char* nuevo_bloque_inicial = intTOString(posicion_ultimo_bloque_ocupado+1);
+        if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
+            log_info(logger_io, "ERROR al sincronizar los cambios en linea:597") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
+            return false;
+        }
+        fcb_file->bloque_inicial = posicion_primer_bloque_nueva_ubicacion;
+        char* nuevo_bloque_inicial = intTOString(posicion_primer_bloque_nueva_ubicacion+1);
         config_set_value(fcb_file->metadata,"BLOQUE_INICIAL",nuevo_bloque_inicial);
         free(buffer_auxiliar_archivo);
 
@@ -619,6 +620,29 @@ char *copiar_datos_desde_archivo(uint32_t tamanio_a_copiar, int posicion_inicial
 
 }
 
+int buscar_0_a_partir_de(int posicion){
+    bool cero_encontrado=false;
+    int rta=(-1);
+    for (int i=0; posicion+i<tamanio_bitmap && !cero_encontrado ;i++){
+        cero_encontrado=!bitarray_test_bit(bitmap,posicion+i);
+        if(cero_encontrado){
+            rta=posicion+i;
+        }  
+    }
+    return rta;
+}
+
+int buscar_posicion_fin_de_hueco(int posicion){
+    bool uno_encontrado=false;
+    int rta=tamanio_bitmap-1; //porque si llega al final del bitmap y no encontro mas 1s, el fin del hueco es el fin del bitmap
+    for (int i=0; posicion+i<tamanio_bitmap && !uno_encontrado ;i++){
+        uno_encontrado=bitarray_test_bit(bitmap,posicion+i);
+        if(uno_encontrado){
+            rta=posicion+i-1;
+        }  
+    }
+    return rta;
+}
 
 int hay_hueco_de_esa_cantidad_de_bloques_en_otro_lugar_del_bitmap(int nueva_cant_bloques){ //se fija si en todo el bitmap, hay alguna cantidad de 0000 seguidos, y si la hay, te dice en que posicion, si no devuelve -1
    
@@ -635,7 +659,7 @@ int hay_hueco_de_esa_cantidad_de_bloques_en_otro_lugar_del_bitmap(int nueva_cant
         if(comienzo_hueco==(-1)){//no encontro otro hueco
             debe_seguir_buscando = false;
         }else{
-            int fin_hueco= buscar_1_a_partir_de(comienzo_hueco)-1;//buscar 1, si llega a la ultima posicion del bitmap, te devuelve esa posicion+1, así despues al restarle 1, sabemos que el fin del hueco es el fin del bitmap
+            int fin_hueco= buscar_posicion_fin_de_hueco(comienzo_hueco);
             if((fin_hueco+1 - comienzo_hueco)>=nueva_cant_bloques){
                 debe_seguir_buscando = false;
                 rta = comienzo_hueco;
@@ -648,77 +672,58 @@ int hay_hueco_de_esa_cantidad_de_bloques_en_otro_lugar_del_bitmap(int nueva_cant
     return rta;
 
 }
-int buscar_0_a_partir_de(int posicion){
-    bool cero_encontrado=false;
-    int rta=(-1);
-    for (int i=0; posicion+i<tamanio_bitmap && !cero_encontrado ;i++){
-        cero_encontrado=!bitarray_test_bit(bitmap,posicion+i);
-        if(cero_encontrado){
-            rta=posicion+i;
-        }  
-    }
-    return rta;
-}
-int buscar_1_a_partir_de(int posicion){
-    bool uno_encontrado=false;
-    int rta=tamanio_bitmap; //porque si a partir de ese 0 no encuentra otro 1, entonces devuelve un index más del final del bitmap, porque despues se reduce en uno, y obtenemos que el fin del hueco es el fin del bitmap
-    for (int i=0; posicion+i<tamanio_bitmap && !uno_encontrado ;i++){
-        uno_encontrado=bitarray_test_bit(bitmap,posicion+i);
-        if(uno_encontrado){
-            rta=posicion+i;
-        }  
-    }
-    return rta;
-}
-int compactar(int tamanio_bitmap){
+
+int compactar(){
     int primer_espacio_libre;
-    int primer_bloque_archivo;
+    int primer_bloque_a_mover_del_archivo;
 
-    //EL PRIMER FOR ES PARA BUSCAR BLOQUES LIBRES Y EL SEGUNDO FOR ES PARA BUSCAR BLOQUES OCUPADOS A PARTIR DEL BLOQUE LIBRE ENCONTRADO. 
-    for (int j = 0; j < tamanio_bitmap; j++){
-        if(!bitarray_test_bit(bitmap,(off_t)j)){
-            primer_espacio_libre = j;
-            for (int i = 0; i < tamanio_bitmap; i++){
-                if(bitarray_test_bit(bitmap,(off_t)(i + primer_espacio_libre))){
-                    primer_bloque_archivo = i;
-                    fcb* archivo_a_mover = buscar_archivo_por_bloque_inicial(primer_bloque_archivo);
+    bool seguir_compactando = true;
 
-                    int bloques_a_mover = ceil((double)archivo_a_mover->tamanio_archivo/block_size); 
+    while(seguir_compactando){
 
-                    int posicion_bloque_inicial = archivo_a_mover->bloque_inicial * block_size;
-                    int posicion_ultimo_bloque = bloques_a_mover * block_size;
+        primer_espacio_libre = buscar_0_a_partir_de(0);
+        int fin_hueco = buscar_posicion_fin_de_hueco(primer_espacio_libre);
+        if(fin_hueco == tamanio_bitmap){
+            seguir_compactando = false;
+        }else{
+            primer_bloque_a_mover_del_archivo = fin_hueco + 1;
+            fcb* archivo_a_mover = buscar_archivo_por_bloque_inicial(primer_bloque_a_mover_del_archivo);
 
-                    uint32_t tamanio_a_copiar = bloques_a_mover * block_size;
+            int bloques_a_mover = ceil((double)archivo_a_mover->tamanio_archivo/block_size); 
 
-                    char* buffer_auxiliar_archivo = copiar_datos_desde_archivo(tamanio_a_copiar, posicion_bloque_inicial); 
+            int posicion_escritura = archivo_a_mover->bloque_inicial * block_size; 
 
-                    memcpy(buffer_bloques + primer_espacio_libre, buffer_auxiliar_archivo, tamanio_a_copiar);   
-                    free(buffer_auxiliar_archivo);
+            uint32_t tamanio_a_copiar = bloques_a_mover * block_size; 
 
-                    for(int k = 0; k < bloques_a_mover; k++){ //Ocupamos todos los espacios libres
-                        bitarray_set_bit(bitmap,(off_t)(primer_espacio_libre));
-                        primer_espacio_libre ++;
-                    }
-                    if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
-                        log_info(logger_io, "ERROR al sincronizar los cambios en linea:685") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
-                        return false;
-                    }
-                    if (msync(buffer_bloques, bloques_a_mover * block_size, MS_SYNC) == -1) {
-                        log_info(logger_io, "ERROR al sincronizar los cambios en buffer_bloques en linea:691");
-                        return -1;
-                    }
+            char* buffer_auxiliar_archivo = copiar_datos_desde_archivo(tamanio_a_copiar, posicion_escritura);         
+            memcpy(buffer_bloques + (primer_espacio_libre * block_size), buffer_auxiliar_archivo, tamanio_a_copiar);   
+            free(buffer_auxiliar_archivo);
 
-                }else{
-                    break; //Creo q este brake tiene sentido pero no se
-                }
+            archivo_a_mover->bloque_inicial = primer_espacio_libre;
+            char* nuevo_bloque_inicial = intTOString(primer_espacio_libre);
+            config_set_value(fcb_file->metadata,"BLOQUE_INICIAL",nuevo_bloque_inicial);
+
+            for(int i = 0; i < bloques_a_mover; i++){ 
+                bitarray_clean_bit(bitmap,(off_t)(primer_bloque_a_mover_del_archivo+i));
+                bitarray_set_bit(bitmap,(off_t)(primer_espacio_libre + i));
             }
-        }  
+
+            if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
+                log_info(logger_io, "ERROR al sincronizar los cambios en linea:716") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
+                return false;
+            }
+            if (msync(buffer_bloques, tamanio_bloques, MS_SYNC) == -1) {
+                log_info(logger_io, "ERROR al sincronizar los cambios en buffer_bloques en linea:720");
+                return -1;
+            }
+        }
     }
+
     int posicion_ultimo_bloque_ocupado;
     for (int i = tamanio_bitmap; i >= 0; i--)
     {
-        if(bitarray_test_bit(bitmap,(off_t)i)){  //1111000011000100000000
-            posicion_ultimo_bloque_ocupado = i;  //             ^  
+        if(bitarray_test_bit(bitmap,(off_t)i)){  //1111100000000
+            posicion_ultimo_bloque_ocupado = i;  //    ^         
             break;
         }
         
@@ -727,6 +732,8 @@ int compactar(int tamanio_bitmap){
     return posicion_ultimo_bloque_ocupado;
     
 }
+
+
 
 fcb * buscar_archivo_por_bloque_inicial(int primero_bloque_archivo){
     
@@ -899,7 +906,7 @@ void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer){
 
     void* posicion_a_escribir_en_bloques = buffer_bloques + ((archivo->bloque_inicial)*block_size) + (int) posicion_a_escribir;
     
-    memcpy(posicion_a_escribir_en_bloques, buffer, tamanio_buffer-1); //Ahi se escribe sin el \0
+    memcpy(posicion_a_escribir_en_bloques, buffer, tamanio_buffer); //Ahi se escribe sin el \0
 
     msync(posicion_a_escribir_en_bloques,tamanio_bloques,MS_SYNC);
 
