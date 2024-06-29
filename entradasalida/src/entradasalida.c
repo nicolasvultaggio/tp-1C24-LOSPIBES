@@ -622,11 +622,7 @@ char *copiar_datos_desde_archivo(uint32_t tamanio_a_copiar, int posicion_inicial
 
 
 int hay_hueco_de_esa_cantidad_de_bloques_en_otro_lugar_del_bitmap(int nueva_cant_bloques){ //se fija si en todo el bitmap, hay alguna cantidad de 0000 seguidos, y si la hay, te dice en que posicion, si no devuelve -1
-    //Calculo la cantidad de bloques dispnibles que hay entre lo que ocupa el bloque y lo que ocuparia cuando lo agrande.
-    
-    //buscar_0_a_partir_de(posicion); //te devuelve la posicion donde hay un 0
-    //buscar_1_a_partir_de(posicion)// te devuelve posicion donde hay un 1
-    int tamanio_de_bitmap;// pronto será una variable global
+   
     int index_a_partir_de_donde_se_buscan_0=0; //porque buscamos un hueco en todo el bitarray
     int comienzo_hueco;
     
@@ -666,7 +662,7 @@ int buscar_0_a_partir_de(int posicion){
 }
 int buscar_1_a_partir_de(int posicion){
     bool uno_encontrado=false;
-    int rta=tamanio_bitmap-1; //porque si a partir de ese 0 no encuentra otro 1, devuelve entonces devuelve la ultima posicion de todo el bitmap
+    int rta=tamanio_bitmap; //porque si a partir de ese 0 no encuentra otro 1, entonces devuelve un index más del final del bitmap, porque despues se reduce en uno, y obtenemos que el fin del hueco es el fin del bitmap
     for (int i=0; posicion+i<tamanio_bitmap && !uno_encontrado ;i++){
         uno_encontrado=bitarray_test_bit(bitmap,posicion+i);
         if(uno_encontrado){
