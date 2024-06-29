@@ -540,7 +540,6 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
     int espacios_libres = 0;
     int posicion_ultimo_bloque = fcb_file->bloque_inicial+cant_bloques_actual-1;
     int posicion_bloque_inicial = fcb_file->bloque_inicial * block_size;
-    tamanio_bitmap = ceil(block_count / 8);
     
     
     //Calculo la cantidad de bloques dispnibles que hay entre lo que ocupa el bloque y lo que ocuparia cuando lo agrande.
@@ -676,20 +675,14 @@ int buscar_1_a_partir_de(int posicion){
     return rta;
 }
 int compactar(int tamanio_bitmap){
-    /*
-    FALTA:
-    -Arreglar eso que le dije en los autios d elos tamanios de los buffer
-    -FIjarnos una solucion para los for esos, creo q con ese brake no se soluciona
-    -Devolver el valor del ultimo lugar ocupa. SOlo falta ponerle el return, la logica ya esta hecha. 
-    */
     int primer_espacio_libre;
     int primer_bloque_archivo;
 
     //EL PRIMER FOR ES PARA BUSCAR BLOQUES LIBRES Y EL SEGUNDO FOR ES PARA BUSCAR BLOQUES OCUPADOS A PARTIR DEL BLOQUE LIBRE ENCONTRADO. 
-    for (int j = 0; j >= tamanio_bitmap; j++){
+    for (int j = 0; j < tamanio_bitmap; j++){
         if(!bitarray_test_bit(bitmap,(off_t)j)){
             primer_espacio_libre = j;
-            for (int i = 0; i >= tamanio_bitmap; i++){
+            for (int i = 0; i < tamanio_bitmap; i++){
                 if(bitarray_test_bit(bitmap,(off_t)(i + primer_espacio_libre))){
                     primer_bloque_archivo = i;
                     fcb* archivo_a_mover = buscar_archivo_por_bloque_inicial(primer_bloque_archivo);
@@ -697,23 +690,26 @@ int compactar(int tamanio_bitmap){
                     int bloques_a_mover = ceil((double)archivo_a_mover->tamanio_archivo/block_size); 
 
                     int posicion_bloque_inicial = archivo_a_mover->bloque_inicial * block_size;
-                    //Parece que estoy multiplicando y dividiendo por lo mismo pero no. Esto me va a dar la ultima posicion que ocupa el BLOQUE en el archivo de bloque
-                    int posicion_ultimo_bloque = ceil((double)archivo_a_mover->tamanio_archivo/block_size) * block_size;
+                    int posicion_ultimo_bloque = bloques_a_mover * block_size;
 
-                    uint32_t tamanio_a_copiar = posicion_bloque_inicial - posicion_ultimo_bloque + 1;
+                    uint32_t tamanio_a_copiar = bloques_a_mover * block_size;
 
-                    char* buffer_auxiliar_archivo = copiar_datos_desde_archivo(tamanio_a_copiar, posicion_bloque_inicial); // Acordarse de hacerle free
+                    char* buffer_auxiliar_archivo = copiar_datos_desde_archivo(tamanio_a_copiar, posicion_bloque_inicial); 
 
                     memcpy(buffer_bloques + primer_espacio_libre, buffer_auxiliar_archivo, tamanio_a_copiar);   
+                    free(buffer_auxiliar_archivo);
 
-
-                    for(int i = 0; i < bloques_a_mover; i++){ //Ocupamos todos los espacios libres
+                    for(int k = 0; k < bloques_a_mover; k++){ //Ocupamos todos los espacios libres
                         bitarray_set_bit(bitmap,(off_t)(primer_espacio_libre));
                         primer_espacio_libre ++;
-                        if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
-                            log_info(logger_io, "ERROR al sincronizar los cambios en linea:685") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
-                            return false;
-                        }
+                    }
+                    if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
+                        log_info(logger_io, "ERROR al sincronizar los cambios en linea:685") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
+                        return false;
+                    }
+                    if (msync(buffer_bloques, bloques_a_mover * block_size, MS_SYNC) == -1) {
+                        log_info(logger_io, "ERROR al sincronizar los cambios en buffer_bloques en linea:691");
+                        return -1;
                     }
 
                 }else{
@@ -722,19 +718,17 @@ int compactar(int tamanio_bitmap){
             }
         }  
     }
-    
-   
-    
-    ///---------------------------ESTO DESPUES, TODAVIA NO LO JUNTE CON COMPACTAR-----------------
     int posicion_ultimo_bloque_ocupado;
-        for (int i = tamanio_bitmap; i >= 0; i--)
-        {
-            if(bitarray_test_bit(bitmap,(off_t)i)){  //1111000011000100000000
-                posicion_ultimo_bloque_ocupado = i;  //             ^  
-                break;
-            }
-            
+    for (int i = tamanio_bitmap; i >= 0; i--)
+    {
+        if(bitarray_test_bit(bitmap,(off_t)i)){  //1111000011000100000000
+            posicion_ultimo_bloque_ocupado = i;  //             ^  
+            break;
         }
+        
+    }
+
+    return posicion_ultimo_bloque_ocupado;
     
 }
 
