@@ -99,6 +99,7 @@ char * intTOString(int numero);
 //mover a protocolo asi kernel lo conoce tambien
 
 int hay_hueco_de_esa_cantidad_de_bloques_en_otro_lugar_del_bitmap(int nueva_cant_bloques);
-
+int buscar_0_a_partir_de(int posicion);
+int buscar_1_a_partir_de(int posicion);
 
 #endif

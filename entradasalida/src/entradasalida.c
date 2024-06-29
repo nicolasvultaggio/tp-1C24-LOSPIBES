@@ -653,7 +653,28 @@ int hay_hueco_de_esa_cantidad_de_bloques_en_otro_lugar_del_bitmap(int nueva_cant
     return rta;
 
 }
-
+int buscar_0_a_partir_de(int posicion){
+    bool cero_encontrado=false;
+    int rta=(-1);
+    for (int i=0; posicion+i<tamanio_bitmap && !cero_encontrado ;i++){
+        cero_encontrado=!bitarray_test_bit(bitmap,posicion+i);
+        if(cero_encontrado){
+            rta=posicion+i;
+        }  
+    }
+    return rta;
+}
+int buscar_1_a_partir_de(int posicion){
+    bool uno_encontrado=false;
+    int rta=tamanio_bitmap-1; //porque si a partir de ese 0 no encuentra otro 1, devuelve entonces devuelve la ultima posicion de todo el bitmap
+    for (int i=0; posicion+i<tamanio_bitmap && !uno_encontrado ;i++){
+        uno_encontrado=bitarray_test_bit(bitmap,posicion+i);
+        if(uno_encontrado){
+            rta=posicion+i;
+        }  
+    }
+    return rta;
+}
 int compactar(int tamanio_bitmap){
     /*
     FALTA:
