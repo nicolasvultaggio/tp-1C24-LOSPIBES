@@ -551,7 +551,7 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
     }
     
     
-    if(espacios_libres >= cantidad_de_bloques_a_agrandar){ //SI hay los sificientes espacios libres ocupo en el bitmap todo lo que me hayan pedido
+    if(espacios_libres >= cantidad_de_bloques_a_agrandar){ //SI hay los suficientes espacios libres ocupo en el bitmap todo lo que me hayan pedido
         for(int i = 0; i < cantidad_de_bloques_a_agrandar; i++){
             bitarray_set_bit(bitmap,(off_t)(posicion_ultimo_bloque)+1);
             posicion_ultimo_bloque ++;
@@ -576,9 +576,18 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
             }
         }
         
-        int posicion_ultimo_bloque_ocupado = compactar(tamanio_bitmap); //FALTA IMPLEMENTAR
-        //usleep(tiemp) HACERLO. 
+        int posicion_ultimo_bloque_ocupado;
+        
+        int a=hay_hueco_de_esa_cantidad_de_bloques_en_otro_lugar_del_bitmap(nueva_cant_bloques);
 
+        if(a!=(-1)){
+            posicion_ultimo_bloque =a;
+        }else{//no tenemos ningun hueco con ese espacio, por lo tanto si o si va a haber que compactar
+            posicion_ultimo_bloque_ocupado = compactar(tamanio_bitmap); //FALTA IMPLEMENTAR
+        }
+        
+        //usleep(tiemp) HACERLO. 
+        //tenemos la posicion del ultimo bloque ocupado=>sabemos donde volver a colocar el archivo
         memcpy(buffer_bloques + posicion_ultimo_bloque_ocupado, buffer_auxiliar_archivo, tamanio_a_copiar);
         for(int i = 0; i < cantidad_de_bloques_a_agrandar; i++){
             bitarray_set_bit(bitmap,(off_t)(posicion_ultimo_bloque_ocupado));
@@ -589,10 +598,10 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
             }
         }
         fcb_file->bloque_inicial = posicion_ultimo_bloque_ocupado;
-        char* nuevo_bloque_inicial = intTOString(posicion_ultimo_bloque_ocupado);
+        char* nuevo_bloque_inicial = intTOString(posicion_ultimo_bloque_ocupado+1);
         config_set_value(fcb_file->metadata,"BLOQUE_INICIAL",nuevo_bloque_inicial);
-
         free(buffer_auxiliar_archivo);
+
     }
 
     //Esto lo hace en ambos casos. No importa si hizo o no hizo compactacion. 
@@ -608,6 +617,40 @@ char *copiar_datos_desde_archivo(uint32_t tamanio_a_copiar, int posicion_inicial
     memcpy(buffer_destino, buffer_bloques + posicion_inicial, tamanio_a_copiar);
 
     return buffer_destino;
+
+}
+
+
+int hay_hueco_de_esa_cantidad_de_bloques_en_otro_lugar_del_bitmap(int nueva_cant_bloques){ //se fija si en todo el bitmap, hay alguna cantidad de 0000 seguidos, y si la hay, te dice en que posicion, si no devuelve -1
+    //Calculo la cantidad de bloques dispnibles que hay entre lo que ocupa el bloque y lo que ocuparia cuando lo agrande.
+    
+    //buscar_0_a_partir_de(posicion); //te devuelve la posicion donde hay un 0
+    //buscar_1_a_partir_de(posicion)// te devuelve posicion donde hay un 1
+    int tamanio_de_bitmap;// pronto será una variable global
+    int index_a_partir_de_donde_se_buscan_0=0; //porque buscamos un hueco en todo el bitarray
+    int comienzo_hueco;
+    
+    bool debe_seguir_buscando=true;
+
+    int rta =(-1);
+    while(debe_seguir_buscando){
+        
+        comienzo_hueco=buscar_0_a_partir_de(index_a_partir_de_donde_se_buscan_0);
+        
+        if(comienzo_hueco==(-1)){//no encontro otro hueco
+            debe_seguir_buscando = false;
+        }else{
+            int fin_hueco= buscar_1_a_partir_de(comienzo_hueco)-1;//buscar 1, si llega a la ultima posicion del bitmap, te devuelve esa posicion+1, así despues al restarle 1, sabemos que el fin del hueco es el fin del bitmap
+            if((fin_hueco+1 - comienzo_hueco)>=nueva_cant_bloques){
+                debe_seguir_buscando = false;
+                rta = comienzo_hueco;
+            }else{
+                index_a_partir_de_donde_se_buscan_0 = fin_hueco+1;
+            }
+        }
+    }
+
+    return rta;
 
 }
 
@@ -633,7 +676,7 @@ int compactar(int tamanio_bitmap){
                     int bloques_a_mover = ceil((double)archivo_a_mover->tamanio_archivo/block_size); 
 
                     int posicion_bloque_inicial = archivo_a_mover->bloque_inicial * block_size;
-                                    //Parece que estoy multiplicando y dividiendo por lo mismo pero no. Esto me va a dar la ultima posicion que ocupa el BLOQUE en el archivo de bloque
+                    //Parece que estoy multiplicando y dividiendo por lo mismo pero no. Esto me va a dar la ultima posicion que ocupa el BLOQUE en el archivo de bloque
                     int posicion_ultimo_bloque = ceil((double)archivo_a_mover->tamanio_archivo/block_size) * block_size;
 
                     uint32_t tamanio_a_copiar = posicion_bloque_inicial - posicion_ultimo_bloque + 1;

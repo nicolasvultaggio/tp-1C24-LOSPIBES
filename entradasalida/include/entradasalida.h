@@ -76,7 +76,7 @@ void atender_DIALFS();
 void inicializar_archivos();
 void abrir_bitmap();
 void abrir_archivo_bloques();
-void escribir_metadata(t_config * metadata,char * key, int valor)
+void escribir_metadata(t_config * metadata,char * key, int valor);
 int leer_metadata(t_config * metadata, char* key);
 void avisar_operacion_realizada_kernel();
 
@@ -97,6 +97,8 @@ off_t buscar_primer_bloque_libre();
 int contar_digitos(int numero);
 char * intTOString(int numero);
 //mover a protocolo asi kernel lo conoce tambien
+
+int hay_hueco_de_esa_cantidad_de_bloques_en_otro_lugar_del_bitmap(int nueva_cant_bloques);
 
 
 #endif
