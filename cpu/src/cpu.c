@@ -12,6 +12,9 @@ int main(int argc, char* argv[]){
     leer__configuraciones();
 	inicializar_semaforos();
 
+	pthread_mutex_init(&mutex_lista_interrupciones,NULL);
+	lista_interrupciones = list_create();
+
 	/* CONECTO CPU CON MEMORIA */
 	fd_conexion_memoria = crear_conexion(ip_memoria, puerto_memoria, logger_cpu, "CPU");
 	enviar_mensaje("Hola, soy CPU!", fd_conexion_memoria);
@@ -53,7 +56,7 @@ void leer__configuraciones(){
 void inicializar_semaforos(){
 
 	pthread_mutex_init(&mutex_tlb, NULL);
-	pthread_mutex_init(&mutex_motivo_x_consola, NULL);
+	//pthread_mutex_init(&mutex_motivo_x_consola, NULL);
 
 	sem_init(&sem_recibir_pcb, 0, 1);
 	sem_init(&sem_execute, 0, 0);
@@ -125,32 +128,26 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 		case SET:
 			log_info(logger_cpu, "PID: %d - Ejecutando SET %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_set(PCB, instruccion->parametro1, instruccion->parametro2);
-			check_interrupt();
 			break;
 		case MOV_IN:
 			log_info(logger_cpu, "PID: %d - Ejecutando MOV_IN %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_mov_in(PCB, instruccion->parametro1, instruccion->parametro2);
-			check_interrupt();
 			break;
 		case MOV_OUT:
 			log_info(logger_cpu, "PID: %d - Ejecutando MOV_OUT %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_mov_out(PCB, instruccion->parametro1, instruccion->parametro2);
-			check_interrupt();
 			break;
 		case SUM:
 			log_info(logger_cpu, "PID: %d - Ejecutando SUM %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_sum(PCB, instruccion->parametro1, instruccion->parametro2);
-			check_interrupt();
 			break;
 		case SUB:
 			log_info(logger_cpu, "PID: %d - Ejecutando SUB %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_sub(PCB, instruccion->parametro1, instruccion->parametro2);
-			check_interrupt();
 			break;
 		case JNZ:
 			log_info(logger_cpu, "PID: %d - Ejecutando JNZ %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_jnz(PCB, instruccion->parametro1, instruccion->parametro2);
-			check_interrupt();
 			break;
 		case RESIZE:
 			log_info(logger_cpu, "PID: %d - Ejecutando RESIZE %s", PCB->PID, instruccion->parametro1);
@@ -163,56 +160,46 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 		case WAIT:
 			log_info(logger_cpu, "PID: %d - Ejecutando WAIT %s", PCB->PID, instruccion->parametro1);
 			ejecutar_wait(PCB, instruccion->parametro1);
-			check_interrupt();
 			break;
 		case SIGNAL:
 			log_info(logger_cpu, "PID: %d - Ejecutando SIGNAL %s", PCB->PID, instruccion->parametro1);
 			ejecutar_signal(PCB, instruccion->parametro1);
-			check_interrupt();
 			break;
 		case IO_GEN_SLEEP:
 			log_info(logger_cpu, "PID: %d - Ejecutando IO_GEN_SLEEP %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_io_gen_sleep(PCB, "IO_GEN_SLEEP", instruccion->parametro1, instruccion->parametro2);
-			check_interrupt();
 			break;
 		case IO_STDIN_READ:
 			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDIN_READ %s %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
 			ejecutar_io_stdin_read(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3);
-			check_interrupt();
 			break;
 		case IO_STDOUT_WRITE:
 			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDOUT_WRITE %s %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
 			ejecutar_io_stdout_write(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3);
-			check_interrupt();
 			break;
 		case IO_FS_CREATE:
 			ejecutar_io_fs_create(instruccion->parametro1,instruccion->parametro2);
-			check_interrupt();
 			break;
 		case IO_FS_DELETE:
 			ejecutar_io_fs_delete(instruccion->parametro1,instruccion->parametro2);
-			check_interrupt();
 			break;
 		case IO_FS_TRUNCATE:
 			ejecutar_io_fs_truncate(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3);
-			check_interrupt();
 			break;
 		case IO_FS_WRITE:
 			ejecutar_io_fs_write(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3,instruccion->parametro4,instruccion->parametro5);
-			check_interrupt();
 			break;
 		case IO_FS_READ:
 			ejecutar_io_fs_read(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3,instruccion->parametro4,instruccion->parametro5);
-			check_interrupt();
 			break;
 		case EXIT:
 			ejecutar_exit(PCB);
-			check_interrupt();
 			break;
 		default:
 			ejecutar_error(PCB);
 			break;
 	}
+	check_interrupt();
 }
 
 /* EXECUTE se ejecua lo correspodiente a cada instruccion */
@@ -224,41 +211,15 @@ void ejecutar_set(pcb* PCB, char* registro, char* valor){
 	
 	setear_registro(PCB, registro, valor8, valor32);
 
-	es_exit =false; //poner en true 
-	es_bloqueante=false; //modificar siempre que es_exit = false
+	//es_exit =false; //poner en true 
+	//es_bloqueante=false; //modificar siempre que es_exit = false
+
+	//hubo desalojo
 	return;
 }
 
 void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
-	/*
-	SET EAX 30
-	MOV_IN EBX EAX
-
-    En EAX tengo guardada la dirección lógica 30
-    La longitud a leer va a ser el tamaño de EBX, o sea 4
-    Entonces tengo que leer desde el byte 30 hasta el 33
-	*/
-
-	/*
 	
-	RESIZE 100
-	SET EAX 34
-	SET EBX 48
-	MOV_OUT EAX EBX
-	MOV_IN ECX EAX
-	SET EBX 104
-	MOV_OUT ECX EBX
-	MOV_IN DX ECX
-	EXIT
-
-	En este caso, en la dirección 34 se guarda el 48. Y luego en la dirección 48 se guarda el 104.
-	Nuestro problema surge cuando intentamos hacer MOV_IN DX ECX. Ya que el DX ocupa 1 byte y el 104 
-	se guardo en memoria como 4 bytes, algo así:
-
-	*/
-	//uint32_t son 4 bytes
-	//uint8_t son 1 byte
-
 	void * direccion_logica = capturar_registro(DIRECCION);
 	size_t size_reg = size_registro(DATOS);
 	uint32_t uint32_t_size_reg = (uint32_t) size_reg;
@@ -300,38 +261,21 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 	
 	memcpy(p_regsitro_datos, buffer, size_reg);
 
-	
 	free(buffer);
 
 	list_destroy(traducciones);
 
-	es_exit=false; //siempre mofificar
-	es_bloqueante=false; //modificar siempre que es_exit = false
+	//es_exit=false; //siempre mofificar
+	//es_bloqueante=false; //modificar siempre que es_exit = false
 
-	check_interrupt();
+	hubo_desalojo=false;
 
 	return;
 }
 
 void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	
-	/*
-	
-	RESIZE 100
-	SET EAX 34
-	SET EBX 48
-	MOV_OUT EAX EBX
-	MOV_IN ECX EAX
-	SET EBX 104
-	MOV_OUT ECX EBX
-	MOV_IN DX ECX
-	EXIT
 
-	En este caso, en la dirección 34 se guarda el 48. Y luego en la dirección 48 se guarda el 104.
-	Nuestro problema surge cuando intentamos hacer MOV_IN DX ECX. Ya que el DX ocupa 1 byte y el 104 
-	se guardo en memoria como 4 bytes, algo así:
-
-	*/
 
 	void * direccion_logica = capturar_registro(DIRECCION);
 	size_t size_reg = size_registro(DATOS);//TAMANIO A ESCRIBIR
@@ -378,10 +322,11 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	
 	list_destroy(traducciones);
 	
-	es_exit=false; //siempre mofificar
-	es_bloqueante=false; //modificar siempre que es_exit = false
+	//es_exit=false; //siempre mofificar
+	//es_bloqueante=false; //modificar siempre que es_exit = false
 
-	check_interrupt();
+	hubo_desalojo = false;
+
 
 }
 
@@ -395,12 +340,14 @@ void ejecutar_io_fs_create(char * nombre_interfaz,char * nombre_archivo){
 	agregar_a_paquete(paquete,nombre_archivo,strlen(nombre_archivo)+1);
 	
 	enviar_paquete(paquete,fd_cpu_dispatch);
-	sem_post(&sem_recibir_pcb);
+	//sem_post(&sem_recibir_pcb);
 	eliminar_paquete(paquete);
-	es_exit=false;  //siempre modificar
-	es_bloqueante=true; //modificar siempre que es_exit = false
-	es_wait = false;  //modificar si se pone a bloqueante = true
-	es_resize = false; //modificar si se pone bloqueante = true
+	//es_exit=false;  //siempre modificar
+	//es_bloqueante=true; //modificar siempre que es_exit = false
+	//es_wait = false;  //modificar si se pone a bloqueante = true
+	//es_resize = false; //modificar si se pone bloqueante = true
+
+	hubo_desalojo=true;
 
 }
 void ejecutar_io_fs_delete(char * nombre_interfaz,char * nombre_archivo){
@@ -413,12 +360,14 @@ void ejecutar_io_fs_delete(char * nombre_interfaz,char * nombre_archivo){
 	agregar_a_paquete(paquete,nombre_archivo,strlen(nombre_archivo)+1);
 
 	enviar_paquete(paquete,fd_cpu_dispatch);
-	sem_post(&sem_recibir_pcb);
+	//sem_post(&sem_recibir_pcb);
 	eliminar_paquete(paquete);
-	es_exit=false;  //siempre modificar
-	es_bloqueante=true; //modificar siempre que es_exit = false
-	es_wait = false;  //modificar si se pone a bloqueante = true
-	es_resize = false; //modificar si se pone bloqueante = true
+	//es_exit=false;  //siempre modificar
+	//es_bloqueante=true; //modificar siempre que es_exit = false
+	//es_wait = false;  //modificar si se pone a bloqueante = true
+	//es_resize = false; //modificar si se pone bloqueante = true
+
+	hubo_desalojo=true;
 }
 
 void ejecutar_io_fs_truncate(char * nombre_interfaz,char * nombre_archivo,char * registro_tamanio){
@@ -436,12 +385,14 @@ void ejecutar_io_fs_truncate(char * nombre_interfaz,char * nombre_archivo,char *
 	agregar_a_paquete(paquete,&tamanio,sizeof(uint32_t));
 
 	enviar_paquete(paquete,fd_cpu_dispatch);
-	sem_post(&sem_recibir_pcb);
+	//sem_post(&sem_recibir_pcb);
 	eliminar_paquete(paquete);
-	es_exit=false;  //siempre modificar
-	es_bloqueante=true; //modificar siempre que es_exit = false
-	es_wait = false;  //modificar si se pone a bloqueante = true
-	es_resize = false; //modificar si se pone bloqueante = true
+	//es_exit=false;  //siempre modificar
+	//es_bloqueante=true; //modificar siempre que es_exit = false
+	//es_wait = false;  //modificar si se pone a bloqueante = true
+	//es_resize = false; //modificar si se pone bloqueante = true
+
+	hubo_desalojo=true;
 
 }
 void ejecutar_io_fs_write(char * nombre_interfaz,char * nombre_archivo,char * registro_direccion,char * registro_tamanio , char * registro_puntero_archivo){
@@ -468,12 +419,13 @@ void ejecutar_io_fs_write(char * nombre_interfaz,char * nombre_archivo,char * re
 	empaquetar_traducciones(paquete,traducciones);
 	
 	enviar_paquete(paquete,fd_cpu_dispatch);
-	sem_post(&sem_recibir_pcb);
+	//sem_post(&sem_recibir_pcb);
 	eliminar_paquete(paquete);
-	es_exit=false;  //siempre modificar
-	es_bloqueante=true; //modificar siempre que es_exit = false
-	es_wait = false;  //modificar si se pone a bloqueante = true
-	es_resize = false; //modificar si se pone bloqueante = true
+	//es_exit=false;  //siempre modificar
+	//es_bloqueante=true; //modificar siempre que es_exit = false
+	//es_wait = false;  //modificar si se pone a bloqueante = true
+	//es_resize = false; //modificar si se pone bloqueante = true
+	hubo_desalojo=true;
 	
 }
 void ejecutar_io_fs_read(char * nombre_interfaz,char * nombre_archivo,char * registro_direccion,char * registro_tamanio , char * registro_puntero_archivo){
@@ -500,12 +452,14 @@ void ejecutar_io_fs_read(char * nombre_interfaz,char * nombre_archivo,char * reg
 	empaquetar_traducciones(paquete,traducciones);
 	
 	enviar_paquete(paquete,fd_cpu_dispatch);
-	sem_post(&sem_recibir_pcb);
+	//sem_post(&sem_recibir_pcb);
 	eliminar_paquete(paquete);
-	es_exit=false;  //siempre modificar
-	es_bloqueante=true; //modificar siempre que es_exit = false
-	es_wait = false;  //modificar si se pone a bloqueante = true
-	es_resize = false; //modificar si se pone bloqueante = true
+	//es_exit=false;  //siempre modificar
+	//es_bloqueante=true; //modificar siempre que es_exit = false
+	//es_wait = false;  //modificar si se pone a bloqueante = true
+	//es_resize = false; //modificar si se pone bloqueante = true
+
+	hubo_desalojo=true;
 }
 
 void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
@@ -532,8 +486,10 @@ void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
 		destino32 = destino32 + origen32;
 	}
 
-	es_exit = false;  
-	es_bloqueante = false; 
+	//es_exit = false;  
+	//es_bloqueante = false; 
+
+	hubo_desalojo=false;
 	return;
 }
 
@@ -559,8 +515,10 @@ void ejecutar_sub(pcb* PCB, char* destinoregistro, char* origenregistro){
 		destino32 = destino32 - origen32;
 	}
 
-	es_exit = false;  
-	es_bloqueante = false; 
+	//es_exit = false;  
+	//es_bloqueante = false; 
+
+	hubo_desalojo=false;
 	return;
 }
 
@@ -574,8 +532,10 @@ void ejecutar_jnz(pcb* PCB, char* registro, char* valor){
 		PCB->PC = pc_actualizado;
 	}
 	
-	es_exit=false;  //siempre modificar
-	es_bloqueante=false; //modificar siempre que es_exit = false
+	//es_exit=false;  //siempre modificar
+	//es_bloqueante=false; //modificar siempre que es_exit = false
+
+	hubo_desalojo = false;
 	return;
 }
 
@@ -585,19 +545,21 @@ void ejecutar_resize(char* tamanio){
 	t_paquete * paquete = crear_paquete(REAJUSTAR_TAMANIO_PROCESO);
 	agregar_a_paquete(paquete,&ajuste_tamanio,sizeof(uint32_t));
 	agregar_a_paquete(paquete,&(PCB->PID),sizeof(int));
-	enviar_paquete(paquete,fd_cpu_dispatch);
+	enviar_paquete(paquete,fd_conexion_memoria);
 	
 
-	int codigo_operacion = recibir_operacion(fd_conexion_memoria);
+	int codigo_operacion = recibir_operacion(fd_conexion_memoria,logger_cpu,"MEMORIA - RESIZE");
 	switch (codigo_operacion){
 		case OUTOFMEMORY:
 			enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, SIN_MEMORIA,NULL,NULL,NULL,NULL,NULL);
-			es_exit = true;  //siempre modificar
-			es_bloqueante = false; //modificar siempre que es_exit = false
+			hubo_desalojo=true;
+			//es_exit = false;  //siempre modificar
+			//es_bloqueante = false; //modificar siempre que es_exit = false
 			break;
 		case OK:
-			es_exit = false;  //siempre modificar
-			es_bloqueante = false; //modificar siempre que es_exit = false
+			hubo_desalojo=false;
+			//es_exit = false;  //siempre modificar
+			//es_bloqueante = false; //modificar siempre que es_exit = false
 			break;
 	}
 	
@@ -630,6 +592,9 @@ void ejecutar_copy_string(pcb* PCB, char* tamanio){
 	list_destroy(traducciones_SI);
 	list_destroy(traducciones_DI);
 
+	hubo_desalojo=false;
+
+
 	return;
 }
 
@@ -638,10 +603,14 @@ void ejecutar_wait(pcb* PCB, char* registro){
 	char* recurso = malloc(strlen(registro) + 1);
 	strcpy(recurso, registro);
 	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_WAIT,NULL,NULL,NULL,NULL,NULL);
+	recv(fd_escucha_dispatch,&hubo_desalojo,sizeof(int),MSG_WAITALL);
+	// kernel devuelve 1 si bloqueo al proceso -> mas adelante despachara otro
+	// kernel devuelve 0 si no bloqueo al proceso -> seguimos
+	wait_o_signal =true;
 	free(recurso);
-	sem_post(&sem_recibir_pcb);
-	es_exit=false;  //siempre modificar
-	es_bloqueante=false; //modificar siempre que es_exit = false
+	//sem_post(&sem_recibir_pcb); todavía no, tenemos que descartar si hubo interrupcion por consola
+	//es_exit=false;  //siempre modificar
+	//es_bloqueante=false; //modificar siempre que es_exit = false
 }
 
 void ejecutar_signal(pcb* PCB, char* registro){
@@ -649,19 +618,24 @@ void ejecutar_signal(pcb* PCB, char* registro){
 	char* recurso = malloc(strlen(registro) + 1);
 	strcpy(recurso, registro);
 	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_SIGNAL,NULL,NULL,NULL,NULL,NULL);
+	recv(fd_escucha_dispatch,&hubo_desalojo,sizeof(int),MSG_WAITALL);
 	free(recurso);
-	//aca te falta esperar la respuesta del kernel
-	es_exit = false;  //siempre modificar
-	es_bloqueante=false; //modificar siempre que es_exit = false
+	wait_o_signal =true;
+	//es_exit = false;  //siempre modificar
+	//es_bloqueante=false; //modificar siempre que es_exit = false
+
+	
 }
 
 void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* unidad_de_tiempo){
 	enviar_pcb(PCB, fd_escucha_dispatch, INTERFAZ, SOLICITAR_INTERFAZ_GENERICA, instruccion, interfaz, unidad_de_tiempo,NULL,NULL);
-	sem_post(&sem_recibir_pcb);
-	es_exit=false;  //siempre modificar
-	es_bloqueante=true; //modificar siempre que es_exit = false
-	es_wait = false;  //modificar si se pone a bloqueante = true
-	es_resize = false; //modificar si se pone bloqueante = true
+	//sem_post(&sem_recibir_pcb);
+	//es_exit=false;  //siempre modificar
+	//es_bloqueante=true; //modificar siempre que es_exit = false
+	//es_wait = false;  //modificar si se pone a bloqueante = true
+	//es_resize = false; //modificar si se pone bloqueante = true
+
+	hubo_desalojo=true;
 	return;
 }
 
@@ -689,13 +663,13 @@ void ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, c
 	agregar_a_paquete(paquete,&tamanio_a_leer,sizeof(uint32_t));
 	empaquetar_traducciones(paquete,traducciones);
 	enviar_paquete(paquete,fd_cpu_dispatch);
-	sem_post(&sem_recibir_pcb);
+	//sem_post(&sem_recibir_pcb); todavía no
 	eliminar_paquete(paquete);
-	es_exit=false;  //siempre modificar
-	es_bloqueante=true; //modificar siempre que es_exit = false
-	es_wait = false;  //modificar si se pone a bloqueante = true
-	es_resize = false; //modificar si se pone bloqueante = true
-
+	//es_exit=false;  //siempre modificar
+	//es_bloqueante=true; //modificar siempre que es_exit = false
+	//es_wait = false;  //modificar si se pone a bloqueante = true
+	//es_resize = false; //modificar si se pone bloqueante = true
+	hubo_desalojo=true;
 }
 
 void ejecutar_io_stdout_write(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
@@ -720,20 +694,22 @@ void ejecutar_io_stdout_write(char * nombre_interfaz, char * registro_direccion,
 	agregar_a_paquete(paquete,&tamanio_a_escribir,sizeof(uint32_t));
 	empaquetar_traducciones(paquete,traducciones);
 	enviar_paquete(paquete,fd_cpu_dispatch);
-	sem_post(&sem_recibir_pcb);
+	//sem_post(&sem_recibir_pcb);
 	eliminar_paquete(paquete);
-	es_exit=false;  //siempre modificar
-	es_bloqueante=true; //modificar siempre que es_exit = false
-	es_wait = false;  //modificar si se pone a bloqueante = true
-	es_resize = false; //modificar si se pone bloqueante = true
-
+	//es_exit=false;  //siempre modificar
+	//es_bloqueante=true; //modificar siempre que es_exit = false
+	//es_wait = false;  //modificar si se pone a bloqueante = true
+	//es_resize = false; //modificar si se pone bloqueante = true
+	hubo_desalojo=true;
 }
 
 void ejecutar_exit(pcb* PCB){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
 	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXITO,NULL,NULL,NULL,NULL,NULL);
-	sem_post(&sem_recibir_pcb);
-	es_exit=true;  //siempre modificar
+	//sem_post(&sem_recibir_pcb);
+	//es_exit=true;  //siempre modificar
+
+	hubo_desalojo=true;
 }
 
 void ejecutar_error(pcb* PCB){ //se usa esta en algun momento? creo que no, 
@@ -1029,23 +1005,12 @@ void* interrupcion(void *arg) {
 	fd_cpu_interrupt = iniciar_servidor(NULL, puerto_cpu_interrupt, logger_cpu, "CPU");
 	log_info(logger_cpu, "Leavantado el puerto INTERRUPT");
 	fd_escucha_interrupt = esperar_cliente(fd_cpu_interrupt,logger_cpu, "Kernel (interrupt)");
-	interrupcion_actual = malloc(sizeof(motivo_desalojo));
 	while (1) {
 		int codigo_operacion = recibir_operacion(fd_escucha_interrupt, logger_cpu, "Kernel (interrupt)");
 		switch (codigo_operacion) {
 		case INTERR:
-			motivo_desalojo motivo = recibir_motiv_desalojo(fd_escucha_interrupt);
-			pthread_mutex_lock(&mutex_motivo_x_consola);
-			if(!hay_interrupcion_x_consola){
-				if(motivo == EXIT_CONSOLA){
-					hay_interrupcion_x_consola = true;
-					(*interrupcion_actual) = motivo; // motivo = EXIT_CONSOLA
-				}else{
-					(*interrupcion_actual) = motivo; // motivo = FIN_QUANTUM
-				}
-			}
-			//free(interrupcion_actual); si me liberas el espacio pierdo el dato
-			pthread_mutex_unlock(&mutex_motivo_x_consola);
+			element_interrupcion* nueva_interrupcion = recibir_motiv_desalojo(fd_escucha_interrupt);
+			push_con_mutex(lista_interrupciones,nueva_interrupcion,&mutex_lista_interrupciones);
 			break;
 		case -1:
 			log_error(logger_cpu, "El cliente se desconecto.");
@@ -1059,139 +1024,91 @@ void* interrupcion(void *arg) {
 }
 
 // yo se que es un quilombo de if y else, pero posta que si no mostras que hacer en todos los casos es un quilombo entenderlo
-void check_interrupt (){
-	if(interrupcion_actual!=NULL){
-		if (!es_exit){
-			if(*interrupcion_actual == FIN_QUANTUM){ //si la interrupcion es por desalojo de quantum
-				if(!es_bloqueante){ // se sabe que no se desalojo al proceso previamente
-					if(error_memoria){ //
-						log_info(logger_cpu,"Como hubo un error de escritura del proceso %d, ignoramos interrupcion de fin de quantum",PCB->PID);
-						liberar_interrupcion_actual(); // no atendemos interrupcion ni ponemos ningun semaforo porque mov in y mov out ya desalojan y ponen a escuchar otro pcb
-					}else{ // se sabe que no se desalojo al proceso previamente
-						log_info(logger_cpu,"Interrupcion: Fin de Quantum para el proceso: %d",PCB->PID);
-						enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,FIN_QUANTUM,NULL,NULL, NULL, NULL, NULL);
-						sem_post(&sem_recibir_pcb);
-						liberar_interrupcion_actual();
-					}
-					
-				}else{ //pudo haberse desalojado al proceso
-					if(es_wait){
-						if(cambio_proceso_wait){
-							log_info(logger_cpu,"Cambio el PCB POR WAIT, ahora es del proceso %d, ignoramos interrupcion por FIN DE QUANTUM",PCB->PID);
-							sem_post(&sem_execute); //el pcb cambiado ya lo recibimos, tenemos que simplemente ponernos a ejecutar otro ciclo de instruccion
-							liberar_interrupcion_actual();
-						}else{
-							log_info(logger_cpu,"Interrupcion: Fin de Quantum para el proceso: %d",PCB->PID);
-							enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,FIN_QUANTUM,NULL,NULL, NULL, NULL, NULL);
-							sem_post(&sem_recibir_pcb);
-							liberar_interrupcion_actual();
-						}
-					}else{//no es wait, puede ser una syscall bloqueante o resize
-						if(es_resize){ 
-							if(resize_desalojo_outofmemory){
-								log_info(logger_cpu,"Resize ya había desalojado al proceso, ignoramos interrupcion por FIN DE QUANTUM");
-								liberar_interrupcion_actual(); // syscall bloqueante ya se encargo de poner a escuchar por otro pcb
-							}else{
-								log_info(logger_cpu,"Interrupcion: Fin de Quantum para el proceso: %d",PCB->PID);
-								enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,FIN_QUANTUM,NULL,NULL, NULL, NULL, NULL);
-								sem_post(&sem_recibir_pcb);
-								liberar_interrupcion_actual();
-							}
-						}else{ //este caso es las syscalls bloqueantes, ni resize ni wait
-							log_info(logger_cpu,"Syscall bloqueante ya había desalojado al proceso %d, ignoramos interrupcion por FIN DE QUANTUM",PCB->PID);
-							liberar_interrupcion_actual();// syscall bloqueante ya se encargo de poner a escuchar por otro pcb
-						}	
-					}
-				}
-			}else{//fin de proceso
-				if(!es_bloqueante){ // se sabe que no se desalojo al proceso previamente
-					if(error_memoria){ //
-						log_info(logger_cpu,"Como hubo un error de escritura del proceso %d, ignoramos el pedido de finalizacion porque ya va a finalizar por este error de escritura",PCB->PID);
-						liberar_interrupcion_actual(); // no atendemos interrupcion ni ponemos ningun semaforo porque mov in y mov out ya desalojan y ponen a escuchar otro pcb
-					}else{ // se sabe que no se desalojo al proceso previamente
-						log_info(logger_cpu,"Interrupcion: Fin de Quantum para el proceso: %d",PCB->PID);
-						enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,FIN_QUANTUM,NULL,NULL, NULL, NULL, NULL);
-						sem_post(&sem_recibir_pcb);
-						liberar_interrupcion_actual();
-					}
-				}else{ //pudo haberse desalojado al proceso
-					if(es_wait){
-						if(cambio_proceso_wait){ //se desalojo el proceso
-							//avisarle a kernel del desalojo?
-							liberar_interrupcion_actual();
-							sem_post(&sem_execute);
-						}else{ //no se desalojo el proceso
-							log_info(logger_cpu,"Interrupcion: Finalizacion del proceso: %d",PCB->PID);
-							enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,EXITO,NULL,NULL, NULL, NULL, NULL);
-							sem_post(&sem_recibir_pcb);
-							liberar_interrupcion_actual();
-							pthread_mutex_lock(&mutex_motivo_x_consola);
-							hay_interrupcion_x_consola = false;
-							pthread_mutex_unlock(&mutex_motivo_x_consola);
-						}
-					}else{//no es wait, puede ser una syscall bloqueante o resize
-						if(es_resize){ 
-							if(resize_desalojo_outofmemory){
-								//avisarle a kernel del desalojo?na, ya lo va a finalizar solito
-								liberar_interrupcion_actual();
-							}else{//resize no desalojo al proceso, atender interrupcion
-								log_info(logger_cpu,"Interrupcion: Finalizacion del proceso: %d",PCB->PID);
-								enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,EXITO,NULL,NULL, NULL, NULL, NULL);
-								sem_post(&sem_recibir_pcb);
-								liberar_interrupcion_actual();
-								pthread_mutex_lock(&mutex_motivo_x_consola);
-								hay_interrupcion_x_consola = false;
-								pthread_mutex_unlock(&mutex_motivo_x_consola);
-							}
-						}else{ //este caso es las syscalls bloqueantes, ni resize ni wait
-							//avisarle a kernel del desalojo?
-							liberar_interrupcion_actual();
-						}	
-					}
-				}
-			}
-		}else{//es exit
-			log_info(logger_cpu,"Instruccion ejecutada: EXIT. Proceso  ya había sido desalojado Entonces ignoramos la interrupcion");
-			liberar_interrupcion_actual();
-		}
-	}else{//no hubo una interrupcion
-		if(!es_exit){
-			if(!es_bloqueante){ // se sabe que no se desalojo al proceso previamente
-				if(error_memoria){
-					//no hacer nada porque se supone que mov in o mov out ya se pusieron a escuchar otro pcb
-				}else{// se sabe que no se desalojo al proceso previamente
-					sem_post(&sem_execute);
-				}
-			}else{ //pudo haberse desalojado al proceso
-				if(es_wait){
-					if(cambio_proceso_wait){
-						sem_post(&sem_execute);
-					}else{
-						sem_post(&sem_execute);	
-					}
-				}else{//no es wait, puede ser una syscall bloqueante o resize
-					if(es_resize){ 
-						if(resize_desalojo_outofmemory){
-						//no hacer nada porque la resize ya pone a escuchar otro pcb despues de desalojar ya se había encargado de poner a escuchar otro pcb
-						}else{
-						sem_post(&sem_execute);
-						}
-					}else{ //este caso es las syscalls bloqueantes, ni resize ni wait
-					//no hacer nada porque la syscall bloqueante ya se había encargado de poner a escuchar otro pcb
-					}	
-				}
-			}
-		}else{
-			//no hacer nada porque exit ya directamente pone a escuchar otro pcb
-		}
-		
-	}
-}
 
+
+void check_interrupt (){
+	pthread_mutex_lock(&mutex_lista_interrupciones);//posta que aca esta bien
+	element_interrupcion * interrupcion_actual = seleccionar_interrupcion();
+	//la idea es decirle al kernel si hubo interrupcion por fin de consola
+	if(interrupcion_actual!=NULL){
+		if(hubo_desalojo){ //ojo con wait, wait apenas desaloja, se debe esperar una respuesta del kernel, que diga si ese pcb se bloqueo o no, si se bloqueo->hubo_desalojo=true y si no se bloqueo, hubo_desalojo=false
+			send(fd_escucha_dispatch,&(interrupcion_actual->motivo),sizeof(motivo_desalojo),NULL); //avisamos que tipo de interrupcion hubo al kernel
+			sem_post(&sem_recibir_pcb);//nos ponemos a escuchar otro pcb
+		}else{ //no hubo desalojo-> habra que atender la interrupcion
+			if(wait_o_signal){ //tiene logica distinta porque debe esperar a que el kernel maneje los casos de wait y signal, antes solo habíamos hecho la simulacion de que pasaria
+				if(interrupcion_actual->motivo==EXIT_CONSOLA){
+					send(fd_escucha_dispatch,&(interrupcion_actual->motivo),sizeof(motivo_desalojo),NULL); //avisamos que tipo de interrupcion hubo al kernel
+					sem_post(&sem_recibir_pcb);//nos ponemos a escuchar otro pcb
+				}else{
+					int caso_especial = 181222;
+					send(fd_escucha_dispatch,&caso_especial,sizeof(int),NULL);
+					recv(fd_escucha_dispatch,&caso_especial,sizeof(int),NULL);
+					enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,interrupcion_actual->motivo,NULL,NULL,NULL,NULL,NULL);
+					sem_post(&sem_recibir_pcb);
+				}
+			}else{
+				enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,interrupcion_actual->motivo,NULL,NULL,NULL,NULL,NULL);
+				sem_post(&sem_recibir_pcb);
+			}
+		}
+	}else{
+		if(hubo_desalojo){ //da igual si hubo wait o signal o no
+			motivo_desalojo a = VACIO;
+			send(fd_escucha_dispatch,&a,sizeof(motivo_desalojo),NULL); //avisamos al kernel que no hubo interrupcion de fin de consola
+			sem_post(&sem_recibir_pcb);
+		}else{
+			if(wait_o_signal){
+				int a = 777; //solo mando esto para que wait o signal se pueda destrabar
+				send(fd_cpu_dispatch,&a,sizeof(int,NULL));
+			}
+			sem_post(&sem_execute);
+		}
+	}
+	list_destroy_and_destroy_elements(lista_interrupciones,(void*)free);
+	pthread_mutex_unlock(&mutex_lista_interrupciones);
+}
+/*
 void liberar_interrupcion_actual(){
 	free(interrupcion_actual);
 	interrupcion_actual = NULL;
 	return;
+}
+*/
+element_interrupcion * recibir_motiv_desalojo(int fd_escucha_interrupt){
+	t_list* paquete = recibir_paquete(fd_escucha_interrupt);
+	motivo_desalojo* motivo =(motivo_desalojo*) list_get(paquete, 0);
+	int* el_pid =(motivo_desalojo*) list_get(paquete, 1);
+	element_interrupcion * nueva_interrupcion = malloc(sizof(element_interrupcion));
+	nueva_interrupcion->motivo= *motivo;
+	nueva_interrupcion->pid = * el_pid;
+	free(motivo);
+	free(el_pid);
+	list_destroy(paquete);
+	return nueva_interrupcion;
+}
+
+element_interrupcion * seleccionar_interrupcion(){
+	
+
+	element_interrupcion * interrupcion_encontrada = NULL;
+
+	interrupcion_encontrada = list_find(lista_interrupciones,(void*)encontrar_interrupcion_por_fin_de_consola);
+	if(!interrupcion_encontrada){
+		list_find(lista_interrupciones,(void*)encontrar_interrupcion_por_fin_de_quantum);
+	}
+
+	return interrupcion_encontrada;
+}
+
+
+bool encontrar_interrupcion_por_fin_de_consola(void* elemento){
+	element_interrupcion *p = (element_interrupcion *) elemento;
+	return PCB->PID == elemento->pid && elemento->motivo == EXIT_CONSOLA;
+}
+
+bool encontrar_interrupcion_por_fin_de_quantum(void* elemento){
+	element_interrupcion *p = (element_interrupcion *) elemento;
+	return PCB->PID == elemento->pid && elemento->motivo == FIN_QUANTUM;
 }
 
 /* LIBERAR MEMORIA USADA POR CPU */

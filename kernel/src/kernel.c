@@ -105,7 +105,7 @@ void iniciar_proceso(char *pathPasadoPorConsola){
 pcb* buscar_proceso_para_finalizar(int pid_a_buscar){ 
     pcb* pcbEncontrado;
     int posicionPCB = buscar_posicion_proceso(cola_new, pid_a_buscar);
-
+    //creo que deberías parar todas las colas al mismo tiempo amigo
     if (posicionPCB != -1) {
         pcbEncontrado = remove_con_mutex(cola_new, &mutex_lista_new, posicionPCB);
     } else {
@@ -560,6 +560,7 @@ void iniciar_planificacion_corto_plazo(){
 void atender_vuelta_dispatch(){
     while(1){
         while(leer_debe_planificar_con_mutex()){
+            int esperar_otra_respuesta_antes_de_despachar_otro_pcb=false; //solo se pone en true en el caso especial de wait y signal
             sem_wait(&sem_atender_rta);//esperar a que se haya despachado un pcb
             op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");
             t_list * lista = recibir_paquete(fd_conexion_dispatch); 
@@ -587,22 +588,56 @@ void atender_vuelta_dispatch(){
                	break;
                 case RECURSO:
                 switch(pcb_actualizado -> motivo){
+                    int simulacion;
+                    int rta_cpu;
                     case SOLICITAR_WAIT:
                         char * recurso_wait = list_get(lista , final_pcb+1);
-                        manejar_wait(pcb_actualizado, recurso_wait);
+                        int rta_cpu_wait;
+                        int simulacion = simulacion_wait(pcb_actualizado,recurso_wait);
+                        send(fd_conexion_dispatch,&simulacion,sizeof(int),NULL);
+                        recv(fd_conexion_dispatch,&rta_cpu,sizeof(int),MSG_WAITALL);
+                        if(rta_cpu ==181222){ //caso especial: FIN DE QUANTUM CON DESALOJO DE WAIT Y SIGNAL
+                            manejar_wait(pcb_actualizado, recurso_wait);
+                            send(fd_conexion_dispatch,&simulacion,sizeof(int),NULL);
+                            esperar_otra_respuesta_antes_de_despachar_otro_pcb = true;
+                        }else{
+                            if(rta_cpu == EXIT_CONSOLA){
+                                cambiar_estado(pcb_actualizado, EXIT_CONSOLA);
+                                push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+		                        sem_post(&sem_procesos_exit);
+                            }else{
+                                manejar_wait(pcb_actualizado, recurso_wait);
+                            }
+                        }
 				        free(recurso_wait);
                     break;
                     case SOLICITAR_SIGNAL:
                         char* recurso_signal = list_get(lista, final_pcb+1);
-				        manejar_signal(pcb_actualizado, recurso_signal);
-				        free(recurso_signal);
+                        int simulacion = simulacion_signal(pcb_actualizado,recurso_wait);
+                        send(fd_conexion_dispatch,&simulacion,sizeof(int),NULL);
+                        recv(fd_conexion_dispatch,&rta_cpu,sizeof(int),MSG_WAITALL);
+                        if(rta_cpu ==181222){ //caso especial
+                            manejar_signal(pcb_actualizado, recurso_wait);
+                            send(fd_conexion_dispatch,&simulacion,sizeof(int),NULL); //aviso al cpu: che, ya hice lo mio 
+                            esperar_otra_respuesta_antes_de_despachar_otro_pcb = true; //ahora debemos esperar la
+                        }else{
+                            if(rta_cpu == EXIT_CONSOLA){
+                                cambiar_estado(pcb_actualizado, EXIT_CONSOLA);
+                                push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+		                        sem_post(&sem_procesos_exit);
+                            }else{
+                                manejar_signal(pcb_actualizado, recurso_wait);
+                            }
+                        }
 				    break;
                 }
                 break;
                 case INTERFAZ: //aca repito logica como loco pero sucede que me chupa la cabeza de la chota 
-                if(tiempo_transcurrido_en_cpu < atoi(quantum)){ //CHE ESTO SOLO HACERLO SI ES VRR
+                //esperar respuesta de check interrupt
+                if(tiempo_transcurrido_en_cpu < atoi(quantum)){ 
                     pcb_actualizado->QUANTUM = atoi(quantum) - tiempo_transcurrido_en_cpu;
                 }
+                //hacer lo de abajo si se lo permite CHECK_INTERRUPT
                 switch(pcb_actualizado->motivo){
                     case SOLICITAR_INTERFAZ_GENERICA: 
                         char * instruccion_gen = list_get(lista,final_pcb+1); //devuelve el puntero al dato del elemento de la lista original 
@@ -894,7 +929,10 @@ void atender_vuelta_dispatch(){
                 }
                 break;
             }
-            sem_post(&sem_despachar);//una vez hecho todo, decirle a despachador() que puede planificar otro pcb
+            if(!esperar_otra_respuesta_antes_de_despachar_otro_pcb){
+                sem_post(&sem_despachar);//una vez hecho todo, decirle a despachador() que puede planificar otro pcb
+            }
+            
         }
     }
 }
@@ -918,8 +956,37 @@ t_list* iniciar_recursos_en_proceso(){
 	return lista;
 }
 
+int simulacion_wait(pcb* proceso, char* recurso_wait){
+    int se_bloquearia;
+    recurso* recurso_buscado = buscar_recurso(recurso_wait); // devuelve o el recurso encontrado o un recurso con ID = -1 que significa que NO EXISTE
+	if(recurso_buscado->id == -1){
+        se_bloquearia=true; //habría desalojo
+        free(recurso_buscado);
+	} else {
+        int buffer;
+		buffer = recurso_buscado->instancias -1;
+		if(buffer < 0){ //Obviamente si es < 0 se bloquea
+			se_bloquearia=true;
+		} else {
+            se_bloquearia=false; // 0 porque es FALSO que hubo desalojo
+        }
+	}
+    return se_bloquearia;
+}   
+int simulacion_signal(pcb* proceso, char* recurso_signal){
+    int se_bloquearia;
+    recurso* recurso_buscado = buscar_recurso(recurso_signal);
+	if(recurso_buscado->id == -1){
+		se_bloquearia=true;
+        free(recurso_buscado);
+	} else {
+       se_bloquearia=false;
+	}
+    return se_bloquearia;
+}
 
 void manejar_wait(pcb* proceso, char* recurso_wait){
+    //int rta_a_cpu;
     recurso* recurso_buscado = buscar_recurso(recurso_wait); // devuelve o el recurso encontrado o un recurso con ID = -1 que significa que NO EXISTE
 	if(recurso_buscado->id == -1){
         log_error(logger_kernel, "El recurso %s no existe", recurso_wait);
@@ -927,7 +994,9 @@ void manejar_wait(pcb* proceso, char* recurso_wait){
 		cambiar_estado(proceso, EXITT);
         push_con_mutex(cola_exit,proceso,&mutex_lista_exit); //cuando no existe hay que mandarlo a exit 
 		sem_post(&sem_procesos_exit);
-        sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
+        //rta_a_cpu =1; //1 porque sí, hubo desalojo
+        free(recurso_buscado);
+        //sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
 	} else {
 		recurso_buscado->instancias --;
 		if(recurso_buscado->instancias < 0){ //Obviamente si es < 0 se bloquea 
@@ -935,24 +1004,30 @@ void manejar_wait(pcb* proceso, char* recurso_wait){
             //cada recurso tiene SU cola y SU mutex
 			push_con_mutex(recurso_buscado->cola_block_asignada, proceso, &recurso_buscado->mutex_asignado);
             push_con_mutex(cola_block, proceso, &mutex_cola_block);
-			sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
+			//rta_a_cpu=1;
+            //sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
 		} else {
 			agregar_recurso(recurso_buscado->nombreRecurso, proceso); //Hay que asignarle el recurso usado al pcb AGREGAR LISTA DE RECURSOS A LA ESTRUCTURA PCB. Aca es donde me di cuenta que todo se iba a la mierda con el empaquetado
 			push_con_mutex(cola_exec, proceso, &mutex_lista_exec);
-			enviar_pcb(proceso,fd_conexion_dispatch,PCBBITO,VACIO,NULL,NULL,NULL,NULL,NULL);
-		}
+			//enviar_pcb(proceso,fd_conexion_dispatch,PCBBITO,VACIO,NULL,NULL,NULL,NULL,NULL);
+            //rta_a_cpu=0; // 0 porque es FALSO que hubo desalojo
+        }
 	}
+    //send(fd_conexion_dispatch,&rta_a_cpu,sizeof(int),NULL);
 }
 
 void manejar_signal(pcb* proceso, char* recurso_signal){
-	recurso* recurso_buscado = buscar_recurso(recurso_signal);
+	//int rta_a_cpu;
+    recurso* recurso_buscado = buscar_recurso(recurso_signal);
 	if(recurso_buscado->id == -1){
 		log_error(logger_kernel, "El recurso %s no existe", recurso_signal);
 		proceso->motivo = RECURSO_INVALIDO;
 		cambiar_estado(proceso, EXITT);
 		push_con_mutex(cola_exit,proceso,&mutex_lista_exit); //cuando no existe hay que mandarlo a exit 
 		sem_post(&sem_procesos_exit);
-        sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
+        //rta_a_cpu=1;//hubo desalojo
+        free(recurso_buscado);
+        //sem_post(&sem_despachar); //Aviso que puede ejecutar otro proceso
 	} else {
 		recurso_buscado->instancias ++;
 		quitar_recurso(recurso_buscado->nombreRecurso, proceso);
@@ -962,8 +1037,10 @@ void manejar_signal(pcb* proceso, char* recurso_signal){
 			procesar_vuelta_blocked_a_ready(proceso_desbloqueado, RECURSOVT);
 		}
 		push_con_mutex(cola_exec, proceso, &mutex_lista_exec);
-		enviar_pcb(proceso,fd_conexion_dispatch,PCBBITO,VACIO,NULL,NULL,NULL,NULL,NULL);
+        //rta_a_cpu = 0; //no hubo desalojo
+		//enviar_pcb(proceso,fd_conexion_dispatch,PCBBITO,VACIO,NULL,NULL,NULL,NULL,NULL);
 	}
+    //send(fd_conexion_dispatch,&rta_a_cpu,sizeof(int),NULL);
 }
 
 recurso *buscar_recurso(recurso* recurso_a_buscar){

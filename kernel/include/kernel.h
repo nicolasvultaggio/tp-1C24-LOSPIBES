@@ -205,6 +205,10 @@ bool STDIN_acepta_instruccion(char * instruccion);
 bool STDOUT_acepta_instruccion(char * instruccion);
 bool dialFS_acepta_instruccion(char * instruccion);
 
+int simulacion_wait(pcb* proceso, char* recurso_wait);//es para saber si se bloquearía o no el proceso al hacerle wait
+int simulacion_signal(pcb* proceso, char* recurso_signal);
+
+
 bool debe_planificar;
 bool esta_planificando;
 
