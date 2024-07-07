@@ -1,7 +1,5 @@
 #include <../../memoria/include/memoria.h>
 int main() {
-    
-    decir_hola("Memoria, verdad y justicia");
 
     logger_memoria = log_create("memoria_logs.log","memoria",1,LOG_LEVEL_INFO);
     config_memoria = config_create("./configs/memoria.config");

@@ -89,7 +89,8 @@ int divide_and_ceil(int numerator, int denominator);
 //te devuelve el puntero al proceso en la lista de procesos
 void acortar_tamanio_proceso(int un_fd,t_proceso * proceso_reajustado,int diferencia_de_paginas);
 void aumentar_tamanio_proceso(int un_fd,t_proceso * proceso_reajustado,int diferencia_de_paginas);
-
+t_pagina* buscar_pagina(int npid, int numero_pagina);
+pid_y_pag_de_cpu* recv_solicitud_marco(int fd);
 int cant_marcos;
 int iniciarMemoria();
 int iniciarPaginacion();

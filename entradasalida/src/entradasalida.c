@@ -335,7 +335,7 @@ void atender_DIALFS(){
 
     t_list * lista = recibir_paquete(fd_conexion_kernel);
 
-    int operacion = *list_get(lista,0); //siempre el primero
+    int operacion = list_get(lista,0); //siempre el primero
     free(list_get(lista,0));
 
     char * nombre_archivo_operacion = list_get(lista,1); //siempre el segundo
@@ -353,8 +353,8 @@ void atender_DIALFS(){
             break;
         case FS_READ:
             
-            uint32_t tamanio_lectura = *list_get(lista,2);
-            uint32_t puntero_archivo_r = *list_get(lista,3);
+            uint32_t tamanio_lectura = list_get(lista,2);
+            uint32_t puntero_archivo_r = list_get(lista,3);
             t_list * traducciones_r = desempaquetar_traducciones(lista,4);
             
             read_file(nombre_archivo_operacion, tamanio_lectura,puntero_archivo_r,traducciones_r);
@@ -366,8 +366,8 @@ void atender_DIALFS(){
             break;
         case FS_WRITE:
             
-            uint32_t tamanio_escritura = *list_get(lista,2);
-            uint32_t puntero_archivo_w = *list_get(lista,3);
+            uint32_t tamanio_escritura = list_get(lista,2);
+            uint32_t puntero_archivo_w = list_get(lista,3);
             t_list * traducciones_w = desempaquetar_traducciones(lista,4);
             
             write_file(nombre_archivo_operacion, tamanio_escritura,puntero_archivo_w,traducciones_w);
@@ -378,7 +378,7 @@ void atender_DIALFS(){
             
             break;
         case FS_TRUNCATE:
-            uint32_t nuevo_tamanio_archivo = *list_get(lista,2);
+            uint32_t nuevo_tamanio_archivo = list_get(lista,2);
             
             truncate_file(nombre_archivo_operacion,nuevo_tamanio_archivo);
             
@@ -555,7 +555,7 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
             bitarray_set_bit(bitmap,(off_t)(posicion_ultimo_bloque));
             posicion_ultimo_bloque ++;
             if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
-                log_info(logger_io, "ERROR al sincronizar los cambios en linea:598") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
+                log_info(logger_io, "ERROR al sincronizar los cambios en linea:598"); //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
                 return false;
             }
         }
@@ -563,7 +563,7 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
         //Aca entra cuando no hay espacio suficiente
 
         //COpio lo que se escribio en el archivo de bloques en un buffer auxiliar
-        uint32_t tamanio_a_copiar = ceil((double)archivo_a_mover->tamanio_archivo/block_size) * block_size;
+        uint32_t tamanio_a_copiar = ceil((double)fcb_file->tamanio_archivo/block_size) * block_size;
         char* buffer_auxiliar_archivo = copiar_datos_desde_archivo(tamanio_a_copiar, posicion_bloque_inicial); // Acordarse de hacerle free
 
         //Desocupo los espacios del bitmap
@@ -571,7 +571,7 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
             bitarray_clean_bit(bitmap,(off_t)(fcb_file->bloque_inicial + i));
         }
         if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
-                log_info(logger_io, "ERROR al sincronizar los cambios en linea:574") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
+                log_info(logger_io, "ERROR al sincronizar los cambios en linea:574"); //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
                 return false;
         }
         
@@ -594,7 +594,7 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
             posicion_ultimo_bloque ++;
         }
         if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
-            log_info(logger_io, "ERROR al sincronizar los cambios en linea:597") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
+            log_info(logger_io, "ERROR al sincronizar los cambios en linea:597"); //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
             return false;
         }
         fcb_file->bloque_inicial = posicion_primer_bloque_nueva_ubicacion;
@@ -701,7 +701,7 @@ int compactar(){
 
             archivo_a_mover->bloque_inicial = primer_espacio_libre;
             char* nuevo_bloque_inicial = intTOString(primer_espacio_libre);
-            config_set_value(fcb_file->metadata,"BLOQUE_INICIAL",nuevo_bloque_inicial);
+            config_set_value(archivo_a_mover->metadata,"BLOQUE_INICIAL",nuevo_bloque_inicial);
 
             for(int i = 0; i < bloques_a_mover; i++){ 
                 bitarray_clean_bit(bitmap,(off_t)(primer_bloque_a_mover_del_archivo+i));
@@ -709,7 +709,7 @@ int compactar(){
             }
 
             if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
-                log_info(logger_io, "ERROR al sincronizar los cambios en linea:716") //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
+                log_info(logger_io, "ERROR al sincronizar los cambios en linea:716"); //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
                 return false;
             }
             if (msync(buffer_bloques, tamanio_bloques, MS_SYNC) == -1) {
@@ -742,7 +742,7 @@ fcb * buscar_archivo_por_bloque_inicial(int primero_bloque_archivo){
         return un_fcb->bloque_inicial == primero_bloque_archivo;
     }
 
-    fcb* archivo_encontrado= list_find(lista_fcbs,(void*)archivo_de_nombre);
+    fcb* archivo_encontrado= list_find(lista_fcbs,(void*)archivo_de_bloque_inicial);
     
     return archivo_encontrado;
 

@@ -227,11 +227,6 @@ typedef struct{
 	int marco;
 }nodo_tlb;
 
-typedef struct
-{
-	int direccion_fisica; // recordar que: la direccion fisica ya incluye al offset
-	int bytes;
-}nodo_lectura_escritura; //para que sirve? es la unidad mas basica de escritura o lectura, no hace falta mas desgloce: leer "bytes" bytes desde la direccion fisica, o escribir "bytes" bytes desde la direccion fisica
 
 /* ESTRUCTURA PARA EL ENVIO DE DIRECCIONES FISICAS DE cpu AL kernell*/
 
