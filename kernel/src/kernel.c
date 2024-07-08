@@ -581,9 +581,21 @@ void atender_vuelta_dispatch(){
                     	sem_post(&sem_procesos_exit);
                         break;
                     case SIN_MEMORIA: // Sergio tiene q poner este mismo motivo
-                        cambiar_estado(pcb_actualizado, EXITT);
-                        push_con_mutex(cola_exit, pcb_actualizado, &mutex_lista_exit);
-                        sem_post(&sem_procesos_exit);
+                        motivo_desalojo ci=1;
+                        send(fd_conexion_dispatch,&ci,sizeof(motivo_desalojo),NULL);
+                        recv(fd_conexion_dispatch,&ci,sizeof(motivo_desalojo),MSG_WAITALL);
+                        if(ci!=EXIT_CONSOLA){
+                            cambiar_estado(pcb_actualizado, EXITT);
+                            pcb_actualizado->motivo=SIN_MEMORIA;
+                            push_con_mutex(cola_exit, pcb_actualizado, &mutex_lista_exit);
+                            sem_post(&sem_procesos_exit);
+                        }else{
+                            cambiar_estado(pcb_actualizado, EXITT);
+                            pcb_actualizado->motivo=EXIT_CONSOLA;
+                            push_con_mutex(cola_exit, pcb_actualizado, &mutex_lista_exit);
+                            sem_post(&sem_procesos_exit);
+                        }
+                        break;
 			    }
                	break;
                 case RECURSO:
