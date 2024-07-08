@@ -72,7 +72,6 @@ void dispatch(void *arg){
 
 	while (1) {
 		sem_wait(&sem_recibir_pcb);
-		hay_interrupcion = false;// ponerle mutex a hay_interrupción, ya que dos procesos que se ejecutan paralelamente lo modifican o leen --> puede haber condicion de carrera
 		int codigo_operacion = recibir_operacion(fd_escucha_dispatch, logger_cpu, "Kernell (dispatch)");
 		switch (codigo_operacion) {
 		case PCBBITO:
@@ -124,122 +123,126 @@ t_linea_instruccion * prox_instruccion(int pid, int program_counter){
 void decode (t_linea_instruccion* instruccion, pcb* PCB){
 	int hacer_check_interrupt;
 	t_list * parametros = instruccion->parametros;
-	char * parametro1,parametro2,parametro3,parametro4,parametro5;
+	void * parametro1=NULL;
+	void * parametro2=NULL;
+	void * parametro3=NULL;
+	void * parametro4=NULL;
+	void * parametro5=NULL;
 	switch(instruccion->instruccion){
 		case SET: 
-			parametro1 = (char*) list_get(parametros,0);
-			parametro2 = (char*) list_get(parametros,1);
-			log_info(logger_cpu, "PID: %d - Ejecutando SET %s %s", PCB->PID, parametro1, parametro2);
-			ejecutar_set(PCB, parametro1, parametro2);
+			parametro1 =  list_get(parametros,0);
+			parametro2 =  list_get(parametros,1);
+			log_info(logger_cpu, "PID: %d - Ejecutando SET %s %s", PCB->PID, (char*)parametro1, (char*)parametro2);
+			ejecutar_set(PCB, (char*)parametro1, (char*)parametro2);
 			break;
 		case MOV_IN: 
-			parametro1 = (char*) list_get(parametros,0);
-			parametro2 = (char*) list_get(parametros,1);
-			log_info(logger_cpu, "PID: %d - Ejecutando MOV_IN %s %s", PCB->PID, parametro1, parametro2);
-			ejecutar_mov_in(PCB, parametro1, parametro2);
+			parametro1 =  list_get(parametros,0);
+			parametro2 =  list_get(parametros,1);
+			log_info(logger_cpu, "PID: %d - Ejecutando MOV_IN %s %s", PCB->PID, (char*)parametro1, (char*)parametro2);
+			ejecutar_mov_in(PCB, (char*)parametro1, (char*)parametro2);
 			break;
 		case MOV_OUT: 
-			parametro1 = (char*) list_get(parametros,0);
-			parametro2 = (char*) list_get(parametros,1);
-			log_info(logger_cpu, "PID: %d - Ejecutando MOV_OUT %s %s", PCB->PID, parametro1, parametro2);
-			ejecutar_mov_out(PCB, parametro1, parametro2);
+			parametro1 =  list_get(parametros,0);
+			parametro2 =  list_get(parametros,1);
+			log_info(logger_cpu, "PID: %d - Ejecutando MOV_OUT %s %s", PCB->PID, (char*)parametro1,(char*) parametro2);
+			ejecutar_mov_out(PCB,(char*) parametro1, (char*)parametro2);
 			break;
 		case SUM: 
-			parametro1 = (char*) list_get(parametros,0);
-			parametro2 = (char*) list_get(parametros,1);
-			log_info(logger_cpu, "PID: %d - Ejecutando SUM %s %s", PCB->PID, parametro1, parametro2);
-			ejecutar_sum(PCB, parametro1, parametro2);
+			parametro1 =  list_get(parametros,0);
+			parametro2 =  list_get(parametros,1);
+			log_info(logger_cpu, "PID: %d - Ejecutando SUM %s %s", PCB->PID, (char*)parametro1, (char*)parametro2);
+			ejecutar_sum(PCB,(char*) parametro1, (char*)parametro2);
 			break;
 		case SUB: 
-			parametro1 = (char*) list_get(parametros,0);
-			parametro2 = (char*) list_get(parametros,1);
-			log_info(logger_cpu, "PID: %d - Ejecutando SUB %s %s", PCB->PID, parametro1, parametro2);
-			ejecutar_sub(PCB, parametro1, parametro2);
+			parametro1 =  list_get(parametros,0);
+			parametro2 =  list_get(parametros,1);
+			log_info(logger_cpu, "PID: %d - Ejecutando SUB %s %s", PCB->PID,(char*) parametro1,(char*) parametro2);
+			ejecutar_sub(PCB,(char*) parametro1,(char*) parametro2);
 			break;
 		case JNZ: 
-			parametro1 = (char*) list_get(parametros,0);
-			parametro2 = (char*) list_get(parametros,1);
-			log_info(logger_cpu, "PID: %d - Ejecutando JNZ %s %s", PCB->PID, parametro1, parametro2);
-			ejecutar_jnz(PCB,parametro1, parametro2);
+			parametro1 =  list_get(parametros,0);
+			parametro2 =  list_get(parametros,1);
+			log_info(logger_cpu, "PID: %d - Ejecutando JNZ %s %s", PCB->PID, (char*)parametro1,(char*) parametro2);
+			ejecutar_jnz(PCB,(char*)parametro1, (char*)parametro2);
 			break;
 		case RESIZE: 
-			parametro1 = (char*) list_get(parametros,0);
-			log_info(logger_cpu, "PID: %d - Ejecutando RESIZE %s", PCB->PID, parametro1);
-			ejecutar_resize(parametro1);
+			parametro1 =  list_get(parametros,0);
+			log_info(logger_cpu, "PID: %d - Ejecutando RESIZE %s", PCB->PID, (char*)parametro1);
+			ejecutar_resize((char*)parametro1);
 			break;
 		case COPY_STRING: 
-			parametro1 = (char*) list_get(parametros,0);
-			log_info(logger_cpu, "PID: %d - Ejecutando COPY_STRING %s", PCB->PID, parametro1);
-			ejecutar_copy_string(PCB,parametro1);
+			parametro1 =  list_get(parametros,0);
+			log_info(logger_cpu, "PID: %d - Ejecutando COPY_STRING %s", PCB->PID, (char*)parametro1);
+			ejecutar_copy_string(PCB,(char*)parametro1);
 			break;
 		case WAIT: 
-			parametro1 = (char*) list_get(parametros,0);
-			log_info(logger_cpu, "PID: %d - Ejecutando WAIT %s", PCB->PID, parametro1);
-			ejecutar_wait(PCB, parametro1);
+			parametro1 =  list_get(parametros,0);
+			log_info(logger_cpu, "PID: %d - Ejecutando WAIT %s", PCB->PID, (char*)parametro1);
+			ejecutar_wait(PCB,(char*) parametro1);
 			break;
 		case SIGNAL:
-			parametro1 = (char*) list_get(parametros,0);
-			log_info(logger_cpu, "PID: %d - Ejecutando SIGNAL %s", PCB->PID, parametro1);
-			ejecutar_signal(PCB, parametro1);
+			parametro1 =  list_get(parametros,0);
+			log_info(logger_cpu, "PID: %d - Ejecutando SIGNAL %s", PCB->PID,(char*) parametro1);
+			ejecutar_signal(PCB, (char*)parametro1);
 			break;
 		case IO_GEN_SLEEP: 
-			parametro1 = (char*) list_get(parametros,0);
-			parametro2 = (char*) list_get(parametros,1);
-			log_info(logger_cpu, "PID: %d - Ejecutando IO_GEN_SLEEP %s %s", PCB->PID, parametro1, parametro2);
-			ejecutar_io_gen_sleep(PCB, "IO_GEN_SLEEP", parametro1, parametro2);
+			parametro1 =  list_get(parametros,0);
+			parametro2 =  list_get(parametros,1);
+			log_info(logger_cpu, "PID: %d - Ejecutando IO_GEN_SLEEP %s %s", PCB->PID, (char*)parametro1,(char*) parametro2);
+			ejecutar_io_gen_sleep(PCB, "IO_GEN_SLEEP", (char*)parametro1,(char*) parametro2);
 			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_STDIN_READ:
-			parametro1 = (char*) list_get(parametros,0);
-			parametro2 = (char*) list_get(parametros,1);
-			parametro3 = (char*) list_get(parametros,2);
-			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDIN_READ %s %s %s", PCB->PID, parametro1, parametro2, parametro3);
-			ejecutar_io_stdin_read(parametro1,parametro2,parametro3);
+			parametro1 =  list_get(parametros,0);
+			parametro2 =  list_get(parametros,1);
+			parametro3 =  list_get(parametros,2);
+			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDIN_READ %s %s %s", PCB->PID, (char*)parametro1, (char*)parametro2, (char*)parametro3);
+			ejecutar_io_stdin_read((char*)parametro1,(char*)parametro2,(char*)parametro3);
 			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_STDOUT_WRITE:
-			parametro1 = (char*) list_get(parametros,0);
-			parametro2 = (char*) list_get(parametros,1);
-			parametro3 = (char*) list_get(parametros,2);
-			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDOUT_WRITE %s %s %s", PCB->PID, parametro1, parametro2, parametro3);
-			ejecutar_io_stdout_write(parametro1,parametro2,parametro3);
+			parametro1 =  list_get(parametros,0);
+			parametro2 =  list_get(parametros,1);
+			parametro3 =  list_get(parametros,2);
+			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDOUT_WRITE %s %s %s", PCB->PID,(char*) parametro1, (char*)parametro2, (char*)parametro3);
+			ejecutar_io_stdout_write((char*)parametro1,(char*)parametro2,(char*)parametro3);
 			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_CREATE:
-			parametro1 = (char*) list_get(parametros,0);
-			parametro2 = (char*) list_get(parametros,1);
-			ejecutar_io_fs_create(parametro1,parametro2);
+			parametro1 =  list_get(parametros,0);
+			parametro2 =  list_get(parametros,1);
+			ejecutar_io_fs_create((char*)parametro1,(char*)parametro2);
 			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_DELETE:
-			parametro1 = (char*) list_get(parametros,0);
-			parametro2 = (char*) list_get(parametros,1);
-			ejecutar_io_fs_delete(parametro1,parametro2);
+			parametro1 =  list_get(parametros,0);
+			parametro2 =  list_get(parametros,1);
+			ejecutar_io_fs_delete((char*)parametro1,(char*)parametro2);
 			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_TRUNCATE:
-			parametro1 = (char*) list_get(parametros,0);
-			parametro2 = (char*) list_get(parametros,1);
-			parametro3 = (char*) list_get(parametros,2);
-			ejecutar_io_fs_truncate(parametro1,parametro2,parametro3);
+			parametro1 =  list_get(parametros,0);
+			parametro2 =  list_get(parametros,1);
+			parametro3 =  list_get(parametros,2);
+			ejecutar_io_fs_truncate((char*)parametro1,(char*)parametro2,(char*)parametro3);
 			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_WRITE:
-			parametro1 = (char*) list_get(parametros,0);
-			parametro2 = (char*) list_get(parametros,1);
-			parametro3 = (char*) list_get(parametros,2);
-			parametro4 = (char*) list_get(parametros,3);
-			parametro5 = (char*) list_get(parametros,4);
-			ejecutar_io_fs_write(parametro1,parametro2,parametro3,parametro4,parametro5);
+			parametro1 =  list_get(parametros,0);
+			parametro2 =  list_get(parametros,1);
+			parametro3 =  list_get(parametros,2);
+			parametro4 =  list_get(parametros,3);
+			parametro5 =  list_get(parametros,4);
+			ejecutar_io_fs_write((char*)parametro1,(char*)parametro2,(char*)parametro3,(char*)parametro4,(char*)parametro5);
 			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_READ:
-			parametro1 = (char*) list_get(parametros,0);
-			parametro2 = (char*) list_get(parametros,1);
-			parametro3 = (char*) list_get(parametros,2);
-			parametro4 = (char*) list_get(parametros,3);
-			parametro5 = (char*) list_get(parametros,4);
-			ejecutar_io_fs_read(parametro1,parametro2,parametro3,parametro4,parametro5);
+			parametro1 =  list_get(parametros,0);
+			parametro2 =  list_get(parametros,1);
+			parametro3 =  list_get(parametros,2);
+			parametro4 =  list_get(parametros,3);
+			parametro5 =  list_get(parametros,4);
+			ejecutar_io_fs_read((char*)parametro1,(char*)parametro2,(char*)parametro3,(char*)parametro4,(char*)parametro5);
 			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case EXIT://falta
@@ -361,7 +364,7 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 		char escrito[((int)(traduccion->bytes))+1];
 		memcpy(escrito,dato_a_escribir+offset,(size_t)(traduccion->bytes));
 		escrito[((int)(traduccion->bytes))+1]='\0';
-		if(!strcmp((char*)rta_memoria,"Ok")){
+		if(!strcmp((char *)rta_memoria,"Ok")){
 			log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica: %d - Valor: %s", PCB->PID, traduccion->direccion_fisica, escrito);
 		}else{
 			log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica: %d - Valor: %s : FALLO", PCB->PID, traduccion->direccion_fisica, escrito);

@@ -82,7 +82,6 @@ typedef struct{
 
 
 /* FUNCIONES DE CPU */
-void terminar_programa();
 void leer__configuraciones();
 void inicializar_semaforos();
 void dispatch();
