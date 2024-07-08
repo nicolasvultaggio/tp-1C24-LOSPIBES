@@ -77,80 +77,42 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
     
     t_list* instrucciones = list_create();
     FILE* f;
-    char buffer[256]; 
+    char *buffer = malloc(256);
     char* palabra;
     char* instruccion_leida= NULL;
     char* parametros[5];
     int contadordeparametros;
 
     f=fopen(ruta,"r");
-	while (fgets(buffer, 256, f) != NULL) {
-		t_linea_instruccion* instruccion = malloc(sizeof(cod_instruccion)); 
-		instruccion->parametro1 = malloc(256);
-		instruccion->parametro2 = malloc(256);
-		instruccion->parametro3 = malloc(256);
-		instruccion->parametro4 = malloc(256);
-        instruccion->parametro5 = malloc(256);
+	while (fgets(buffer, 256, f) != NULL) {//suponemos que una instruccion nunca dura mas de 256 caracteres
+		t_linea_instruccion* instruccion = malloc(sizeof(t_linea_instruccion)); 
+		
+		int posicion_de_salto_de_linea = strlen(buffer)-1;
+		buffer[posicion_de_salto_de_linea]='\0'; //quitamos el salto de linea de la instruccion
+		char ** array_de_instruccion = string_split(buffer," "); //separar cada parte de la linea
+		
+		instruccion->instruccion=instruccion_to_enum(array_de_instruccion[0]);
 
-
-		// Eliminar el carácter de salto de línea del final de la línea
-		buffer[strcspn(buffer, "\n")] = '\0';
-
-        instruccion_leida = strtok(buffer, " ");                                                             
-        contadordeparametros = 0;
-        while ((palabra = strtok(NULL, " ")) != NULL && contadordeparametros < 5) {
-            parametros[contadordeparametros++] = palabra;
-        }
-
-        if(instruccion_leida != NULL){
-            cod_instruccion cod_inst = instruccion_to_enum(instruccion_leida);
-
-            instruccion->instruccion = cod_inst;
-            if(contadordeparametros > 0){
-            	strcpy(instruccion->parametro1, parametros[0]);
-            }else{
-            	strcpy(instruccion->parametro1, "");
-            }
-            if(contadordeparametros > 1){
-            	strcpy(instruccion->parametro2, parametros[1]);
-            }else{
-            	strcpy(instruccion->parametro2, "");
-            }
-            if(contadordeparametros > 2){
-            	strcpy(instruccion->parametro3, parametros[2]);
-            }else{
-            	strcpy(instruccion->parametro3, "");
-            }
-			if(contadordeparametros>3){
-                strcpy(instruccion->parametro1,parametros[3]);
-            }
-            else{
-                strcpy(instruccion->parametro1," ");
-            }
-          if(contadordeparametros>4){
-                strcpy(instruccion->parametro1,parametros[4]);
-            }
-         else{
-              strcpy(instruccion->parametro1," ");
-            }
-            
-		list_add(instrucciones, instruccion);
-        }else{
-        	instruccion_destroyer(instruccion);
-        }
+		//saber la cantidad de parametros segun la instruccion
+		int cantidad_de_parametros;
+		for(int i = 0; i<cantidad_de_parametros;i++){
+			
+		}
+		//crear la lista de parametros
+		//guardar cada elemento del split en la lista de parametros
 	}
 
 	fclose(f);
 
 	return instrucciones;
 }
+
 void instruccion_destroyer(t_linea_instruccion* instruccion){
+	int cantidad_de_instrucciones = list_size(instruccion->parametros);
+	for(int i=0;i<cantidad_de_instrucciones;i++){
+		free(list_get(instruccion->parametros),i);
+	}
 	free(instruccion);
-	free(instruccion->parametro1);
-	free(instruccion->parametro2);
-	free(instruccion->parametro3);
-	free(instruccion->parametro4);
-	free(instruccion->parametro5);
 }
 
 //aca se le conectan primero cpu, despues kernel, y despues pueden conectarse MUULTIPLES interfaces
