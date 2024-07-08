@@ -93,16 +93,12 @@ typedef enum{
 /* PBC PLAYS */
 typedef struct {
 	cod_instruccion instruccion;
-	char* parametro1;
-	char* parametro2;
-	char* parametro3;
-	char* parametro4;
-	char* parametro5;
+	t_list * parametros;
 } t_linea_instruccion;
 
 typedef struct {
 	int PID; //numero UNICO para cada proceso
-    uint32_t PC; // direccion de la siguiente instruccion a ejecutar
+    int PC; // numero de la proxima instruccion a ejectuar
     int QUANTUM; // cantidad de tiempo que el proceso puede ejecutarse antes de que el so intervenga para cambiar el contexto
     motivo_desalojo motivo;
 	estadosDeLosProcesos estado; //Estado en el que esta el proceso

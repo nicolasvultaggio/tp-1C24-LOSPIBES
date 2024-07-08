@@ -327,7 +327,7 @@ void finalizar_proceso_a_pedido_de_kernel(int un_fd){
 	list_destroy_and_destroy_elements(proceso_a_finalizar->instrucciones, (void*) instruccion_destroyer);
 }
 
-t_solicitud_instruccion* recv_solicitar_instruccion(int fd){
+t_solicitud_instruccion* recibir_solicitud_de_instruccion(int fd){
 	t_list* paquete = recibir_paquete(fd);
 	t_solicitud_instruccion* solicitud_instruccion_recibida = malloc(sizeof(t_solicitud_instruccion));
 
@@ -343,24 +343,20 @@ t_solicitud_instruccion* recv_solicitar_instruccion(int fd){
 	return solicitud_instruccion_recibida;
 }// RECIBE EL PEDIDO DE CPU, PID Y PROGRAM COUNTER
 
-t_linea_instruccion* buscar_instruccion(int pid, int program_counter){ //no tiene sentido que lo pasees por parametro 
+t_linea_instruccion* buscar_instruccion(int pid, int program_counter){ 
 	
-	int i = 0;
+	bool es_proceso_de_pid(void* arg){
+		t_proceso * un_proceso = (t_proceso *) arg;
+		return un_proceso->pid == program_counter;
+	};
 	
 	pthread_mutex_lock(&mutex_lista_procesos);
-	t_proceso* proceso_instr = list_get(lista_de_procesos, i);
+	t_proceso* proceso = list_find(lista_de_procesos,(void*)es_proceso_de_pid);
 	pthread_mutex_unlock(&mutex_lista_procesos);
 
-	while(pid != proceso_instr->pid){
-		i++;
-		pthread_mutex_lock(&mutex_lista_procesos);
-		proceso_instr = list_get(lista_de_procesos, i);
-		pthread_mutex_unlock(&mutex_lista_procesos);
-	}
-	//tenias una funcion de la commons que te ahorraba todo este trabajo igual, se llama list_find, fijate en la funcion finalizar_proceso_a_pedido_de_kernel
-
-	return list_get(proceso_instr->instrucciones, program_counter);
+	return list_get(proceso->instrucciones, program_counter);
 }//BUSCA LA INSTRUCCION EN LA LISTA QUE CREAMOS CUANDO KERNEL PIDIO INCIAR PROCESO, YA ESTA CREADA EN UNA VARIABLE GLOBAL
+
 
 
 
@@ -368,24 +364,27 @@ void send_proxima_instruccion(int filedescriptor, t_linea_instruccion* instrucci
 	t_paquete* paquete = crear_paquete(PROXIMA_INSTRUCCION);
 
 	agregar_a_paquete(paquete, &(instruccion->instruccion), sizeof(cod_instruccion));
-	agregar_a_paquete(paquete, instruccion->parametro1, strlen(instruccion->parametro1) + 1);
-	agregar_a_paquete(paquete, instruccion->parametro2, strlen(instruccion->parametro2) + 1);
-	agregar_a_paquete(paquete, instruccion->parametro3, strlen(instruccion->parametro3) + 1);
-	agregar_a_paquete(paquete, instruccion->parametro4, strlen(instruccion->parametro4) + 1);
-	agregar_a_paquete(paquete, instruccion->parametro5, strlen(instruccion->parametro5) + 1);
+	
+	int cantidad_de_parametros = list_size(instruccion->parametros);
+	
+	agregar_a_paquete(paquete,&cantidad_de_parametros,sizeof(int));
+
+	for(int i =0; ;i++){
+		char * aux = list_get(instruccion->parametros,0);
+		agregar_a_paquete(paquete,aux,strlen(aux)+1);//suponemos que los parametros llegan con el fin de linea
+	}
 
 	enviar_paquete(paquete, filedescriptor);
 	eliminar_paquete(paquete);
 }//envia la instruccion pedida a CPU serializado
 
-void procesar_pedido_instruccion(int socket_cpu){ //la lista de procesos es una variable global, no hace falta que la pases por parametro
 
-	int retardo_respuesta = config_get_long_value(config_memoria, "RETARDO_RESPUESTA");
-	t_solicitud_instruccion* solicitud_instruccion = recv_solicitar_instruccion(socket_cpu);
+void procesar_pedido_instruccion(int socket_cpu){ 
 
-	t_linea_instruccion* instruccion_a_enviar = buscar_instruccion(solicitud_instruccion->pid, solicitud_instruccion->program_counter - 1);//es -1 xq como se va a llamar varias veces una vez que 
+	t_solicitud_instruccion* solicitud_instruccion = recibir_solicitud_de_instruccion(socket_cpu);
+	t_linea_instruccion* instruccion_a_enviar = buscar_instruccion(solicitud_instruccion->pid, solicitud_instruccion->program_counter );
 	free(solicitud_instruccion);
-	usleep(retardo_respuesta*1000);//preguntar 
+	usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 	send_proxima_instruccion(socket_cpu, instruccion_a_enviar);
 }
 /*************************************/

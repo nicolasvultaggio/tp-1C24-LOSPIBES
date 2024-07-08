@@ -568,34 +568,20 @@ t_linea_instruccion* recibir_proxima_instruccion(int fd_conexion){
 	t_list* paquete = recibir_paquete(fd_conexion);
 	t_linea_instruccion* instruccion_recibida = malloc(sizeof(t_linea_instruccion));
 
+	instruccion_recibida->parametros = list_create();
+	
 	cod_instruccion* instruccion = list_get(paquete, 0);
 	instruccion_recibida->instruccion = *instruccion;
 	free(instruccion);
 
-	char* parametro1 = list_get(paquete, 1);
-	instruccion_recibida->parametro1 = malloc(strlen(parametro1));
-	strcpy(instruccion_recibida->parametro1, parametro1);
-	free(parametro1);
+	int* p_cantidad_de_parametros = list_get(paquete, 1);
+	int cantidad_de_parametros= *p_cantidad_de_parametros;
+	free(p_cantidad_de_parametros);
 
-	char* parametro2 = list_get(paquete, 2);
-	instruccion_recibida->parametro2 = malloc(strlen(parametro2));
-	strcpy(instruccion_recibida->parametro2, parametro2);
-	free(parametro2);
-
-	char* parametro3 = list_get(paquete, 3);
-	instruccion_recibida->parametro3 = malloc(strlen(parametro3));
-	strcpy(instruccion_recibida->parametro3, parametro3);
-	free(parametro3);
-
-	char* parametro4 = list_get(paquete, 4);
-	instruccion_recibida->parametro4 = malloc(strlen(parametro4));
-	strcpy(instruccion_recibida->parametro4, parametro4);
-	free(parametro4);
-
-	char* parametro5 = list_get(paquete, 5);
-	instruccion_recibida->parametro5 = malloc(strlen(parametro5));
-	strcpy(instruccion_recibida->parametro5, parametro5);
-	free(parametro5);
+	for(int i=0;i<cantidad_de_parametros;i++){
+		void * aux = list_get(paquete,i+2);
+		list_add(instruccion_recibida->parametros,aux);
+	}
 
 	list_destroy(paquete);
 	return instruccion_recibida;

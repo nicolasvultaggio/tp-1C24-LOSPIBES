@@ -74,7 +74,7 @@ int server_escuchar();
 static void procesar_clientes(void* void_args);
 cod_instruccion instruccion_to_enum(char* instruccion);
 void iniciar_proceso_a_pedido_de_Kernel(char* path, int pid, int socket_kernel);
-t_solicitud_instruccion* recv_solicitar_instruccion(int fd);
+t_solicitud_instruccion* recibir_solicitud_de_instruccion(int fd);
 t_linea_instruccion* buscar_instruccion(int pid, int program_counter);
 void send_proxima_instruccion(int filedescriptor, t_linea_instruccion *instruccion);
 void procesar_pedido_instruccion(int socket_cpu);

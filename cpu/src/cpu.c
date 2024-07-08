@@ -12,7 +12,7 @@ int main(int argc, char* argv[]){
     leer__configuraciones();
 	inicializar_semaforos();
 
-	pthread_mutex_init(&mutex_lista_interrupciones,NULL);
+	
 	lista_interrupciones = list_create();
 
 	/* CONECTO CPU CON MEMORIA */
@@ -54,6 +54,7 @@ void leer__configuraciones(){
 void inicializar_semaforos(){
 
 	pthread_mutex_init(&mutex_tlb, NULL);
+	pthread_mutex_init(&mutex_lista_interrupciones,NULL);
 	//pthread_mutex_init(&mutex_motivo_x_consola, NULL);
 
 	sem_init(&sem_recibir_pcb, 0, 1);
