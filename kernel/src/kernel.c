@@ -145,7 +145,7 @@ void finalizar_proceso(char* PID){
     pcb* pcb_buscado = buscar_proceso_para_finalizar(pid_busado);
 
     if(strcmp(string_de_estado(pcb_buscado->estado), "EXEC") == 0){ 
-        enviar_interrupcion(EXIT_CONSOLA);
+        enviar_interrupcion(EXIT_CONSOLA,pid_busado);
     }else{
         pcb_buscado->motivo = EXIT_CONSOLA;
         cambiar_estado(pcb_buscado,EXITT);
@@ -560,7 +560,7 @@ void iniciar_planificacion_corto_plazo(){
 void atender_vuelta_dispatch(){
     while(1){
         while(leer_debe_planificar_con_mutex()){
-            int esperar_otra_respuesta_antes_de_despachar_otro_pcb=false; //solo se pone en true en el caso especial de wait y signal
+            //int no_despachar=false; //habra casos en los que luego de atender el desalojo, no despachamos otro
             sem_wait(&sem_atender_rta);//esperar a que se haya despachado un pcb
             op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");
             t_list * lista = recibir_paquete(fd_conexion_dispatch); 
@@ -592,43 +592,31 @@ void atender_vuelta_dispatch(){
                     int rta_cpu;
                     case SOLICITAR_WAIT:
                         char * recurso_wait = list_get(lista , final_pcb+1);
-                        int rta_cpu_wait;
                         int simulacion = simulacion_wait(pcb_actualizado,recurso_wait);
                         send(fd_conexion_dispatch,&simulacion,sizeof(int),NULL);
-                        recv(fd_conexion_dispatch,&rta_cpu,sizeof(int),MSG_WAITALL);
-                        if(rta_cpu ==181222){ //caso especial: FIN DE QUANTUM CON DESALOJO DE WAIT Y SIGNAL
-                            manejar_wait(pcb_actualizado, recurso_wait);
-                            send(fd_conexion_dispatch,&simulacion,sizeof(int),NULL);
-                            esperar_otra_respuesta_antes_de_despachar_otro_pcb = true;
+                        recv(fd_conexion_dispatch,&rta_cpu,sizeof(int),MSG_WAITALL);//aca recibimos que dice cpu despues de hacer check interrupt: esto nos determina si terminamos realizando la operacion o no
+                        if(rta_cpu == EXIT_CONSOLA){ //aca descarto la operacion wait y signal
+                            cambiar_estado(pcb_actualizado, EXIT_CONSOLA);
+                            push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+		                    sem_post(&sem_procesos_exit);
                         }else{
-                            if(rta_cpu == EXIT_CONSOLA){
-                                cambiar_estado(pcb_actualizado, EXIT_CONSOLA);
-                                push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
-		                        sem_post(&sem_procesos_exit);
-                            }else{
-                                manejar_wait(pcb_actualizado, recurso_wait);
-                            }
+                            manejar_wait(pcb_actualizado, recurso_wait);
                         }
 				        free(recurso_wait);
                     break;
                     case SOLICITAR_SIGNAL:
                         char* recurso_signal = list_get(lista, final_pcb+1);
-                        int simulacion = simulacion_signal(pcb_actualizado,recurso_wait);
+                        int simulacion = simulacion_signal(pcb_actualizado,recurso_signal);
                         send(fd_conexion_dispatch,&simulacion,sizeof(int),NULL);
-                        recv(fd_conexion_dispatch,&rta_cpu,sizeof(int),MSG_WAITALL);
-                        if(rta_cpu ==181222){ //caso especial
-                            manejar_signal(pcb_actualizado, recurso_wait);
-                            send(fd_conexion_dispatch,&simulacion,sizeof(int),NULL); //aviso al cpu: che, ya hice lo mio 
-                            esperar_otra_respuesta_antes_de_despachar_otro_pcb = true; //ahora debemos esperar la
+                        recv(fd_conexion_dispatch,&rta_cpu,sizeof(int),MSG_WAITALL);//aca recibimos que dice cpu despues de hacer check interrupt: esto nos determina si terminamos realizando la operacion o no
+                        if(rta_cpu == EXIT_CONSOLA){
+                            cambiar_estado(pcb_actualizado, EXIT_CONSOLA);
+                            push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
+		                    sem_post(&sem_procesos_exit);
                         }else{
-                            if(rta_cpu == EXIT_CONSOLA){
-                                cambiar_estado(pcb_actualizado, EXIT_CONSOLA);
-                                push_con_mutex(cola_exit,pcb_actualizado,&mutex_lista_exit);
-		                        sem_post(&sem_procesos_exit);
-                            }else{
-                                manejar_signal(pcb_actualizado, recurso_wait);
-                            }
-                        }
+                            manejar_signal(pcb_actualizado, recurso_signal);
+                        }  
+                        free(recurso_signal);
 				    break;
                 }
                 break;
@@ -929,10 +917,7 @@ void atender_vuelta_dispatch(){
                 }
                 break;
             }
-            if(!esperar_otra_respuesta_antes_de_despachar_otro_pcb){
-                sem_post(&sem_despachar);//una vez hecho todo, decirle a despachador() que puede planificar otro pcb
-            }
-            
+            sem_post(&sem_despachar);//una vez hecho todo, decirle a despachador() que puede planificar otro pcb
         }
     }
 }
@@ -1233,7 +1218,7 @@ void reducir_quantum(void *ppid){ // como todo hilo, es esa su especificacion
         pcb * pcb_retirado_de_exec = list_get(cola_exec,0); // obtiene el pcb, sin removerlo de exec
         pthread_mutex_lock(&mutex_lista_exec);
         if(pcb_retirado_de_exec->PID == pid){
-            enviar_interrupcion(FIN_QUANTUM);
+            enviar_interrupcion(FIN_QUANTUM,pid);
         }
     }
 }
@@ -1247,9 +1232,10 @@ void manejar_quantum_VRR(int pid){
 }                             
 
 
-void enviar_interrupcion(motivo_desalojo motivo){
+void enviar_interrupcion(motivo_desalojo motivo, int pid){
     t_paquete* paquete = crear_paquete(INTERR);
-	agregar_a_paquete(paquete, &motivo, sizeof(motivo));
+	agregar_a_paquete(paquete, &motivo, sizeof(motivo_desalojo));
+    agregar_a_paquete(paquete, &pid, sizeof(int));
 	enviar_paquete(paquete, fd_conexion_interrupt);
 	eliminar_paquete(paquete);
 }

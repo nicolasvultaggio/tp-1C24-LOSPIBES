@@ -619,14 +619,6 @@ t_datos_proceso* recibir_datos_del_proceso(int fd_kernel){
 
 }
 
-motivo_desalojo recibir_motiv_desalojo(int fd_escucha_interrupt){
-	t_list* paquete = recibir_paquete(fd_escucha_interrupt);
-	motivo_desalojo* motivo =(motivo_desalojo*) list_get(paquete, 0);
-	motivo_desalojo ret = *motivo;
-	free(motivo);
-	list_destroy(paquete);
-	return ret;
-}
 
 pcb* guardar_datos_del_pcb(t_list* paquete){ 
 

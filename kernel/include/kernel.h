@@ -183,7 +183,7 @@ void escuchar_interfaces();
 void procesar_conexion_interfaz(void * arg);
 void despachar_pcb(pcb * un_pcb);
 void proceso_a_ready(pcb *pcb);
-void enviar_interrupcion(motivo_desalojo motivo);
+void enviar_interrupcion(motivo_desalojo motivo,int pid);
 bool leer_debe_planificar_con_mutex();
 element_interfaz * interfaz_existe_y_esta_conectada(char * un_nombre);
 bool generica_acepta_instruccion(char * instruccion);

@@ -602,10 +602,10 @@ void ejecutar_wait(pcb* PCB, char* registro){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "WAIT", registro);
 	char* recurso = malloc(strlen(registro) + 1);
 	strcpy(recurso, registro);
-	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_WAIT,NULL,NULL,NULL,NULL,NULL);
+	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_WAIT,recurso,NULL,NULL,NULL,NULL);
 	recv(fd_escucha_dispatch,&hubo_desalojo,sizeof(int),MSG_WAITALL);
-	// kernel devuelve 1 si bloqueo al proceso -> mas adelante despachara otro
-	// kernel devuelve 0 si no bloqueo al proceso -> seguimos
+	// kernel devuelve 1 si bloquearía al proceso -> mas adelante despachara otro
+	// kernel devuelve 0 si no bloquearía al proceso -> seguimos
 	wait_o_signal =true;
 	free(recurso);
 	//sem_post(&sem_recibir_pcb); todavía no, tenemos que descartar si hubo interrupcion por consola
@@ -617,14 +617,12 @@ void ejecutar_signal(pcb* PCB, char* registro){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "SIGNAL", registro);
 	char* recurso = malloc(strlen(registro) + 1);
 	strcpy(recurso, registro);
-	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_SIGNAL,NULL,NULL,NULL,NULL,NULL);
+	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_SIGNAL,recurso,NULL,NULL,NULL,NULL);
 	recv(fd_escucha_dispatch,&hubo_desalojo,sizeof(int),MSG_WAITALL);
 	free(recurso);
 	wait_o_signal =true;
 	//es_exit = false;  //siempre modificar
 	//es_bloqueante=false; //modificar siempre que es_exit = false
-
-	
 }
 
 void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* unidad_de_tiempo){
@@ -1032,32 +1030,27 @@ void check_interrupt (){
 	//la idea es decirle al kernel si hubo interrupcion por fin de consola
 	if(interrupcion_actual!=NULL){
 		if(hubo_desalojo){ //ojo con wait, wait apenas desaloja, se debe esperar una respuesta del kernel, que diga si ese pcb se bloqueo o no, si se bloqueo->hubo_desalojo=true y si no se bloqueo, hubo_desalojo=false
+			//aca entra con cualquier syscall, y los casos en los que wait y signal desalojarian al proceso
 			send(fd_escucha_dispatch,&(interrupcion_actual->motivo),sizeof(motivo_desalojo),NULL); //avisamos que tipo de interrupcion hubo al kernel
 			sem_post(&sem_recibir_pcb);//nos ponemos a escuchar otro pcb
 		}else{ //no hubo desalojo-> habra que atender la interrupcion
 			if(wait_o_signal){ //tiene logica distinta porque debe esperar a que el kernel maneje los casos de wait y signal, antes solo habíamos hecho la simulacion de que pasaria
-				if(interrupcion_actual->motivo==EXIT_CONSOLA){
-					send(fd_escucha_dispatch,&(interrupcion_actual->motivo),sizeof(motivo_desalojo),NULL); //avisamos que tipo de interrupcion hubo al kernel
-					sem_post(&sem_recibir_pcb);//nos ponemos a escuchar otro pcb
-				}else{
-					int caso_especial = 181222;
-					send(fd_escucha_dispatch,&caso_especial,sizeof(int),NULL);
-					recv(fd_escucha_dispatch,&caso_especial,sizeof(int),NULL);
-					enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,interrupcion_actual->motivo,NULL,NULL,NULL,NULL,NULL);
-					sem_post(&sem_recibir_pcb);
-				}
-			}else{
+				//aca entra en los casos en los que wait y signal no bloquean al proceso
+				send(fd_escucha_dispatch,&(interrupcion_actual->motivo),sizeof(motivo_desalojo),NULL); //avisamos que tipo de interrupcion hubo al kernel, que ya tenia el pcb.
+				sem_post(&sem_recibir_pcb);//nos ponemos a escuchar otro pcb
+			}else{ 
+				//aca entra si hubo cualquier instruccion no desalojante 
 				enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,interrupcion_actual->motivo,NULL,NULL,NULL,NULL,NULL);
 				sem_post(&sem_recibir_pcb);
 			}
 		}
 	}else{
-		if(hubo_desalojo){ //da igual si hubo wait o signal o no
+		if(hubo_desalojo){ // cualquier syscall- wait y signal en casos bloqueantes
 			motivo_desalojo a = VACIO;
 			send(fd_escucha_dispatch,&a,sizeof(motivo_desalojo),NULL); //avisamos al kernel que no hubo interrupcion de fin de consola
 			sem_post(&sem_recibir_pcb);
 		}else{
-			if(wait_o_signal){
+			if(wait_o_signal){ // cualquier funcion no syscall y wait y signal en casos no bloqueantes
 				int a = 777; //solo mando esto para que wait o signal se pueda destrabar
 				send(fd_cpu_dispatch,&a,sizeof(int,NULL));
 			}
@@ -1075,9 +1068,10 @@ void liberar_interrupcion_actual(){
 }
 */
 element_interrupcion * recibir_motiv_desalojo(int fd_escucha_interrupt){
+	int sera_INTERR=recibir_operacion(fd_escucha_interrupt,logger_cpu,"Kernel-Interrupcion recibida");
 	t_list* paquete = recibir_paquete(fd_escucha_interrupt);
 	motivo_desalojo* motivo =(motivo_desalojo*) list_get(paquete, 0);
-	int* el_pid =(motivo_desalojo*) list_get(paquete, 1);
+	int* el_pid =(int*) list_get(paquete, 1);
 	element_interrupcion * nueva_interrupcion = malloc(sizof(element_interrupcion));
 	nueva_interrupcion->motivo= *motivo;
 	nueva_interrupcion->pid = * el_pid;
