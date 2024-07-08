@@ -37,9 +37,7 @@ int main(int argc, char* argv[]){
 	pthread_join(*hilo_interrupt, NULL);
 	pthread_join(*hilo_cilo_instruccion, NULL);
 
-    terminar_programa();
-
-    return EXIT_SUCCESS;    
+    return terminar_programa();   
 }
 
 /* OBTENER PARAMETROS DE .CONFIG */
@@ -1144,7 +1142,7 @@ bool encontrar_interrupcion_por_fin_de_quantum(void* elemento) {
 
 
 /* LIBERAR MEMORIA USADA POR CPU */
-void terminar_programa(){
+int terminar_programa(){
     if(logger_cpu != NULL){
 		log_destroy(logger_cpu);
 	}
@@ -1152,4 +1150,16 @@ void terminar_programa(){
 		config_destroy(config_cpu);
 	}
     liberar_conexion(fd_conexion_memoria);
+
+	return EXIT_SUCCESS;
+}
+
+void solicitar_proxima_instruccion( int pid, int program_counter){
+	
+	t_paquete* paquete = crear_paquete(SOLICITAR_INSTRUCCION);
+	agregar_a_paquete(paquete, &pid, sizeof(int));
+	agregar_a_paquete(paquete, &program_counter, sizeof(int));
+	enviar_paquete(paquete, fd_conexion_memoria);
+	eliminar_paquete(paquete);
+
 }

@@ -89,7 +89,7 @@ void dispatch();
 void fetch ();
 void decode (t_linea_instruccion* instruccion, pcb* PCB);
 t_linea_instruccion* prox_instruccion(int pid, uint32_t program_counter);
-void terminar_programa();
+int terminar_programa();
 void inicializar_tlb();
 
 /* EXECUTE Ejecutar instrucciones */
