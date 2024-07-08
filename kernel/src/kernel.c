@@ -604,7 +604,7 @@ void atender_vuelta_dispatch(){
                         int rta_cpu;
                         case SOLICITAR_WAIT:
                             char * recurso_wait = list_get(lista , final_pcb+1);
-                            int simulacion = simulacion_wait(pcb_actualizado,recurso_wait);
+                            simulacion = simulacion_wait(pcb_actualizado,recurso_wait);
                             send(fd_conexion_dispatch,&simulacion,sizeof(int),NULL);
                             recv(fd_conexion_dispatch,&rta_cpu,sizeof(int),MSG_WAITALL);//aca recibimos que dice cpu despues de hacer check interrupt: esto nos determina si terminamos realizando la operacion o no
                             if(rta_cpu == EXIT_CONSOLA){ //aca descarto la operacion wait y signal
@@ -618,7 +618,7 @@ void atender_vuelta_dispatch(){
                         break;
                         case SOLICITAR_SIGNAL:
                             char* recurso_signal = list_get(lista, final_pcb+1);
-                            int simulacion = simulacion_signal(pcb_actualizado,recurso_signal);
+                            simulacion = simulacion_signal(pcb_actualizado,recurso_signal);
                             send(fd_conexion_dispatch,&simulacion,sizeof(int),NULL);
                             recv(fd_conexion_dispatch,&rta_cpu,sizeof(int),MSG_WAITALL);//aca recibimos que dice cpu despues de hacer check interrupt: esto nos determina si terminamos realizando la operacion o no
                             if(rta_cpu == EXIT_CONSOLA){
@@ -774,9 +774,9 @@ void atender_vuelta_dispatch(){
                                             info_de_bloqueo->parametros= list_create();
                                             list_add(info_de_bloqueo->parametros,nombre_archivo_fc);
                                             cambiar_estado(pcb_actualizado,BLOCKED);
-                                            push_con_mutex(interfaz_fc->cola_bloqueados,info_de_bloqueo,interfaz_fc->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
+                                            push_con_mutex(interfaz__fc->cola_bloqueados,info_de_bloqueo,interfaz__fc->mutex_procesos_blocked); //si estaba en la lista de interfaces, tiene que tener los semaforos inicializados
                                             push_con_mutex(cola_block, pcb_actualizado, &mutex_cola_block); 
-                                            sem_post(interfaz_fc->sem_procesos_blocked); 
+                                            sem_post(interfaz__fc->sem_procesos_blocked); 
                                             break;
                                         }
                                     }

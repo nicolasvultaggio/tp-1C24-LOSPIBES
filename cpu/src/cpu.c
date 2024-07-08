@@ -233,7 +233,8 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 	void * direccion_logica = capturar_registro(DIRECCION);
 	size_t size_reg = size_registro(DATOS);
 	uint32_t uint32_t_size_reg = (uint32_t) size_reg;
-	t_list * traducciones = obtener_traducciones( (uint32_t) (*direccion_logica), uint32_t_size_reg);
+	uint32_t direccion_logica_uint32 = (uint32_t)(uintptr_t)direccion_logica;
+	t_list * traducciones = obtener_traducciones(direccion_logica_uint32, uint32_t_size_reg);
 	//ojo estas traducciones no se empaquetan, las otras si porque necesitabamos mandarlas al kernel, estas mandamos una por una a memoria
 	int cantidad_de_traducciones = list_size(traducciones);
 
@@ -292,7 +293,8 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	size_t size_reg = size_registro(DATOS);//TAMANIO A ESCRIBIR
 	void * dato_a_escribir = capturar_registro(DATOS); //LITERLAMENTE LO QUE VAMOS A ESCRIBIR
 	uint32_t uint32_t_size_reg = (uint32_t) size_reg;
-	t_list * traducciones = obtener_traducciones( (uint32_t) (*direccion_logica), uint32_t_size_reg);
+	uint32_t direccion_logica_uint32 = (uint32_t)(uintptr_t)direccion_logica;
+	t_list * traducciones = obtener_traducciones( direccion_logica_uint32, uint32_t_size_reg);
 	//ojo estas traducciones no se empaquetan, las otras si porque necesitabamos mandarlas al kernel, estas mandamos una por una a memoria
 	
 	int cantidad_de_traducciones = list_size(traducciones);
@@ -486,69 +488,59 @@ void ejecutar_io_fs_read(char * nombre_interfaz,char * nombre_archivo,char * reg
 	
 }
 
-void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
-	
-	size_t size_origen = 0, size_destino = 0;
-	
-	uint8_t destino = malloc();
+void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro) {
+    size_t size_origen = size_registro(origenregistro);
+    size_t size_destino = size_registro(destinoregistro);
+    
+   
+    uint8_t *destino8 = capturar_registro(destinoregistro);
+    uint8_t *origen8 = capturar_registro(origenregistro);
+    uint32_t *destino32 = (uint32_t *) capturar_registro(destinoregistro);
+    uint32_t *origen32 = (uint32_t *) capturar_registro(origenregistro);
 
-	uint8_t * destino8 = capturar_registro(destinoregistro);
-	uint8_t * origen8 = capturar_registro(origenregistro);
-	uint32_t * destino32 = capturar_registro(destinoregistro);
-	uint32_t * origen32 = capturar_registro(origenregistro);
+    if ((size_origen == 1) && (size_destino == 1)) {
+        *destino8 += *origen8;
+    } else if ((size_origen == 1) && (size_destino == 4)) {
+        *destino32 += *origen8;
+    } else if ((size_origen == 4) && (size_destino == 1)) {
+        *destino8 += *origen32;
+    } else if ((size_origen == 4) && (size_destino == 4)) {
+        *destino32 += *origen32;
+    }
 
-	size_origen = size_registro(origenregistro);
-	size_destino = size_registro(destinoregistro);
+    hubo_desalojo = false;
+    wait_o_signal = false;
+    es_exit = false;
 
-	if((size_origen == 1) && (size_destino == 1)){
-		destino8 = destino8 + origen8;
-	}else if((size_origen == 1) && (size_destino == 4)){
-		destino32 = destino32 + origen8;
-	}else if((size_origen == 4) && (size_destino == 1)){
-		destino8 = destino8 + origen32;
-	}else if((size_origen == 4) && (size_destino == 4)){
-		destino32 = destino32 + origen32;
-	}
-
-	//es_exit = false;  
-	//es_bloqueante = false; 
-
-	hubo_desalojo=false;
-	wait_o_signal =false;
-	es_exit=false;
-	return;
+    return;
 }
 
-void ejecutar_sub(pcb* PCB, char* destinoregistro, char* origenregistro){
+void ejecutar_sub(pcb* PCB, char* destinoregistro, char* origenregistro) {
+    size_t size_origen = size_registro(origenregistro);
+    size_t size_destino = size_registro(destinoregistro);
 
-	size_t size_origen = 0, size_destino = 0;
+    // Asumimos que `capturar_registro` devuelve un puntero adecuado
+    uint8_t *destino8 = capturar_registro(destinoregistro);
+    uint8_t *origen8 = capturar_registro(origenregistro);
+    uint32_t *destino32 = (uint32_t *) capturar_registro(destinoregistro);
+    uint32_t *origen32 = (uint32_t *) capturar_registro(origenregistro);
 
-	uint8_t * destino8 = capturar_registro(destinoregistro);
-	uint8_t * origen8 = capturar_registro(origenregistro);
-	uint32_t * destino32 = capturar_registro(destinoregistro);
-	uint32_t * origen32 = capturar_registro(origenregistro);
+    if ((size_origen == 1) && (size_destino == 1)) {
+        *destino8 -= *origen8;
+    } else if ((size_origen == 1) && (size_destino == 4)) {
+        *destino32 -= *origen8;
+    } else if ((size_origen == 4) && (size_destino == 1)) {
+        *destino8 -= *origen32;
+    } else if ((size_origen == 4) && (size_destino == 4)) {
+        *destino32 -= *origen32;
+    }
 
-	size_origen = size_registro(origenregistro);
-	size_destino = size_registro(destinoregistro);
-
-	if((size_origen == 1) && (size_destino == 1)){
-		destino8 = destino8 - origen8;
-	}else if((size_origen == 1) && (size_destino == 4)){
-		destino32 = destino32 - origen8;
-	}else if((size_origen == 4) && (size_destino == 1)){
-		destino8 = destino8 - origen32;
-	}else if((size_origen == 4) && (size_destino == 4)){
-		destino32 = destino32 - origen32;
-	}
-
-	//es_exit = false;  
-	//es_bloqueante = false; 
-
-	wait_o_signal =false;
-	hubo_desalojo = false;
-	es_exit=false;
-	return;
+    wait_o_signal = false;
+    hubo_desalojo = false;
+    es_exit = false;
+    return;
 }
+
 
 void ejecutar_jnz(pcb* PCB, char* registro, char* valor){
 		
@@ -614,12 +606,12 @@ void ejecutar_copy_string(pcb* PCB, char* tamanio){
 	enviar_paquete(paquete,fd_conexion_memoria);
 	eliminar_paquete(paquete);
 
-	uint_t lectura = recibir_lectura_memoria(); 
+	uint32_t lectura = recibir_lectura_memoria(); 
 
 	nodo_lectura_escritura * traduccion_DI = malloc(sizeof(nodo_lectura_escritura));
 	traduccion_DI = list_get(traduccion_DI,0);
 
-	log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica DI: %d - Valor: %d ", PCB->pid, traduccion_DI->direccion_fisica, lectura);	
+	log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica DI: %d - Valor: %d ", PCB->PID, traduccion_DI->direccion_fisica, lectura);	
 
 	free(traduccion_DI);
 	list_destroy(traducciones_SI);
@@ -845,7 +837,7 @@ void * capturar_registro(char * registro){
 
 uint32_t convU8toU32(uint8_t *number) {
   uint32_t result = *number;
-  return *result;
+  return result;
 }
 
 /* FUNCIONES stdin_read y stout_write */
@@ -937,7 +929,7 @@ uint32_t MMU(uint32_t direccion_logica){
 		break;
 	} //ya tenes el numero de marco
 
-	log_info(logger_cpu,  "PID: %d - OBTENER MARCO - Página: %d - Marco: %d", PCB->pid, numero_pagina, marco); //log ob
+	log_info(logger_cpu,  "PID: %d - OBTENER MARCO - Página: %d - Marco: %d", PCB->PID, numero_pagina, marco); //log ob
 
 	return ((uint32_t) marco) *((uint32_t)TAM_PAGINA) + desplazamiento; //devuelve ya la direccion fisica
 }
@@ -952,7 +944,7 @@ void inicializar_tlb(){
 
 int solicitar_tamanio_pagina(){ //vos le pedis tambien? si poque no tengo manera de saber el tamaño de pagina
 	int tamanio;
-	int codigo_operacion = recibir_operacion(fd_conexion_memoria);
+	int codigo_operacion = recibir_operacion(fd_conexion_memoria,logger_cpu,"memoria");
 	switch (codigo_operacion){
 		case SIZE_PAGE:
 			TAM_PAGINA = recibir_tamanio_pagina(fd_conexion_memoria);
@@ -981,7 +973,7 @@ void agregar_entrada_tlb(t_list* TLB, nodo_tlb * info_proceso_memoria, pthread_m
 
 void verificar_tamanio_tlb(t_list* TLB, pthread_mutex_t* mutex){
 
-	if((list_size(TLB)/MAX_TLB_ENTRY) =! 1){
+	if((list_size(TLB)/MAX_TLB_ENTRY) != 1){
 		return;
 	}
 	nodo_tlb* puntero = pop_con_mutex(TLB, mutex);
@@ -1011,7 +1003,7 @@ int consultar_tlb(int PID, int numero_pagina){
 
 	if(info_proceso_memoria == NULL){ //TLB MISS
 		log_info(logger_cpu, "PID: %d - TLB MISS - Pagina: %d", PCB->PID, numero_pagina);
-		marco = solicitar_frame_memory(PID, numero_pagina);
+		marco = solicitar_frame_memory(numero_pagina);
 		info_proceso_memoria = administrar_tlb(PID, numero_pagina, marco); //devuelve si o si la nueva entrada
 	}else{ //ESTO ES TLB HIT
 		if(algoritmo_tlb == "LRU"){ 
@@ -1097,7 +1089,7 @@ void check_interrupt (){
 			}else{
 				if(wait_o_signal){ // cualquier funcion no syscall y wait y signal en casos no bloqueantes
 					int a = 777; //solo mando esto para que wait o signal se pueda destrabar
-					send(fd_cpu_dispatch,&a,sizeof(int,NULL));
+					send(fd_cpu_dispatch,&a,sizeof(int),NULL);
 				}
 				sem_post(&sem_execute);
 			}
@@ -1118,7 +1110,7 @@ element_interrupcion * recibir_motiv_desalojo(int fd_escucha_interrupt){
 	t_list* paquete = recibir_paquete(fd_escucha_interrupt);
 	motivo_desalojo* motivo =(motivo_desalojo*) list_get(paquete, 0);
 	int* el_pid =(int*) list_get(paquete, 1);
-	element_interrupcion * nueva_interrupcion = malloc(sizof(element_interrupcion));
+	element_interrupcion * nueva_interrupcion = malloc(sizeof(element_interrupcion));
 	nueva_interrupcion->motivo= *motivo;
 	nueva_interrupcion->pid = * el_pid;
 	free(motivo);
@@ -1140,16 +1132,16 @@ element_interrupcion * seleccionar_interrupcion(){
 	return interrupcion_encontrada;
 }
 
-
-bool encontrar_interrupcion_por_fin_de_consola(void* elemento){
-	element_interrupcion *p = (element_interrupcion *) elemento;
-	return PCB->PID == elemento->pid && elemento->motivo == EXIT_CONSOLA;
+bool encontrar_interrupcion_por_fin_de_consola(void* elemento) {
+    element_interrupcion *p = (element_interrupcion *) elemento;
+    return PCB->PID == p->pid && p->motivo == EXIT_CONSOLA;
 }
 
-bool encontrar_interrupcion_por_fin_de_quantum(void* elemento){
-	element_interrupcion *p = (element_interrupcion *) elemento;
-	return PCB->PID == elemento->pid && elemento->motivo == FIN_QUANTUM;
+bool encontrar_interrupcion_por_fin_de_quantum(void* elemento) {
+    element_interrupcion *p = (element_interrupcion *) elemento;
+    return PCB->PID == p->pid && p->motivo == FIN_QUANTUM;
 }
+
 
 /* LIBERAR MEMORIA USADA POR CPU */
 void terminar_programa(){
