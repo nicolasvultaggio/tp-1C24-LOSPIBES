@@ -103,19 +103,18 @@ void fetch (void *arg){
 	}
 }
 
-t_linea_instruccion * prox_instruccion(int pid, uint32_t program_counter){
+
+t_linea_instruccion * prox_instruccion(int pid, int program_counter){
 	
-	t_linea_instruccion* instruccion_recibida = malloc(sizeof(t_linea_instruccion));
+	t_linea_instruccion* instruccion_recibida;
 	
-	//enviar_solicitud_de_instruccion(fd_conexion_memoria, pid, program_counter);
+	solicitar_proxima_instruccion(pid,program_counter);
 	
-	int codigo_operacion = recibir_operacion(fd_conexion_memoria, logger_cpu, "Memoria");
+	int codigo_operacion = recibir_operacion(fd_conexion_memoria, logger_cpu, "Memoria, en un pedido de instruccion algo falló.\n");
 		
-		switch (codigo_operacion) {
-			case PROXIMA_INSTRUCCION:
-				instruccion_recibida = recibir_proxima_instruccion(fd_conexion_memoria);
-				break;		
-		}
+	//la operacion siempre sera PROXIMA_INSTRUCCION
+	instruccion_recibida = recibir_proxima_instruccion(fd_conexion_memoria);
+	
 	
 	return instruccion_recibida;
 }
