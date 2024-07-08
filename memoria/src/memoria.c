@@ -174,6 +174,7 @@ int server_escuchar() {
 static void procesar_clientes(void* void_args){ 
 	int *args = (int*) void_args;
 	int cliente_socket = *args;
+	int avisoDeFinalizacion = 1;
 
 	op_code cop;
 	while (cliente_socket != -1) {
@@ -195,6 +196,7 @@ static void procesar_clientes(void* void_args){
 		case DATOS_PROCESO: // CREAR PROCESO: este codigo SOLO LO ENVIA EL KERNEL 
 			t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);// por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
 			iniciar_proceso_a_pedido_de_Kernel(datos_proceso->path, datos_proceso->pid, cliente_socket);
+			send(fd_conexion_kernel,avisoDeFinalizacion,sizeof(int),NULL);
 			free(datos_proceso->path);
 			free(datos_proceso);
 			break;
@@ -219,6 +221,7 @@ static void procesar_clientes(void* void_args){
 			break;
 		case FINALIZAR_PROCESO:
 			finalizar_proceso_a_pedido_de_kernel(cliente_socket); //si o si recibe el pid ahi adentro
+			send(fd_conexion_kernel,avisoDeFinalizacion,sizeof(int),NULL);
 			break;
 		default:
 			log_error(logger_memoria, "Codigo de operacion no reconocido en memoria");
