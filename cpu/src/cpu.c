@@ -563,7 +563,9 @@ void ejecutar_resize(char* tamanio){
 	int codigo_operacion = recibir_operacion(fd_conexion_memoria,logger_cpu,"MEMORIA - RESIZE");
 	switch (codigo_operacion){
 		case OUTOFMEMORY:
+			motivo_desalojo buffersito;
 			enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, SIN_MEMORIA,NULL,NULL,NULL,NULL,NULL);
+			recv(fd_escucha_dispatch,&buffersito,sizeof(motivo_desalojo),MSG_WAITALL);
 			hubo_desalojo=true;
 			//es_exit = false;  //siempre modificar
 			//es_bloqueante = false; //modificar siempre que es_exit = false
