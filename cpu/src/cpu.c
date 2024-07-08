@@ -124,75 +124,84 @@ t_linea_instruccion * prox_instruccion(int pid, uint32_t program_counter){
 
 /* DECODE interpreto las intrucciones y las mando a ejecutar */
 void decode (t_linea_instruccion* instruccion, pcb* PCB){
+	int hacer_check_interrupt;
 	switch(instruccion->instruccion){
-		case SET:
+		case SET: //check
 			log_info(logger_cpu, "PID: %d - Ejecutando SET %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_set(PCB, instruccion->parametro1, instruccion->parametro2);
 			break;
-		case MOV_IN:
+		case MOV_IN: //podrían desalojar?
 			log_info(logger_cpu, "PID: %d - Ejecutando MOV_IN %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_mov_in(PCB, instruccion->parametro1, instruccion->parametro2);
 			break;
-		case MOV_OUT:
+		case MOV_OUT: //podrían desalojar?
 			log_info(logger_cpu, "PID: %d - Ejecutando MOV_OUT %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_mov_out(PCB, instruccion->parametro1, instruccion->parametro2);
 			break;
-		case SUM:
+		case SUM: //check
 			log_info(logger_cpu, "PID: %d - Ejecutando SUM %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_sum(PCB, instruccion->parametro1, instruccion->parametro2);
 			break;
-		case SUB:
+		case SUB: //check
 			log_info(logger_cpu, "PID: %d - Ejecutando SUB %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_sub(PCB, instruccion->parametro1, instruccion->parametro2);
 			break;
-		case JNZ:
+		case JNZ: //check
 			log_info(logger_cpu, "PID: %d - Ejecutando JNZ %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_jnz(PCB, instruccion->parametro1, instruccion->parametro2);
 			break;
-		case RESIZE:
+		case RESIZE: //falta
 			log_info(logger_cpu, "PID: %d - Ejecutando RESIZE %s", PCB->PID, instruccion->parametro1);
 			ejecutar_resize(instruccion->parametro1);
 			break;
-		case COPY_STRING:
+		case COPY_STRING: //falta
 			log_info(logger_cpu, "PID: %d - Ejecutando COPY_STRING %s", PCB->PID, instruccion->parametro1);
 			ejecutar_copy_string(PCB,instruccion->parametro1);
 			break;
-		case WAIT:
+		case WAIT: //check
 			log_info(logger_cpu, "PID: %d - Ejecutando WAIT %s", PCB->PID, instruccion->parametro1);
 			ejecutar_wait(PCB, instruccion->parametro1);
 			break;
-		case SIGNAL:
+		case SIGNAL://check
 			log_info(logger_cpu, "PID: %d - Ejecutando SIGNAL %s", PCB->PID, instruccion->parametro1);
 			ejecutar_signal(PCB, instruccion->parametro1);
 			break;
-		case IO_GEN_SLEEP:
+		case IO_GEN_SLEEP: 
 			log_info(logger_cpu, "PID: %d - Ejecutando IO_GEN_SLEEP %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2);
 			ejecutar_io_gen_sleep(PCB, "IO_GEN_SLEEP", instruccion->parametro1, instruccion->parametro2);
+			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_STDIN_READ:
 			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDIN_READ %s %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
 			ejecutar_io_stdin_read(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3);
+			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_STDOUT_WRITE:
 			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDOUT_WRITE %s %s %s", PCB->PID, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
 			ejecutar_io_stdout_write(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3);
+			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_CREATE:
 			ejecutar_io_fs_create(instruccion->parametro1,instruccion->parametro2);
+			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_DELETE:
 			ejecutar_io_fs_delete(instruccion->parametro1,instruccion->parametro2);
+			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_TRUNCATE:
 			ejecutar_io_fs_truncate(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3);
+			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_WRITE:
 			ejecutar_io_fs_write(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3,instruccion->parametro4,instruccion->parametro5);
+			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_READ:
 			ejecutar_io_fs_read(instruccion->parametro1,instruccion->parametro2,instruccion->parametro3,instruccion->parametro4,instruccion->parametro5);
+			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
-		case EXIT:
+		case EXIT://falta
 			ejecutar_exit(PCB);
 			break;
 		default:
@@ -213,8 +222,8 @@ void ejecutar_set(pcb* PCB, char* registro, char* valor){
 
 	//es_exit =false; //poner en true 
 	//es_bloqueante=false; //modificar siempre que es_exit = false
-
-	//hubo desalojo
+	wait_o_signal =false;
+	hubo_desalojo = false;
 	return;
 }
 
@@ -268,8 +277,8 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 	//es_exit=false; //siempre mofificar
 	//es_bloqueante=false; //modificar siempre que es_exit = false
 
-	hubo_desalojo=false;
-
+	wait_o_signal =false;
+	hubo_desalojo = false;
 	return;
 }
 
@@ -325,8 +334,8 @@ void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
 	//es_exit=false; //siempre mofificar
 	//es_bloqueante=false; //modificar siempre que es_exit = false
 
+	wait_o_signal =false;
 	hubo_desalojo = false;
-
 
 }
 
@@ -489,7 +498,8 @@ void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro){
 	//es_exit = false;  
 	//es_bloqueante = false; 
 
-	hubo_desalojo=false;
+	wait_o_signal =false;
+	hubo_desalojo = false;
 	return;
 }
 
@@ -518,7 +528,8 @@ void ejecutar_sub(pcb* PCB, char* destinoregistro, char* origenregistro){
 	//es_exit = false;  
 	//es_bloqueante = false; 
 
-	hubo_desalojo=false;
+	wait_o_signal =false;
+	hubo_desalojo = false;
 	return;
 }
 
@@ -535,6 +546,7 @@ void ejecutar_jnz(pcb* PCB, char* registro, char* valor){
 	//es_exit=false;  //siempre modificar
 	//es_bloqueante=false; //modificar siempre que es_exit = false
 
+	wait_o_signal =false;
 	hubo_desalojo = false;
 	return;
 }
@@ -562,7 +574,7 @@ void ejecutar_resize(char* tamanio){
 			//es_bloqueante = false; //modificar siempre que es_exit = false
 			break;
 	}
-	
+	wait_o_signal=false;
 	eliminar_paquete(paquete);
 	return;
 }
@@ -592,8 +604,8 @@ void ejecutar_copy_string(pcb* PCB, char* tamanio){
 	list_destroy(traducciones_SI);
 	list_destroy(traducciones_DI);
 
-	hubo_desalojo=false;
-
+	wait_o_signal =false;
+	hubo_desalojo = false;
 
 	return;
 }
@@ -634,6 +646,7 @@ void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* un
 	//es_resize = false; //modificar si se pone bloqueante = true
 
 	hubo_desalojo=true;
+	wait_o_signal=false;
 	return;
 }
 
@@ -668,6 +681,7 @@ void ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, c
 	//es_wait = false;  //modificar si se pone a bloqueante = true
 	//es_resize = false; //modificar si se pone bloqueante = true
 	hubo_desalojo=true;
+	wait_o_signal=false;
 }
 
 void ejecutar_io_stdout_write(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
@@ -699,6 +713,7 @@ void ejecutar_io_stdout_write(char * nombre_interfaz, char * registro_direccion,
 	//es_wait = false;  //modificar si se pone a bloqueante = true
 	//es_resize = false; //modificar si se pone bloqueante = true
 	hubo_desalojo=true;
+	wait_o_signal=false;
 }
 
 void ejecutar_exit(pcb* PCB){
@@ -708,6 +723,7 @@ void ejecutar_exit(pcb* PCB){
 	//es_exit=true;  //siempre modificar
 
 	hubo_desalojo=true;
+	wait_o_signal=false;
 }
 
 void ejecutar_error(pcb* PCB){ //se usa esta en algun momento? creo que no, 
