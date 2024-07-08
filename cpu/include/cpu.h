@@ -64,6 +64,7 @@ int fd_cpu_interrupt;
 
 bool hubo_desalojo;
 bool wait_o_signal;
+bool es_exit;
 /* REGISTROS */
 typedef struct{
 	uint32_t* pc;
