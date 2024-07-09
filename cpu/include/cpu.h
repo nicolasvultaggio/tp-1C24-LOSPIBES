@@ -101,9 +101,9 @@ void ejecutar_sub( char* destinoregistro, char* origenregistro);
 void ejecutar_jnz( char* registro, char* instruccion);
 void ejecutar_resize(char* tamanio);
 void ejecutar_copy_string( char* tamanio);
+void ejecutar_wait(char* nombre_recurso);
+void ejecutar_signal( char* nombre_recurso);
 
-void ejecutar_wait(pcb* PCB, char* registro);
-void ejecutar_signal(pcb* PCB, char* registro);
 void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* unidad_de_tiempo);
 void ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio);
 void ejecutar_io_stdout_write(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio);

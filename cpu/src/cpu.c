@@ -764,10 +764,10 @@ void ejecutar_copy_string( char* tamanio){
 	return;
 }
 
-void ejecutar_wait(pcb* PCB, char* registro){
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "WAIT", registro);
-	char* recurso = malloc(strlen(registro) + 1);
-	strcpy(recurso, registro);
+void ejecutar_wait( char* nombre_recurso){
+	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "WAIT", nombre_recurso);
+	char* recurso = malloc(strlen(nombre_recurso) + 1);
+	strcpy(recurso, nombre_recurso);
 	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_WAIT,recurso,NULL,NULL,NULL,NULL);
 	recv(fd_escucha_dispatch,&hubo_desalojo,sizeof(int),MSG_WAITALL);
 	// kernel devuelve 1 si bloquearía al proceso -> mas adelante despachara otro
@@ -780,10 +780,10 @@ void ejecutar_wait(pcb* PCB, char* registro){
 	//es_bloqueante=false; //modificar siempre que es_exit = false
 }
 
-void ejecutar_signal(pcb* PCB, char* registro){
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "SIGNAL", registro);
-	char* recurso = malloc(strlen(registro) + 1);
-	strcpy(recurso, registro);
+void ejecutar_signal(char* nombre_recurso){
+	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "SIGNAL", nombre_recurso);
+	char* recurso = malloc(strlen(nombre_recurso) + 1);
+	strcpy(recurso, nombre_recurso);
 	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_SIGNAL,recurso,NULL,NULL,NULL,NULL);
 	recv(fd_escucha_dispatch,&hubo_desalojo,sizeof(int),MSG_WAITALL);
 	free(recurso);
