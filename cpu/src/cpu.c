@@ -916,9 +916,9 @@ void ejecutar_exit(){
 	es_exit=true;
 }
 //esto se usa alguna vez? se invoca?
-void ejecutar_error(pcb* PCB){ //se usa esta en algun momento? creo que no, 
+void ejecutar_error(){ //se usa esta en algun momento? creo que no, 
 	//log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
-	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXIT_CONSOLA,NULL,NULL,NULL,NULL,NULL);
+	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXIT_CONSOLA,NULL,NULL,NULL,NULL,NULL); //va a romper el kernel porque se supone que no tiene como recibir esto
 	sem_post(&sem_recibir_pcb);
 }
 

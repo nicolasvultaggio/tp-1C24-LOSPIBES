@@ -112,7 +112,7 @@ void ejecutar_io_fs_truncate(char * nombre_interfaz,char * nombre_archivo,char *
 void ejecutar_io_fs_write(char * nombre_interfaz,char * nombre_archivo,char * registro_direccion,char * registro_tamanio , char * registro_puntero_archivo);
 void ejecutar_io_fs_read(char * nombre_interfaz,char * nombre_archivo,char * registro_direccion,char * registro_tamanio , char * registro_puntero_archivo);
 void ejecutar_exit();
-void ejecutar_error(pcb* PCB);
+void ejecutar_error();
 
 void enviar_recurso_por_signal(char * recurso, int fd_escucha_dispatch, op_code OPERACION);
 void enviar_recurso_por_wait(char * recurso, int fd_escucha_dispatch, op_code OPERACION);
