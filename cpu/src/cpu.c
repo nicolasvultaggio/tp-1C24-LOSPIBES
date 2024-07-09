@@ -284,7 +284,7 @@ void ejecutar_set( char* registro, char* valor){
 	return;
 }
 
-void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
+void ejecutar_mov_in(char* DATOS, char* DIRECCION){
 	
 	enum_reg_cpu registro_direccion_enum = registro_to_enum(DIRECCION);
 	enum_reg_cpu registro_datos_enum=registro_to_enum(DATOS);
@@ -348,17 +348,18 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 	wait_o_signal =false;
 	hubo_desalojo = false;
 	es_exit=false;
-	
+
 	return;
 }
 
-void ejecutar_mov_out(pcb* PCB, char* DIRECCION, char* DATOS){
+void ejecutar_mov_out(char* DATOS, char* DIRECCION){
 	
+	enum_reg_cpu registro_direccion_enum = registro_to_enum(DIRECCION);
+	enum_reg_cpu registro_datos_enum=registro_to_enum(DATOS);
 
-
-	void * direccion_logica = capturar_registro(DIRECCION);
-	size_t size_reg = size_registro(DATOS);//TAMANIO A ESCRIBIR
-	void * dato_a_escribir = capturar_registro(DATOS); //LITERLAMENTE LO QUE VAMOS A ESCRIBIR
+	void * direccion_logica = capturar_registro(registro_direccion_enum);
+	size_t size_reg = size_registro(registro_datos_enum);//TAMANIO A ESCRIBIR
+	void * dato_a_escribir = capturar_registro(registro_datos_enum); //LITERLAMENTE LO QUE VAMOS A ESCRIBIR
 	uint32_t uint32_t_size_reg = (uint32_t) size_reg;
 	uint32_t direccion_logica_uint32 = (uint32_t)(uintptr_t)direccion_logica;
 	t_list * traducciones = obtener_traducciones( direccion_logica_uint32, uint32_t_size_reg);
@@ -555,23 +556,28 @@ void ejecutar_io_fs_read(char * nombre_interfaz,char * nombre_archivo,char * reg
 	
 }
 
-void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro) {
-    size_t size_origen = size_registro(origenregistro);
-    size_t size_destino = size_registro(destinoregistro);
+void ejecutar_sum( char* destinoregistro, char* origenregistro) {
+    
+	enum_reg_cpu registro_destino_enum = registro_to_enum(destinoregistro);
+	enum_reg_cpu registro_origen_enum=registro_to_enum(origenregistro);
+	
+	size_t size_origen = size_registro(registro_origen_enum);
+    size_t size_destino = size_registro(registro_destino_enum);
     
    
-    uint8_t *destino8 = capturar_registro(destinoregistro);
-    uint8_t *origen8 = capturar_registro(origenregistro);
-    uint32_t *destino32 = (uint32_t *) capturar_registro(destinoregistro);
-    uint32_t *origen32 = (uint32_t *) capturar_registro(origenregistro);
+    uint8_t *destino8 = capturar_registro(registro_destino_enum);
+    uint8_t *origen8 = capturar_registro(registro_origen_enum);
+    uint32_t *destino32 = (uint32_t *) capturar_registro(registro_destino_enum);
+    uint32_t *origen32 = (uint32_t *) capturar_registro(registro_origen_enum);
+	
 
-    if ((size_origen == 1) && (size_destino == 1)) {
+    if ((size_origen == sizeof(uint8_t)) && (size_destino == sizeof(uint8_t))) {
         *destino8 += *origen8;
-    } else if ((size_origen == 1) && (size_destino == 4)) {
-        *destino32 += *origen8;
-    } else if ((size_origen == 4) && (size_destino == 1)) {
-        *destino8 += *origen32;
-    } else if ((size_origen == 4) && (size_destino == 4)) {
+    } else if ((size_origen == sizeof(uint8_t)) && (size_destino == sizeof(uint32_t))) {
+        *destino32 += ((uint32_t)(*origen8));
+    } else if ((size_origen == sizeof(uint32_t)) && (size_destino == sizeof(uint8_t))) {
+        *destino8 += ((uint8_t)(*origen32));//suponemos que la cantidad de bits de origen entran en destino
+    } else if ((size_origen == sizeof(uint32_t)) && (size_destino == sizeof(uint32_t))) {
         *destino32 += *origen32;
     }
 
@@ -581,30 +587,34 @@ void ejecutar_sum(pcb* PCB, char* destinoregistro, char* origenregistro) {
 
     return;
 }
+void ejecutar_sub( char* destinoregistro, char* origenregistro) {
+    enum_reg_cpu registro_destino_enum = registro_to_enum(destinoregistro);
+	enum_reg_cpu registro_origen_enum=registro_to_enum(origenregistro);
+	
+	size_t size_origen = size_registro(registro_origen_enum);
+    size_t size_destino = size_registro(registro_destino_enum);
+    
+   
+    uint8_t *destino8 = capturar_registro(registro_destino_enum);
+    uint8_t *origen8 = capturar_registro(registro_origen_enum);
+    uint32_t *destino32 = (uint32_t *) capturar_registro(registro_destino_enum);
+    uint32_t *origen32 = (uint32_t *) capturar_registro(registro_origen_enum);
+	
 
-void ejecutar_sub(pcb* PCB, char* destinoregistro, char* origenregistro) {
-    size_t size_origen = size_registro(origenregistro);
-    size_t size_destino = size_registro(destinoregistro);
-
-    // Asumimos que `capturar_registro` devuelve un puntero adecuado
-    uint8_t *destino8 = capturar_registro(destinoregistro);
-    uint8_t *origen8 = capturar_registro(origenregistro);
-    uint32_t *destino32 = (uint32_t *) capturar_registro(destinoregistro);
-    uint32_t *origen32 = (uint32_t *) capturar_registro(origenregistro);
-
-    if ((size_origen == 1) && (size_destino == 1)) {
+    if ((size_origen == sizeof(uint8_t)) && (size_destino == sizeof(uint8_t))) {
         *destino8 -= *origen8;
-    } else if ((size_origen == 1) && (size_destino == 4)) {
-        *destino32 -= *origen8;
-    } else if ((size_origen == 4) && (size_destino == 1)) {
-        *destino8 -= *origen32;
-    } else if ((size_origen == 4) && (size_destino == 4)) {
+    } else if ((size_origen == sizeof(uint8_t)) && (size_destino == sizeof(uint32_t))) {
+        *destino32 -= ((uint32_t)(*origen8));
+    } else if ((size_origen == sizeof(uint32_t)) && (size_destino == sizeof(uint8_t))) {
+        *destino8 -= ((uint8_t)(*origen32));//suponemos que la cantidad de bits de origen entran en destino
+    } else if ((size_origen == sizeof(uint32_t)) && (size_destino == sizeof(uint32_t))) {
         *destino32 -= *origen32;
     }
 
-    wait_o_signal = false;
     hubo_desalojo = false;
+    wait_o_signal = false;
     es_exit = false;
+
     return;
 }
 

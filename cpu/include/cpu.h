@@ -93,11 +93,12 @@ int terminar_programa();
 void inicializar_tlb();
 
 /* EXECUTE Ejecutar instrucciones */
-void ejecutar_set(pcb* PCB, char* parametro1, char* parametro2);
-void ejecutar_mov_in();
-void ejecutar_mov_out();
-void ejecutar_sum(pcb* PCB, char* parametro1, char* parametro2);
-void ejecutar_sub(pcb* PCB, char* parametro1, char* parametro2);
+void ejecutar_set( char* registro, char* valor);
+void ejecutar_mov_in(char* DATOS, char* DIRECCION);
+void ejecutar_mov_out(char* DATOS, char* DIRECCION);
+void ejecutar_sum( char* destinoregistro, char* origenregistro);
+void ejecutar_sub( char* destinoregistro, char* origenregistro);
+
 void ejecutar_jnz(pcb* PCB, char* parametro1, char* parametro2);
 void ejecutar_resize(char* tamanio);
 void ejecutar_copy_string();
