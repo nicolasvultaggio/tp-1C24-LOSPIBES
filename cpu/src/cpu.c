@@ -793,8 +793,10 @@ void ejecutar_signal(char* nombre_recurso){
 	//es_bloqueante=false; //modificar siempre que es_exit = false
 }
 
-void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* unidad_de_tiempo){
+void ejecutar_io_gen_sleep( char* instruccion, char* interfaz, char* unidad_de_tiempo){
+	int buffersito;
 	enviar_pcb(PCB, fd_escucha_dispatch, INTERFAZ, SOLICITAR_INTERFAZ_GENERICA, instruccion, interfaz, unidad_de_tiempo,NULL,NULL);
+	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
 	//sem_post(&sem_recibir_pcb);
 	//es_exit=false;  //siempre modificar
 	//es_bloqueante=true; //modificar siempre que es_exit = false
