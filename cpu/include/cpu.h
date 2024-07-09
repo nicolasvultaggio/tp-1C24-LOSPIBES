@@ -86,11 +86,11 @@ void leer__configuraciones();
 void inicializar_semaforos();
 void dispatch();
 void fetch ();
+
+//PARA MANEJO DE DECODE
 void decode (t_linea_instruccion* instruccion, pcb* PCB);
 t_linea_instruccion* prox_instruccion(int pid, int program_counter);
 void solicitar_proxima_instruccion( int pid, int program_counter);
-int terminar_programa();
-void inicializar_tlb();
 
 /* EXECUTE Ejecutar instrucciones */
 void ejecutar_set( char* registro, char* valor);
@@ -114,28 +114,34 @@ void ejecutar_io_fs_read(char * nombre_interfaz,char * nombre_archivo,char * reg
 void ejecutar_exit();
 void ejecutar_error();
 
+//WAIT Y SIGNAL
 void enviar_recurso_por_signal(char * recurso, int fd_escucha_dispatch, op_code OPERACION);
 void enviar_recurso_por_wait(char * recurso, int fd_escucha_dispatch, op_code OPERACION);
 
-bool es_entrada_TLB_de_PID(void * un_nodo_tlb );
+
+//MANEJO DE TRADUCCIONES
+t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_leer );
+
+//MANEJO DE REGISTROS
 size_t size_registro(enum_reg_cpu registro);
 enum_reg_cpu registro_to_enum(char * registro);
 void * capturar_registro(enum_reg_cpu registro);
-t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_leer );
 
-int solicitar_frame_memory(int numero_pagina);
-
-element_interrupcion * recibir_motiv_desalojo(int fd_escucha_interrupt);
-element_interrupcion * seleccionar_interrupcion();
-
+//MANEJO DE INTERRUPCIONES
+void* interrupcion(void *arg);
 bool encontrar_interrupcion_por_fin_de_consola(void* elemento);
 bool encontrar_interrupcion_por_fin_de_quantum(void* elemento);
-
-/* CHECK INTERRUPT */
+element_interrupcion * recibir_motiv_desalojo(int fd_escucha_interrupt);
+element_interrupcion * seleccionar_interrupcion();
 void check_interrupt();
-void* interrupcion(void *arg);
+
+//MMU
+void inicializar_tlb();
 nodo_tlb * administrar_tlb( int PID, int numero_pagina, int marco);
 uint32_t MMU( uint32_t direccion_logica);
+int solicitar_frame_memory(int numero_pagina);
+bool es_entrada_TLB_de_PID(void * un_nodo_tlb );
 
 int tam_pagina;
+int terminar_programa();
 #endif
