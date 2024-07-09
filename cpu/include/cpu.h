@@ -116,9 +116,6 @@ void ejecutar_io_fs_read(char * nombre_interfaz,char * nombre_archivo,char * reg
 void ejecutar_exit();
 void ejecutar_error();
 
-//MANEJO DE TRADUCCIONES
-t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_leer );
-
 //MANEJO DE REGISTROS
 size_t size_registro(enum_reg_cpu registro);
 enum_reg_cpu registro_to_enum(char * registro);
@@ -132,6 +129,8 @@ element_interrupcion * recibir_motiv_desalojo(int fd_escucha_interrupt);
 element_interrupcion * seleccionar_interrupcion();
 void check_interrupt();
 
+//MANEJO DE TRADUCCIONES
+t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_leer );
 //MMU
 void inicializar_tlb();
 nodo_tlb * administrar_tlb( int PID, int numero_pagina, int marco);
@@ -139,6 +138,8 @@ uint32_t MMU( uint32_t direccion_logica);
 int solicitar_frame_memory(int numero_pagina);
 bool es_entrada_TLB_de_PID(void * un_nodo_tlb );
 
-int tam_pagina;
+
+//PETICIONES A MEMORIA
+void solicitar_tamanio_pagina();
 int terminar_programa();
 #endif

@@ -154,6 +154,9 @@ static void procesar_clientes(void* void_args){
 			return;
 		}
 		switch (cop) {
+		case SIZE_PAGE:
+			send(cliente_socket,&tam_pagina,sizeof(int),NULL);
+			break;
 		case MENSAJE:
 			recibir_mensaje(logger_memoria, cliente_socket);
 			//posiblemente haya que enviar una respuesta tambien para indicar que se recibio el mensaje

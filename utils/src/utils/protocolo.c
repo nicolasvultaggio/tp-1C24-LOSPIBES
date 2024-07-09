@@ -680,16 +680,6 @@ pcb* recibir_liberar_proceso(int fd){
 	return pcb;
 }
 
-int recibir_tamanio_pagina(int fd_conexion_memoria){
-	t_list* paquete = recibir_paquete(fd_conexion_memoria);
-	int tam_pagina = 0;
-	int* tam_pag = list_get(paquete, 0);
-	tam_pagina = *tam_pag;
-	free(tam_pag);
-	list_destroy(paquete);
-	return tam_pagina;
-}
-
 
 int recibir_marco (int fd_conexion_memoria){ //para recibir send_marco
 	int a;

@@ -1082,20 +1082,15 @@ void inicializar_tlb(){
 
 	translation_lookaside_buffer = list_create();
 	MAX_TLB_ENTRY = atoi (cantidad_entradas_tlb);
-	TAM_PAGINA = solicitar_tamanio_pagina();
+	solicitar_tamanio_pagina();
 
 }
 
-int solicitar_tamanio_pagina(){ //vos le pedis tambien? si poque no tengo manera de saber el tamaño de pagina
-	int tamanio;
-	int codigo_operacion = recibir_operacion(fd_conexion_memoria,logger_cpu,"memoria");
-	switch (codigo_operacion){
-		case SIZE_PAGE:
-			TAM_PAGINA = recibir_tamanio_pagina(fd_conexion_memoria);
-			break;
-	}		
-	
-	return tamanio;
+void solicitar_tamanio_pagina(){ 
+	op_code a = SIZE_PAGE;
+	send(fd_conexion_memoria,&a,sizeof(op_code),NULL); 
+	recv(fd_conexion_memoria,&TAM_PAGINA,sizeof(int),MSG_WAITALL);
+	return;
 }
 
 int solicitar_frame_memory(int numero_pagina){ 
