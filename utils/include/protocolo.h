@@ -223,7 +223,19 @@ typedef struct{
 	int marco;
 }nodo_tlb;
 
-
+typedef enum{
+	AX,
+    BX,
+   	CX,
+   	DX,
+    AX,
+	EAX,
+    EBX,
+   	ECX,
+    EDX,
+    SI,
+    DI
+}enum_reg_cpu;
 /* ESTRUCTURA PARA EL ENVIO DE DIRECCIONES FISICAS DE cpu AL kernell*/
 
 typedef struct {

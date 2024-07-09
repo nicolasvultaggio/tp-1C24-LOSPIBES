@@ -133,7 +133,7 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
 			log_info(logger_cpu, "PID: %d - Ejecutando SET %s %s", PCB->PID, (char*)parametro1, (char*)parametro2);
-			ejecutar_set(PCB, (char*)parametro1, (char*)parametro2);
+			ejecutar_set( (char*)parametro1, (char*)parametro2);
 			break;
 		case MOV_IN: 
 			parametro1 =  list_get(parametros,0);
@@ -257,13 +257,24 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 
 /* EXECUTE se ejecua lo correspodiente a cada instruccion */
 
-void ejecutar_set(pcb* PCB, char* registro, char* valor){
+void ejecutar_set( char* registro, char* valor){
 	
 	uint8_t valor8 = strtoul(valor, NULL, 10);
 	uint32_t valor32 = strtoul(valor, NULL, 10);
 	
-	setear_registro(PCB, registro, valor8, valor32);
+	void * p_registro=capturar_registro(registro);
+	size_t tam_registro = size_registro(registro);
 
+	switch (tam_registro)
+	{
+	case sizeof(uint8_t):
+		memcpy(p_registro,&valor8,tam_registro);
+		break;
+	case sizeof(uint32_t):
+	 	memcpy(p_registro,&valor32,tam_registro);
+		break;
+	}
+	
 	//es_exit =false; //poner en true 
 	//es_bloqueante=false; //modificar siempre que es_exit = false
 	wait_o_signal =false;
@@ -799,84 +810,75 @@ void ejecutar_error(pcb* PCB){ //se usa esta en algun momento? creo que no,
 
 /* FUNCIONES PARA EL CALCULO ARITMETICOLOGICO */
 
-size_t size_registro(char * registro){
+size_t size_registro(enum_reg_cpu registro){
 
-	size_t SIZEEE;
+	switch(registro){
+		case AX:
+		return sizeof(uint8_t);
+		case BX:
+		return sizeof(uint8_t);
+		case CX:
+		return sizeof(uint8_t);
+		case DX:
+		return sizeof(uint8_t);
+		default:
+		return sizeof(uint32_t);
+	}
+}
+enum_reg_cpu registro_enum(char * registro){
+
 
 	if(strcmp(registro, "AX") == 0){
-		SIZEEE = sizeof(uint8_t);
+		return AX;
 	} else if(strcmp(registro, "BX") == 0){
-		SIZEEE = sizeof(uint8_t);
+		return BX;
 	} else if(strcmp(registro, "CX") == 0){
-		SIZEEE = sizeof(uint8_t);
+		return CX;
 	} else if(strcmp(registro, "DX") == 0){
-		SIZEEE = sizeof(uint8_t);
+		return DX;
 	} else  if(strcmp(registro, "EAX") == 0){
-		SIZEEE = sizeof(uint32_t);
+		return EAX;
 	} else if(strcmp(registro, "EBX") == 0){
-		SIZEEE = sizeof(uint32_t);
+		return EBX;
 	} else if(strcmp(registro, "ECX") == 0){
-		SIZEEE = sizeof(uint32_t);
+		return ECX;
 	} else if(strcmp(registro, "EDX") == 0){
-		SIZEEE = sizeof(uint32_t);
+		return EDX;
 	} else if(strcmp(registro, "SI") == 0){
-		SIZEEE = sizeof(uint32_t);
+		return SI;
 	} else if(strcmp(registro, "DI") == 0){
-		SIZEEE = sizeof(uint32_t);
+		return DI;
 	}
 
-	return SIZEEE;
 }
 
-void setear_registro(pcb * PCB, char * registro, uint8_t valor8, uint32_t valor32){
-	if(strcmp(registro, "AX") == 0){
-		PCB->registros.AX = valor8;
-	} else if(strcmp(registro, "BX") == 0){
-		PCB->registros.BX = valor8;
-	} else if(strcmp(registro, "CX") == 0){
-		PCB->registros.CX = valor8;
-	} else if(strcmp(registro, "DX") == 0){
-		PCB->registros.DX = valor8;
-	}else if(strcmp(registro, "EAX") == 0){
-		PCB->registros.EAX = valor32;
-	} else if(strcmp(registro, "EBX") == 0){
-		PCB->registros.EBX = valor32;
-	} else if(strcmp(registro, "ECX") == 0){
-		PCB->registros.ECX = valor32;
-	} else if(strcmp(registro, "EDX") == 0){
-		PCB->registros.EDX = valor32;
-	} else if(strcmp(registro, "SI") == 0){
-		PCB->registros.SI = valor32;
-	} else if(strcmp(registro, "DI") == 0){
-		PCB->registros.DI = valor32;
-	}
-	return;
-}
-
-void * capturar_registro(char * registro){
+void * capturar_registro(enum_reg_cpu registro){
 	
-	if(strcmp(registro, "AX") == 0){
+	switch(registro){
+		case PC:
+		return &(PCB->PC);
+		case AX:
 		return &(PCB->registros.AX);
-	} else if(strcmp(registro, "BX") == 0){
+		case BX:
 		return &(PCB->registros.BX);
-	} else if(strcmp(registro, "CX") == 0){
+		case CX:
 		return &(PCB->registros.CX);
-	} else if(strcmp(registro, "DX") == 0){
+		case DX:
 		return &(PCB->registros.DX);
-	}else if(strcmp(registro, "EAX") == 0){
+		case EAX:
 		return &(PCB->registros.EAX);
-	} else if(strcmp(registro, "EBX") == 0){
+		case EBX:
 		return &(PCB->registros.EBX);
-	} else if(strcmp(registro, "ECX") == 0){
+		case ECX:
 		return &(PCB->registros.ECX);
-	} else if(strcmp(registro, "EDX") == 0){
+		case EDX:
 		return &(PCB->registros.EDX);
-	} else if(strcmp(registro, "SI") == 0){
+		case SI:
 		return &(PCB->registros.SI);
-	} else if(strcmp(registro, "DI") == 0){
+		case DI:
 		return &(PCB->registros.DI);
 	}
-
+	
 }
 
 uint32_t convU8toU32(uint8_t *number) {

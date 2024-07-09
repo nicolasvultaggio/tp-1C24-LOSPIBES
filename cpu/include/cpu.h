@@ -118,9 +118,9 @@ void enviar_recurso_por_signal(char * recurso, int fd_escucha_dispatch, op_code 
 void enviar_recurso_por_wait(char * recurso, int fd_escucha_dispatch, op_code OPERACION);
 
 bool es_entrada_TLB_de_PID(void * un_nodo_tlb );
-size_t size_registro(char * registro);
-void setear_registro(pcb * PCB, char * registro, uint8_t valor8, uint32_t valor32);
-void * capturar_registro(char * registro);
+size_t size_registro(enum_reg_cpu registro);
+enum_reg_cpu registro_enum(char * registro);
+void * capturar_registro(enum_reg_cpu registro);
 uint32_t recibir_lectura_memoria();
 t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_leer );
 
