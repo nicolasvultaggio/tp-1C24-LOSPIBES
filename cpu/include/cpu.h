@@ -98,10 +98,10 @@ void ejecutar_mov_in(char* DATOS, char* DIRECCION);
 void ejecutar_mov_out(char* DATOS, char* DIRECCION);
 void ejecutar_sum( char* destinoregistro, char* origenregistro);
 void ejecutar_sub( char* destinoregistro, char* origenregistro);
-
-void ejecutar_jnz(pcb* PCB, char* parametro1, char* parametro2);
+void ejecutar_jnz( char* registro, char* instruccion);
 void ejecutar_resize(char* tamanio);
-void ejecutar_copy_string();
+void ejecutar_copy_string( char* tamanio);
+
 void ejecutar_wait(pcb* PCB, char* registro);
 void ejecutar_signal(pcb* PCB, char* registro);
 void ejecutar_io_gen_sleep(pcb* PCB, char* instruccion, char* interfaz, char* unidad_de_tiempo);

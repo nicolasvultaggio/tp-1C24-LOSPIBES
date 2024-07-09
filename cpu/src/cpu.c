@@ -619,13 +619,16 @@ void ejecutar_sub( char* destinoregistro, char* origenregistro) {
 }
 
 
-void ejecutar_jnz(pcb* PCB, char* registro, char* valor){
-		
-	int * reg_value = capturar_registro (registro); //si es cero cualquier formaton numerico devuelve cero
+void ejecutar_jnz( char* registro, char* instruccion){
+	
+	enum_reg_cpu registro_enum = registro_to_enum(registro);
+	
+	int * puntero_al_registro  = capturar_registro(registro_enum); //si es cero cualquier formaton numerico devuelve cero
+	
 	uint32_t pc_actualizado = 0;
 
-	if (reg_value != 0){
-		pc_actualizado = strtoul(valor, NULL, 10);
+	if (*puntero_al_registro != 0){
+		pc_actualizado = strtoul(instruccion, NULL, 10);
 		PCB->PC = pc_actualizado;
 	}
 	
@@ -669,29 +672,89 @@ void ejecutar_resize(char* tamanio){
 	return;
 }
 
-void ejecutar_copy_string(pcb* PCB, char* tamanio){
+void ejecutar_copy_string( char* tamanio){
 
-	int copy_tamanio = atoi(tamanio);
+	uint32_t copy_tamanio = (uint32_t)atoi(tamanio);
+
+	//LEEMOS DE MEMORIA LA CANTIDAD DE BYTES PEDIDA PARTIR DE LA DIRECCION LOGICA DEL REGISTRO SI
 
 	t_list * traducciones_SI = obtener_traducciones(PCB->registros.SI, copy_tamanio);
-	t_list * traducciones_DI = obtener_traducciones(PCB->registros.DI, 1);
+	void * buffer = malloc((size_t)copy_tamanio); 
+	size_t offset =0;
+	int cantidad_de_traducciones_SI = list_size(traducciones_SI);
+	for (int i=0;i<cantidad_de_traducciones_SI;i++){
+		nodo_lectura_escritura * traduccion = list_get(traducciones_SI,i);
+        
+        //empaquetamos datos y los enviamos a memoria
+        t_paquete * paquete2 = crear_paquete(LECTURA_MEMORIA);
+        agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(uint32_t));
+        agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(uint32_t));
+        enviar_paquete(paquete2,fd_conexion_memoria);
+        eliminar_paquete(paquete2);
 
-	t_paquete * paquete = crear_paquete(COPY);
-	empaquetar_traducciones(paquete,traducciones_SI);
-	empaquetar_traducciones(paquete,traducciones_DI);
-	agregar_a_paquete(paquete,&copy_tamanio,sizeof(int));
-	enviar_paquete(paquete,fd_conexion_memoria);
-	eliminar_paquete(paquete);
+        //recibimos respuesta de memoria, escribimos en el buffer
+        int cod_op;
+	    recv(fd_conexion_memoria, &cod_op, sizeof(int), MSG_WAITALL); //al pedo, esta nada mas para que podamos recibir el codop antes del paquete
+        t_list * lista = recibir_paquete(fd_conexion_memoria);
+        void * bytes_leidos = list_get(lista,0);
+        list_destroy(lista);
 
-	uint32_t lectura = recibir_lectura_memoria(); 
+		char * minibuffer = malloc((size_t)traduccion->bytes+1); //solo sirve para escribirlo en el log
+		memcpy(minibuffer,bytes_leidos,(size_t)traduccion->bytes);
+		minibuffer[sizeof(minibuffer)]='\0';
 
-	nodo_lectura_escritura * traduccion_DI = malloc(sizeof(nodo_lectura_escritura));
-	traduccion_DI = list_get(traduccion_DI,0);
+		log_info(logger_cpu, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s", PCB->PID, traduccion->direccion_fisica, minibuffer);
+		
+		free(minibuffer);
 
-	log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica DI: %d - Valor: %d ", PCB->PID, traduccion_DI->direccion_fisica, lectura);	
+        memcpy((buffer+offset),bytes_leidos,(size_t)traduccion->bytes);//estaríamos guardando caracteres
 
-	free(traduccion_DI);
+        offset+=(size_t) (traduccion->bytes);
+
+		traduccion_destroyer(traduccion);
+	}
 	list_destroy(traducciones_SI);
+
+	//LEIMOS EL STRING Y LO GUARDAMOS EN EL BUFFER
+	//AHORA TENEMOS QUE ESCRIBIR LO DEL BUFFER EN LA POSICION DE MEMORIA QUE INDICA EL REGISTRO DI
+
+	t_list * traducciones_DI = obtener_traducciones(PCB->registros.DI, copy_tamanio);
+	int cantidad_de_traducciones = list_size(traducciones_DI);
+	size_t offset=0;
+	for (int i=0;i<cantidad_de_traducciones;i++){
+
+		nodo_lectura_escritura * traduccion = list_get(traducciones_DI,i);
+
+		t_paquete * paquete = crear_paquete(ESCRITURA_MEMORIA);
+		agregar_a_paquete(paquete,&(traduccion->direccion_fisica),sizeof(uint32_t));//direccion fisica
+		agregar_a_paquete(paquete,&(traduccion->bytes),sizeof(uint32_t));//cantidad de bytes a escribir
+		agregar_a_paquete(paquete,buffer+offset,(int)(traduccion->bytes));//dato a escribir
+		enviar_paquete(paquete,fd_conexion_memoria);
+		eliminar_paquete(paquete);
+
+		int cod_op;
+	    recv(fd_conexion_memoria, &cod_op, sizeof(int), MSG_WAITALL); //al pedo, esta nada mas para que podamos recibir el codop antes del paquete
+        t_list * lista = recibir_paquete(fd_conexion_memoria);
+        void * rta_memoria = list_get(lista,0);
+        list_destroy(lista);
+
+		char escrito[((int)(traduccion->bytes))+1];
+		memcpy(escrito,buffer+offset,(size_t)(traduccion->bytes));
+		escrito[((int)(traduccion->bytes))+1]='\0';
+		if(!strcmp((char *)rta_memoria,"Ok")){
+			log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica: %d - Valor: %s", PCB->PID, traduccion->direccion_fisica, escrito);
+		}else{
+			log_info(logger_cpu, "PID: %d - ESCRIBIR - Direccion Fisica: %d - Valor: %s : FALLO", PCB->PID, traduccion->direccion_fisica, escrito);
+			//o sea sí, nunca va a entrar a este else, entonces no me gasto en hacer toda la logica del desalojo
+		}
+		
+		free(rta_memoria);
+
+		offset+=(size_t)(traduccion->bytes);
+
+		traduccion_destroyer(traduccion);
+	}
+	
 	list_destroy(traducciones_DI);
 
 	wait_o_signal =false;
@@ -958,15 +1021,6 @@ t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_le
 	//importante, esta funcion no libera la lista
 }
 
-uint32_t recibir_lectura_memoria(){
-	t_list* paquete = recibir_paquete(fd_conexion_memoria);
-	uint32_t lecturita = 0;
-	uint32_t* lectura = list_get(paquete, 0);
-	lecturita = *lectura;
-	free(lectura);
-	list_destroy(paquete);
-	return lecturita;
-}
 
 
 /* TLB */
