@@ -905,7 +905,7 @@ void ejecutar_io_stdout_write(char * nombre_interfaz, char * registro_direccion,
 	es_exit=false;
 }
 
-void ejecutar_exit(pcb* PCB){
+void ejecutar_exit(){
 	log_info(logger_cpu, "PID: %d - Ejecutando: %s", PCB->PID, "EXIT");
 	enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, EXITO,NULL,NULL,NULL,NULL,NULL);
 	//sem_post(&sem_recibir_pcb);
