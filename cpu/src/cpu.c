@@ -99,6 +99,13 @@ void fetch (void *arg){
 		log_info(logger_cpu, "PID: %d - FETCH - Program Counter: %d", PCB->PID, PCB->PC);
 		PCB->PC++;
 		decode(proxima_instruccion, PCB);
+
+		int cantidad_de_parametros = list_size(proxima_instruccion->parametros);
+
+		for (int i=0;i<cantidad_de_parametros;i++){
+			free(list_get(proxima_instruccion->parametros,i)); //ojo con que las instrucciones liberen lo que reciben por parametro
+		}
+		
 		free(proxima_instruccion);
 	}
 }
