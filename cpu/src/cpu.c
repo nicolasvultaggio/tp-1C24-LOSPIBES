@@ -121,7 +121,6 @@ t_linea_instruccion * prox_instruccion(int pid, int program_counter){
 
 /* DECODE interpreto las intrucciones y las mando a ejecutar */
 void decode (t_linea_instruccion* instruccion, pcb* PCB){
-	int hacer_check_interrupt;
 	t_list * parametros = instruccion->parametros;
 	void * parametro1=NULL;
 	void * parametro2=NULL;
@@ -190,7 +189,6 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			parametro2 =  list_get(parametros,1);
 			log_info(logger_cpu, "PID: %d - Ejecutando IO_GEN_SLEEP %s %s", PCB->PID, (char*)parametro1,(char*) parametro2);
 			ejecutar_io_gen_sleep(PCB, "IO_GEN_SLEEP", (char*)parametro1,(char*) parametro2);
-			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_STDIN_READ:
 			parametro1 =  list_get(parametros,0);
@@ -198,7 +196,6 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			parametro3 =  list_get(parametros,2);
 			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDIN_READ %s %s %s", PCB->PID, (char*)parametro1, (char*)parametro2, (char*)parametro3);
 			ejecutar_io_stdin_read((char*)parametro1,(char*)parametro2,(char*)parametro3);
-			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_STDOUT_WRITE:
 			parametro1 =  list_get(parametros,0);
@@ -206,26 +203,22 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			parametro3 =  list_get(parametros,2);
 			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDOUT_WRITE %s %s %s", PCB->PID,(char*) parametro1, (char*)parametro2, (char*)parametro3);
 			ejecutar_io_stdout_write((char*)parametro1,(char*)parametro2,(char*)parametro3);
-			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_CREATE:
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
 			ejecutar_io_fs_create((char*)parametro1,(char*)parametro2);
-			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_DELETE:
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
 			ejecutar_io_fs_delete((char*)parametro1,(char*)parametro2);
-			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_TRUNCATE:
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
 			parametro3 =  list_get(parametros,2);
 			ejecutar_io_fs_truncate((char*)parametro1,(char*)parametro2,(char*)parametro3);
-			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_WRITE:
 			parametro1 =  list_get(parametros,0);
@@ -234,7 +227,6 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			parametro4 =  list_get(parametros,3);
 			parametro5 =  list_get(parametros,4);
 			ejecutar_io_fs_write((char*)parametro1,(char*)parametro2,(char*)parametro3,(char*)parametro4,(char*)parametro5);
-			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case IO_FS_READ:
 			parametro1 =  list_get(parametros,0);
@@ -243,7 +235,6 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			parametro4 =  list_get(parametros,3);
 			parametro5 =  list_get(parametros,4);
 			ejecutar_io_fs_read((char*)parametro1,(char*)parametro2,(char*)parametro3,(char*)parametro4,(char*)parametro5);
-			recv(fd_escucha_dispatch,&hacer_check_interrupt,sizeof(int),MSG_WAITALL);
 			break;
 		case EXIT://falta
 			ejecutar_exit(PCB);
@@ -414,6 +405,9 @@ void ejecutar_mov_out(char* DATOS, char* DIRECCION){
 }
 
 void ejecutar_io_fs_create(char * nombre_interfaz,char * nombre_archivo){
+	
+	int buffersito;
+	
 	t_paquete * paquete = crear_paquete(INTERFAZ); 
 	empaquetar_pcb(paquete, PCB, FS_CREATE);
 	empaquetar_recursos(paquete, PCB->recursos_asignados);
@@ -425,6 +419,8 @@ void ejecutar_io_fs_create(char * nombre_interfaz,char * nombre_archivo){
 	enviar_paquete(paquete,fd_cpu_dispatch);
 	//sem_post(&sem_recibir_pcb);
 	eliminar_paquete(paquete);
+
+	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
 	//es_exit=false;  //siempre modificar
 	//es_bloqueante=true; //modificar siempre que es_exit = false
 	//es_wait = false;  //modificar si se pone a bloqueante = true
@@ -436,6 +432,8 @@ void ejecutar_io_fs_create(char * nombre_interfaz,char * nombre_archivo){
 
 }
 void ejecutar_io_fs_delete(char * nombre_interfaz,char * nombre_archivo){
+	int buffersito;
+
 	t_paquete * paquete = crear_paquete(INTERFAZ); 
 	empaquetar_pcb(paquete, PCB, FS_DELETE);
 	empaquetar_recursos(paquete, PCB->recursos_asignados);
@@ -445,7 +443,8 @@ void ejecutar_io_fs_delete(char * nombre_interfaz,char * nombre_archivo){
 	agregar_a_paquete(paquete,nombre_archivo,strlen(nombre_archivo)+1);
 
 	enviar_paquete(paquete,fd_cpu_dispatch);
-	//sem_post(&sem_recibir_pcb);
+	
+	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
 	eliminar_paquete(paquete);
 	//es_exit=false;  //siempre modificar
 	//es_bloqueante=true; //modificar siempre que es_exit = false
@@ -460,7 +459,11 @@ void ejecutar_io_fs_delete(char * nombre_interfaz,char * nombre_archivo){
 
 void ejecutar_io_fs_truncate(char * nombre_interfaz,char * nombre_archivo,char * registro_tamanio){
 	
-	uint32_t * p_tamanio =(uint32_t*) capturar_registro(registro_tamanio);
+	int buffersito;
+
+	enum_reg_cpu registro_tamanio_enum=registro_to_enum(registro_tamanio);
+
+	uint32_t * p_tamanio =(uint32_t*) capturar_registro(registro_tamanio_enum);
 	uint32_t tamanio = *p_tamanio;
 	
 	t_paquete * paquete = crear_paquete(INTERFAZ); 
@@ -473,7 +476,9 @@ void ejecutar_io_fs_truncate(char * nombre_interfaz,char * nombre_archivo,char *
 	agregar_a_paquete(paquete,&tamanio,sizeof(uint32_t));
 
 	enviar_paquete(paquete,fd_cpu_dispatch);
-	//sem_post(&sem_recibir_pcb);
+	
+	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
+	
 	eliminar_paquete(paquete);
 	//es_exit=false;  //siempre modificar
 	//es_bloqueante=true; //modificar siempre que es_exit = false
@@ -487,9 +492,16 @@ void ejecutar_io_fs_truncate(char * nombre_interfaz,char * nombre_archivo,char *
 }
 void ejecutar_io_fs_write(char * nombre_interfaz,char * nombre_archivo,char * registro_direccion,char * registro_tamanio , char * registro_puntero_archivo){
 	//leer memoria y escribir en archivo
-	uint32_t * p_direccion_logica_i = 	(uint32_t *) capturar_registro(registro_direccion);
-	uint32_t * p_tamanio_a_leer = (uint32_t *) capturar_registro(registro_tamanio);
-	uint32_t * p_puntero_archivo = (uint32_t *) capturar_registro(registro_tamanio);
+
+	int buffersito;
+
+	enum_reg_cpu registro_direccion_enum = registro_to_enum(registro_direccion);
+	enum_reg_cpu registro_tamanio_enum = registro_to_enum(registro_tamanio);
+	enum_reg_cpu registro_puntero_enum = registro_to_enum(registro_puntero_archivo);
+
+	uint32_t * p_direccion_logica_i = 	(uint32_t *) capturar_registro(registro_direccion_enum);
+	uint32_t * p_tamanio_a_leer = (uint32_t *) capturar_registro(registro_tamanio_enum);
+	uint32_t * p_puntero_archivo = (uint32_t *) capturar_registro(registro_puntero_enum);
 	uint32_t direccion_logica_i=*p_direccion_logica_i;
 	uint32_t tamanio_a_leer=*p_tamanio_a_leer;
 	uint32_t puntero_archivo=*p_puntero_archivo;
@@ -510,6 +522,9 @@ void ejecutar_io_fs_write(char * nombre_interfaz,char * nombre_archivo,char * re
 	
 	enviar_paquete(paquete,fd_cpu_dispatch);
 	//sem_post(&sem_recibir_pcb);
+
+	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
+	
 	eliminar_paquete(paquete);
 	//es_exit=false;  //siempre modificar
 	//es_bloqueante=true; //modificar siempre que es_exit = false
@@ -521,9 +536,16 @@ void ejecutar_io_fs_write(char * nombre_interfaz,char * nombre_archivo,char * re
 }
 void ejecutar_io_fs_read(char * nombre_interfaz,char * nombre_archivo,char * registro_direccion,char * registro_tamanio , char * registro_puntero_archivo){
 	//leer archivo y escribir en memoria
-	uint32_t * p_direccion_logica_i = 	(uint32_t *) capturar_registro(registro_direccion);
-	uint32_t * p_tamanio_a_escribir = (uint32_t *) capturar_registro(registro_tamanio);
-	uint32_t * p_puntero_archivo = (uint32_t *) capturar_registro(registro_tamanio);
+
+	int buffersito;
+
+	enum_reg_cpu registro_direccion_enum = registro_to_enum(registro_direccion);
+	enum_reg_cpu registro_tamanio_enum = registro_to_enum(registro_tamanio);
+	enum_reg_cpu registro_puntero_enum = registro_to_enum(registro_puntero_archivo);
+
+	uint32_t * p_direccion_logica_i = 	(uint32_t *) capturar_registro(registro_direccion_enum);
+	uint32_t * p_tamanio_a_escribir = (uint32_t *) capturar_registro(registro_tamanio_enum);
+	uint32_t * p_puntero_archivo = (uint32_t *) capturar_registro(registro_puntero_enum);
 	uint32_t direccion_logica_i=*p_direccion_logica_i;
 	uint32_t tamanio_a_escribir=*p_tamanio_a_escribir;
 	uint32_t puntero_archivo=*p_puntero_archivo;
@@ -544,6 +566,8 @@ void ejecutar_io_fs_read(char * nombre_interfaz,char * nombre_archivo,char * reg
 	
 	enviar_paquete(paquete,fd_cpu_dispatch);
 	//sem_post(&sem_recibir_pcb);
+	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
+
 	eliminar_paquete(paquete);
 	//es_exit=false;  //siempre modificar
 	//es_bloqueante=true; //modificar siempre que es_exit = false
@@ -870,7 +894,7 @@ void ejecutar_io_stdout_write(char * nombre_interfaz, char * registro_direccion,
 	enviar_paquete(paquete,fd_cpu_dispatch);
 	
 	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
-	
+
 	eliminar_paquete(paquete);
 	//es_exit=false;  //siempre modificar
 	//es_bloqueante=true; //modificar siempre que es_exit = false
