@@ -119,7 +119,7 @@ void enviar_recurso_por_wait(char * recurso, int fd_escucha_dispatch, op_code OP
 
 bool es_entrada_TLB_de_PID(void * un_nodo_tlb );
 size_t size_registro(enum_reg_cpu registro);
-enum_reg_cpu registro_enum(char * registro);
+enum_reg_cpu registro_to_enum(char * registro);
 void * capturar_registro(enum_reg_cpu registro);
 uint32_t recibir_lectura_memoria();
 t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_leer );

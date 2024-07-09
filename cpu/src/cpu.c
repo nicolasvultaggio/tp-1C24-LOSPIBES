@@ -262,6 +262,7 @@ void ejecutar_set( char* registro, char* valor){
 	uint8_t valor8 = strtoul(valor, NULL, 10);
 	uint32_t valor32 = strtoul(valor, NULL, 10);
 	
+	enum_reg_cpu enum_registro= registro_to_enum(registro);
 	void * p_registro=capturar_registro(registro);
 	size_t tam_registro = size_registro(registro);
 
@@ -825,7 +826,7 @@ size_t size_registro(enum_reg_cpu registro){
 		return sizeof(uint32_t);
 	}
 }
-enum_reg_cpu registro_enum(char * registro){
+enum_reg_cpu registro_to_enum(char * registro){
 
 
 	if(strcmp(registro, "AX") == 0){
