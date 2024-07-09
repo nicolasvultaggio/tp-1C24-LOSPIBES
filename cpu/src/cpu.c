@@ -1008,8 +1008,8 @@ t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_le
 	
 	uint32_t direccion_logica_f = direccion_logica_i + tamanio_a_leer -1;
 
-	int pagina_inicial = (int) direccion_logica_i /  tam_pagina;
-	int pagina_final = (int) direccion_logica_f /  tam_pagina;
+	int pagina_inicial = (int) direccion_logica_i /  TAM_PAGINA;
+	int pagina_final = (int) direccion_logica_f /  TAM_PAGINA;
 
 	// int numero_de_paginas_a_traducir = pagina_final - pagina_inicial + 1;
     t_list * lista_traducciones = list_create();
