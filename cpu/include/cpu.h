@@ -49,7 +49,7 @@ int fd_escucha_interrupt;
 int fd_cpu_dispatch;
 int fd_cpu_interrupt;
 
-/*FLAGS PARA MANEJO DE INTERRUPCION*/
+/*FLAGS VIEJOS PARA MANEJO DE INTERRUPCION*/
 
 //todas estas flags tendran que actualizarse cada vez que se ejecuta una intstruccion
 //bool es_exit; //siempre mofificar
@@ -65,7 +65,9 @@ int fd_cpu_interrupt;
 bool hubo_desalojo;
 bool wait_o_signal;
 bool es_exit;
+
 /* REGISTROS */
+/*
 typedef struct{
 	uint32_t* pc;
     uint8_t*  ax;
@@ -79,7 +81,7 @@ typedef struct{
 	uint32_t* si;
 	uint32_t* di;
 } t_registros;
-
+*/
 
 /* FUNCIONES DE CPU */
 void leer__configuraciones();
@@ -113,11 +115,6 @@ void ejecutar_io_fs_write(char * nombre_interfaz,char * nombre_archivo,char * re
 void ejecutar_io_fs_read(char * nombre_interfaz,char * nombre_archivo,char * registro_direccion,char * registro_tamanio , char * registro_puntero_archivo);
 void ejecutar_exit();
 void ejecutar_error();
-
-//WAIT Y SIGNAL
-void enviar_recurso_por_signal(char * recurso, int fd_escucha_dispatch, op_code OPERACION);
-void enviar_recurso_por_wait(char * recurso, int fd_escucha_dispatch, op_code OPERACION);
-
 
 //MANEJO DE TRADUCCIONES
 t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_leer );

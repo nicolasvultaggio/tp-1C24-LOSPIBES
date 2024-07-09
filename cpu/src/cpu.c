@@ -995,11 +995,6 @@ void * capturar_registro(enum_reg_cpu registro){
 	
 }
 
-uint32_t convU8toU32(uint8_t *number) {
-  uint32_t result = *number;
-  return result;
-}
-
 /* FUNCIONES stdin_read y stout_write */
 
 t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_leer){ //cambio los tipos de datos de DL y tamanio por el siguiente ejemplo
@@ -1050,7 +1045,6 @@ t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_le
 	return lista_traducciones;
 	//importante, esta funcion no libera la lista
 }
-
 
 
 /* TLB */
