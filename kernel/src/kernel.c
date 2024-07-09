@@ -142,6 +142,8 @@ pcb* buscar_proceso_para_finalizar(int pid_a_buscar){
 
 void finalizar_proceso(char* PID){
     int pid_busado = atoi(PID);
+    detener_planificacion();
+    log_info(logger_kernel,"Se detiene la planificacion para buscar el procesos a finalizar");
     pcb* pcb_buscado = buscar_proceso_para_finalizar(pid_busado);
 
     if(strcmp(string_de_estado(pcb_buscado->estado), "EXEC") == 0){ 
@@ -152,6 +154,8 @@ void finalizar_proceso(char* PID){
         push_con_mutex(cola_exit,pcb_buscado,&mutex_lista_exit);
         sem_post(&sem_procesos_exit);
     }
+    iniciar_planificacion();
+    log_info(logger_kernel,"Se reanuda la planificacion ");
 }
 
 pcb *crear_pcb(){
