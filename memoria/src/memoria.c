@@ -78,30 +78,38 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
     t_list* instrucciones = list_create();
     FILE* f;
     char *buffer = malloc(256);
-    char* palabra;
-    char* instruccion_leida= NULL;
-    char* parametros[5];
-    int contadordeparametros;
+    //char* palabra;
+    //char* instruccion_leida= NULL;
+    //char* parametros[5];
+    //int contadordeparametros;
 
     f=fopen(ruta,"r");
 	while (fgets(buffer, 256, f) != NULL) {//suponemos que una instruccion nunca dura mas de 256 caracteres
-		t_linea_instruccion* instruccion = malloc(sizeof(t_linea_instruccion)); 
+		t_linea_instruccion* una_instruccion = malloc(sizeof(t_linea_instruccion)); 
 		
-		int posicion_de_salto_de_linea = strlen(buffer)-1;
-		buffer[posicion_de_salto_de_linea]='\0'; //quitamos el salto de linea de la instruccion
+		una_instruccion->parametros=list_create(); //crear la lista de parametros
+		size_t len = strlen(buffer);
+		
+		if(len>0 && buffer[len-1]=='\n'){
+			buffer[len-1]='\0'; //quitamos el salto de linea de la instruccion en caso de que no sea la ultima
+		}
+		
 		char ** array_de_instruccion = string_split(buffer," "); //separar cada parte de la linea
 		
-		instruccion->instruccion=instruccion_to_enum(array_de_instruccion[0]);
+		una_instruccion->instruccion=instruccion_to_enum(array_de_instruccion[0]);
 
-		//saber la cantidad de parametros segun la instruccion
-		int cantidad_de_parametros;
-		for(int i = 0; i<cantidad_de_parametros;i++){
-			
+
+		int cantidad_de_parametros = cantidad_de_parametros_segun_instruccion(una_instruccion->instruccion);//saber la cantidad de parametros segun la instruccion
+		
+		for(int i = 0; i<cantidad_de_parametros;i++){	//guardar cada elemento del split en la lista de parametros
+			list_add(una_instruccion->parametros,array_de_instruccion[1+i]);
 		}
-		//crear la lista de parametros
-		//guardar cada elemento del split en la lista de parametros
+		
+		list_add(instrucciones,una_instruccion);//agregados todos los parametros, guardamos
+		
 	}
 
+	free(buffer);
 	fclose(f);
 
 	return instrucciones;
@@ -618,4 +626,45 @@ int cantidad_de_marcos_disponibles(){
 }
 
 
-
+int cantidad_de_parametros_segun_instruccion(cod_instruccion una_instruccion){
+	switch(una_instruccion){
+		case SET:
+		return 2 ;
+		case MOV_IN :
+		return 2 ;
+		case MOV_OUT:
+		return 2;
+		case SUM:
+		return 2;
+		case SUB :
+		return 2;
+		case JNZ:
+		return 2;
+		case RESIZE:
+		return 1;
+		case COPY_STRING:
+		return 1;
+		case WAIT:
+		return 1 ;
+		case SIGNAL:
+		return 1;
+		case IO_GEN_SLEEP:
+		return 2 ;
+		case IO_STDIN_READ:
+		return 3;
+		case IO_STDOUT_WRITE:
+		return 3 ;
+		case IO_FS_CREATE:
+		return 2;
+		case IO_FS_DELETE:
+		return 2;
+		case IO_FS_TRUNCATE:
+		return 3;
+		case IO_FS_WRITE:
+		return 5 ;
+		case IO_FS_READ:
+		return 5;
+		case EXIT:
+		return 0 ;
+	}
+}

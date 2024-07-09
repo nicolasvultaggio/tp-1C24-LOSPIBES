@@ -99,4 +99,6 @@ char * data;
 t_bitarray* frames_array;
 char * asignarMemoriaBits(int bits);
 t_list tablas_de_paginas;
+
+int cantidad_de_parametros_segun_instruccion(cod_instruccion una_instruccion);
 #endif
