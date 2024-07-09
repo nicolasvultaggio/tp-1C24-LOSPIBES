@@ -64,7 +64,7 @@ void inicializar_semaforos(){
 	
 }
 
-void dispatch(void *arg){
+void dispatch(){
 
 	fd_cpu_dispatch = iniciar_servidor(NULL, puerto_cpu_dispatch,logger_cpu,"CPU");
 	log_info(logger_cpu, "Levantado el puerto DISPATCH");	
@@ -90,7 +90,7 @@ void dispatch(void *arg){
 }
 
 /* FETCH busco las proximas intrucciones a ejecutar */
-void fetch (void *arg){
+void fetch (){
 
 	while(1){
 
@@ -105,7 +105,7 @@ void fetch (void *arg){
 		for (int i=0;i<cantidad_de_parametros;i++){
 			free(list_get(proxima_instruccion->parametros,i)); //ojo con que las instrucciones liberen lo que reciben por parametro
 		}
-		
+
 		free(proxima_instruccion);
 	}
 }
@@ -1178,7 +1178,7 @@ nodo_tlb * administrar_tlb( int PID, int numero_pagina, int marco){ //a revisar
 
 
 /* CHECK INTERRUPT */
-void* interrupcion(void *arg) {
+void interrupcion() {
 
 	fd_cpu_interrupt = iniciar_servidor(NULL, puerto_cpu_interrupt, logger_cpu, "CPU");
 	log_info(logger_cpu, "Leavantado el puerto INTERRUPT");

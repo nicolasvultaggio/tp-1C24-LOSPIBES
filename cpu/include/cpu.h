@@ -125,7 +125,7 @@ enum_reg_cpu registro_to_enum(char * registro);
 void * capturar_registro(enum_reg_cpu registro);
 
 //MANEJO DE INTERRUPCIONES
-void* interrupcion(void *arg);
+void interrupcion();
 bool encontrar_interrupcion_por_fin_de_consola(void* elemento);
 bool encontrar_interrupcion_por_fin_de_quantum(void* elemento);
 element_interrupcion * recibir_motiv_desalojo(int fd_escucha_interrupt);
