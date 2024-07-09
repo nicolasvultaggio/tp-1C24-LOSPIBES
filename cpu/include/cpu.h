@@ -104,8 +104,8 @@ void ejecutar_copy_string( char* tamanio);
 void ejecutar_wait(char* nombre_recurso);
 void ejecutar_signal( char* nombre_recurso);
 void ejecutar_io_gen_sleep( char* instruccion, char* interfaz, char* unidad_de_tiempo);
-
 void ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio);
+
 void ejecutar_io_stdout_write(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio);
 void ejecutar_io_fs_create(char * nombre_interfaz,char * nombre_archivo);
 void ejecutar_io_fs_delete(char * nombre_interfaz,char * nombre_archivo);

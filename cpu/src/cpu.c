@@ -811,13 +811,12 @@ void ejecutar_io_gen_sleep( char* instruccion, char* interfaz, char* unidad_de_t
 
 void ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, char * registro_tamanio){
 	
-	/*int direccion_logica_i = atoi(registro_direccion);
-	int tamanio_a_leer = atoi(registro_tamanio);stdin
-	*/ // son char pero palbras (osea EAX) igual registro tamaño
-
-	uint32_t * p_direccion_logica_i = 	(uint32_t *) capturar_registro(registro_direccion);
-	//size_t tamanio_a_leer = size_registro(registro_tamanio); no, no es esto lo que tiene que hacer
-	uint32_t * p_tamanio_a_leer = (uint32_t *) capturar_registro(registro_tamanio);
+	int buffersito;
+	enum_reg_cpu registro_direccion_enum = registro_to_enum(registro_direccion);
+	enum_reg_cpu registro_tamanio_enum=registro_to_enum(registro_tamanio);
+	
+	uint32_t * p_direccion_logica_i = 	(uint32_t *) capturar_registro(registro_direccion_enum);
+	uint32_t * p_tamanio_a_leer = (uint32_t *) capturar_registro(registro_tamanio_enum);
 
 	uint32_t direccion_logica_i=*p_direccion_logica_i;
 	uint32_t tamanio_a_leer=*p_tamanio_a_leer;
@@ -834,6 +833,9 @@ void ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, c
 	empaquetar_traducciones(paquete,traducciones);
 	enviar_paquete(paquete,fd_cpu_dispatch);
 	//sem_post(&sem_recibir_pcb); todavía no
+	
+	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
+
 	eliminar_paquete(paquete);
 	//es_exit=false;  //siempre modificar
 	//es_bloqueante=true; //modificar siempre que es_exit = false
