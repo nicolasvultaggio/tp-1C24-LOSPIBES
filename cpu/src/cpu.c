@@ -263,8 +263,8 @@ void ejecutar_set( char* registro, char* valor){
 	uint32_t valor32 = strtoul(valor, NULL, 10);
 	
 	enum_reg_cpu enum_registro= registro_to_enum(registro);
-	void * p_registro=capturar_registro(registro);
-	size_t tam_registro = size_registro(registro);
+	void * p_registro=capturar_registro(enum_registro);
+	size_t tam_registro = size_registro(enum_registro);
 
 	switch (tam_registro)
 	{
@@ -286,8 +286,12 @@ void ejecutar_set( char* registro, char* valor){
 
 void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 	
-	void * direccion_logica = capturar_registro(DIRECCION);
-	size_t size_reg = size_registro(DATOS);
+	enum_reg_cpu registro_direccion_enum = registro_to_enum(DIRECCION);
+	enum_reg_cpu registro_datos_enum=registro_to_enum(DATOS);
+
+	void * direccion_logica = capturar_registro(registro_direccion_enum);
+	size_t size_reg = size_registro(registro_datos_enum);
+
 	uint32_t uint32_t_size_reg = (uint32_t) size_reg;
 	uint32_t direccion_logica_uint32 = (uint32_t)(uintptr_t)direccion_logica;
 	t_list * traducciones = obtener_traducciones(direccion_logica_uint32, uint32_t_size_reg);
@@ -314,8 +318,14 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
         void * bytes_leidos = list_get(lista,0);
         list_destroy(lista);
 
-		log_info(logger_cpu, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s", PCB->PID, traduccion->direccion_fisica, bytes_leidos);
+		char * minibuffer = malloc((size_t)traduccion->bytes+1); //solo sirve para escribirlo en el log
+		memcpy(minibuffer,bytes_leidos,(size_t)traduccion->bytes);
+		minibuffer[sizeof(minibuffer)]='\0';
+
+		log_info(logger_cpu, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s", PCB->PID, traduccion->direccion_fisica, minibuffer);
 		
+		free(minibuffer);
+
         memcpy((buffer+offset),bytes_leidos,(size_t)traduccion->bytes);//estaríamos guardando caracteres
 
         offset+=(size_t) (traduccion->bytes);
@@ -324,7 +334,7 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 	}
 	
 
-	void * p_regsitro_datos = capturar_registro(DATOS);
+	void * p_regsitro_datos = capturar_registro(registro_datos_enum);
 	
 	memcpy(p_regsitro_datos, buffer, size_reg);
 
@@ -338,6 +348,7 @@ void ejecutar_mov_in(pcb* PCB, char* DATOS, char* DIRECCION){
 	wait_o_signal =false;
 	hubo_desalojo = false;
 	es_exit=false;
+	
 	return;
 }
 
@@ -852,7 +863,6 @@ enum_reg_cpu registro_to_enum(char * registro){
 	}
 
 }
-
 void * capturar_registro(enum_reg_cpu registro){
 	
 	switch(registro){
@@ -890,15 +900,7 @@ uint32_t convU8toU32(uint8_t *number) {
 /* FUNCIONES stdin_read y stout_write */
 
 t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_leer){ //cambio los tipos de datos de DL y tamanio por el siguiente ejemplo
-	/*
-	SET EAX 30 
-	MOV_IN EBX EAX
-
-    En EAX tengo guardada la dirección lógica 30
-    La longitud a leer va a ser el tamaño de EBX, o sea 4
-    Entonces tengo que leer desde el byte 30 hasta el 33
-	*/
-	/* EAX es uint32_t y el tamanio a leer es sizeof(EBX) y EBX es sizeof*/
+	
 	uint32_t direccion_logica_f = direccion_logica_i + tamanio_a_leer -1;
 
 	int pagina_inicial = (int) direccion_logica_i /  tam_pagina;

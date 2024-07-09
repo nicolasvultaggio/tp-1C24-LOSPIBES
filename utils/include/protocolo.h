@@ -224,6 +224,7 @@ typedef struct{
 }nodo_tlb;
 
 typedef enum{
+	PC,
 	AX,
     BX,
    	CX,
