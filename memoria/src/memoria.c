@@ -337,11 +337,11 @@ void send_proxima_instruccion(int filedescriptor, t_linea_instruccion* instrucci
 	
 	int cantidad_de_parametros = list_size(instruccion->parametros);
 	
-	agregar_a_paquete(paquete,&cantidad_de_parametros,sizeof(int));
+	agregar_a_paquete(paquete,&cantidad_de_parametros,sizeof(int)); //hace falta hacer esto? ya habíamos generado una funcion que te devolvia la cantidad de parametros segun el cod_instruccion
 
 	for(int i =0; ;i++){
 		char * aux = list_get(instruccion->parametros,0);
-		agregar_a_paquete(paquete,aux,strlen(aux)+1);//suponemos que los parametros llegan con el fin de linea
+		agregar_a_paquete(paquete,aux,strlen(aux)+1);//suponemos que los parametros llegan con el fin de linea, eso depende de string_split
 	}
 
 	enviar_paquete(paquete, filedescriptor);
@@ -626,45 +626,3 @@ int cantidad_de_marcos_disponibles(){
 }
 
 
-int cantidad_de_parametros_segun_instruccion(cod_instruccion una_instruccion){
-	switch(una_instruccion){
-		case SET:
-		return 2 ;
-		case MOV_IN :
-		return 2 ;
-		case MOV_OUT:
-		return 2;
-		case SUM:
-		return 2;
-		case SUB :
-		return 2;
-		case JNZ:
-		return 2;
-		case RESIZE:
-		return 1;
-		case COPY_STRING:
-		return 1;
-		case WAIT:
-		return 1 ;
-		case SIGNAL:
-		return 1;
-		case IO_GEN_SLEEP:
-		return 2 ;
-		case IO_STDIN_READ:
-		return 3;
-		case IO_STDOUT_WRITE:
-		return 3 ;
-		case IO_FS_CREATE:
-		return 2;
-		case IO_FS_DELETE:
-		return 2;
-		case IO_FS_TRUNCATE:
-		return 3;
-		case IO_FS_WRITE:
-		return 5 ;
-		case IO_FS_READ:
-		return 5;
-		case EXIT:
-		return 0 ;
-	}
-}

@@ -274,4 +274,6 @@ uint32_t recibir_valor_leido_memoria(int fd_memoria);
 void empaquetar_traducciones(t_paquete* paquete, t_list* lista_de_traducciones);
 
 t_datos_proceso* recibir_datos_del_proceso(int fd_kernel);
+
+int cantidad_de_parametros_segun_instruccion(cod_instruccion una_instruccion);
 #endif
