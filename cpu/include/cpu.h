@@ -137,7 +137,9 @@ nodo_tlb * administrar_tlb( int PID, int numero_pagina, int marco);
 uint32_t MMU( uint32_t direccion_logica);
 int solicitar_frame_memory(int numero_pagina);
 bool es_entrada_TLB_de_PID(void * un_nodo_tlb );
-
+void agregar_entrada_tlb(t_list* TLB, nodo_tlb * info_proceso_memoria, pthread_mutex_t* mutex, int PID, int numero_pagina, int marco);
+void verificar_tamanio_tlb(t_list* TLB, pthread_mutex_t* mutex);
+int consultar_tlb(int PID, int numero_pagina);
 
 //PETICIONES A MEMORIA
 void solicitar_tamanio_pagina();
