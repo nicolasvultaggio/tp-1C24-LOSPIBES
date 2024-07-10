@@ -145,31 +145,31 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
 			log_info(logger_cpu, "PID: %d - Ejecutando MOV_IN %s %s", PCB->PID, (char*)parametro1, (char*)parametro2);
-			ejecutar_mov_in(PCB, (char*)parametro1, (char*)parametro2);
+			ejecutar_mov_in((char*)parametro1, (char*)parametro2); // ANTES ESTABA ejecutar_mov_in(PCB, (char*)parametro1, (char*)parametro2); Asi en todas las funciones de abajo
 			break;
 		case MOV_OUT: 
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
 			log_info(logger_cpu, "PID: %d - Ejecutando MOV_OUT %s %s", PCB->PID, (char*)parametro1,(char*) parametro2);
-			ejecutar_mov_out(PCB,(char*) parametro1, (char*)parametro2);
+			ejecutar_mov_out((char*) parametro1, (char*)parametro2);
 			break;
 		case SUM: 
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
 			log_info(logger_cpu, "PID: %d - Ejecutando SUM %s %s", PCB->PID, (char*)parametro1, (char*)parametro2);
-			ejecutar_sum(PCB,(char*) parametro1, (char*)parametro2);
+			ejecutar_sum((char*) parametro1, (char*)parametro2);
 			break;
 		case SUB: 
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
 			log_info(logger_cpu, "PID: %d - Ejecutando SUB %s %s", PCB->PID,(char*) parametro1,(char*) parametro2);
-			ejecutar_sub(PCB,(char*) parametro1,(char*) parametro2);
+			ejecutar_sub((char*) parametro1,(char*) parametro2);
 			break;
 		case JNZ: 
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
 			log_info(logger_cpu, "PID: %d - Ejecutando JNZ %s %s", PCB->PID, (char*)parametro1,(char*) parametro2);
-			ejecutar_jnz(PCB,(char*)parametro1, (char*)parametro2);
+			ejecutar_jnz((char*)parametro1, (char*)parametro2);
 			break;
 		case RESIZE: 
 			parametro1 =  list_get(parametros,0);
@@ -179,23 +179,23 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 		case COPY_STRING: 
 			parametro1 =  list_get(parametros,0);
 			log_info(logger_cpu, "PID: %d - Ejecutando COPY_STRING %s", PCB->PID, (char*)parametro1);
-			ejecutar_copy_string(PCB,(char*)parametro1);
+			ejecutar_copy_string((char*)parametro1);
 			break;
 		case WAIT: 
 			parametro1 =  list_get(parametros,0);
 			log_info(logger_cpu, "PID: %d - Ejecutando WAIT %s", PCB->PID, (char*)parametro1);
-			ejecutar_wait(PCB,(char*) parametro1);
+			ejecutar_wait((char*) parametro1);
 			break;
 		case SIGNAL:
 			parametro1 =  list_get(parametros,0);
 			log_info(logger_cpu, "PID: %d - Ejecutando SIGNAL %s", PCB->PID,(char*) parametro1);
-			ejecutar_signal(PCB, (char*)parametro1);
+			ejecutar_signal((char*)parametro1);
 			break;
 		case IO_GEN_SLEEP: 
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
 			log_info(logger_cpu, "PID: %d - Ejecutando IO_GEN_SLEEP %s %s", PCB->PID, (char*)parametro1,(char*) parametro2);
-			ejecutar_io_gen_sleep(PCB, "IO_GEN_SLEEP", (char*)parametro1,(char*) parametro2);
+			ejecutar_io_gen_sleep( "IO_GEN_SLEEP", (char*)parametro1,(char*) parametro2);
 			break;
 		case IO_STDIN_READ:
 			parametro1 =  list_get(parametros,0);
@@ -751,7 +751,6 @@ void ejecutar_copy_string( char* tamanio){
 
 	t_list * traducciones_DI = obtener_traducciones(PCB->registros.DI, copy_tamanio);
 	int cantidad_de_traducciones = list_size(traducciones_DI);
-	size_t offset=0;
 	for (int i=0;i<cantidad_de_traducciones;i++){
 
 		nodo_lectura_escritura * traduccion = list_get(traducciones_DI,i);

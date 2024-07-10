@@ -229,7 +229,6 @@ typedef enum{
     BX,
    	CX,
    	DX,
-    AX,
 	EAX,
     EBX,
    	ECX,

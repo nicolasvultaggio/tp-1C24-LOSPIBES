@@ -469,8 +469,8 @@ char* motivo_a_string(motivo_desalojo motivo){
     case SIN_MEMORIA:
         return "OUT_OF_MEMORY";
         break;
-    case 
 
+    default:
         return "NO CONOZCO ESE MOTIVO";
         break;
     }
