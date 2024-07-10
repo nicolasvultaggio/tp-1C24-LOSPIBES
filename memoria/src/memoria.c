@@ -116,12 +116,17 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
 }
 
 void instruccion_destroyer(t_linea_instruccion* instruccion){
-	int cantidad_de_instrucciones = list_size(instruccion->parametros);
-	for(int i=0;i<cantidad_de_instrucciones;i++){
-		free(list_get(instruccion->parametros),i);
-	}
-	free(instruccion);
+    int cantidad_de_instrucciones = list_size(instruccion->parametros);
+    for(int i = 0; i < cantidad_de_instrucciones; i++){
+        free(list_get(instruccion->parametros, i));
+    }
+    list_destroy(instruccion->parametros); // Destruir la lista después de liberar sus elementos
+    free(instruccion);
 }
+
+
+
+
 
 //aca se le conectan primero cpu, despues kernel, y despues pueden conectarse MUULTIPLES interfaces
 int server_escuchar() { 
