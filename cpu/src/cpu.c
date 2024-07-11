@@ -72,8 +72,7 @@ void dispatch(){
 
 	while (1) {
 		sem_wait(&sem_recibir_pcb);
-		int codigo_operacion = recibir_operacion(fd_escucha_dispatch, logger_cpu, "Kernell (dispatch)");
-		switch (codigo_operacion) {
+		switch (recibir_operacion(fd_escucha_dispatch, logger_cpu, "Kernell (dispatch)")) {
 		case PCBBITO:
 			PCB = recibir_pcb(fd_escucha_dispatch);
 			sem_post(&sem_execute);
@@ -681,8 +680,7 @@ void ejecutar_resize(char* tamanio){
 	enviar_paquete(paquete,fd_conexion_memoria);
 	
 
-	int codigo_operacion = recibir_operacion(fd_conexion_memoria,logger_cpu,"MEMORIA - RESIZE");
-	switch (codigo_operacion){
+	switch (recibir_operacion(fd_conexion_memoria,logger_cpu,"MEMORIA - RESIZE")){
 		case OUTOFMEMORY:
 			motivo_desalojo buffersito;
 			enviar_pcb(PCB, fd_escucha_dispatch, PCB_ACTUALIZADO, SIN_MEMORIA,NULL,NULL,NULL,NULL,NULL);
@@ -1127,7 +1125,6 @@ bool es_entrada_TLB_de_PID(void * un_nodo_tlb ){
 int consultar_tlb(int PID, int numero_pagina){
 	
 	int marco;
-	int posicion_elemento_buscado;
 	nodo_tlb * info_proceso_memoria;
 	
 	if(list_is_empty(translation_lookaside_buffer)){ //TLB MISS PERO PORQUE LA TLB ESTA VACIA
@@ -1144,7 +1141,7 @@ int consultar_tlb(int PID, int numero_pagina){
 		marco = solicitar_frame_memory(numero_pagina);
 		info_proceso_memoria = administrar_tlb(PID, numero_pagina, marco); //devuelve si o si la nueva entrada
 	}else{ //ESTO ES TLB HIT
-		if(algoritmo_tlb == "LRU"){ 
+		if(strcmp(algoritmo_tlb, "LRU") == 0){
 			log_info(logger_cpu, "PID: %d - TLB HIT - Pagina:  %d", PCB->PID, numero_pagina);
 			list_remove_element(translation_lookaside_buffer,info_proceso_memoria);
 			list_add(translation_lookaside_buffer,info_proceso_memoria);
@@ -1178,8 +1175,7 @@ void interrupcion() {
 	log_info(logger_cpu, "Leavantado el puerto INTERRUPT");
 	fd_escucha_interrupt = esperar_cliente(fd_cpu_interrupt,logger_cpu, "Kernel (interrupt)");
 	while (1) {
-		int codigo_operacion = recibir_operacion(fd_escucha_interrupt, logger_cpu, "Kernel (interrupt)");
-		switch (codigo_operacion) {
+		switch (recibir_operacion(fd_escucha_interrupt, logger_cpu, "Kernel (interrupt)")) {
 		case INTERR:
 			element_interrupcion* nueva_interrupcion = recibir_motiv_desalojo(fd_escucha_interrupt);
 			push_con_mutex(lista_interrupciones,nueva_interrupcion,&mutex_lista_interrupciones);
