@@ -5,7 +5,7 @@ int main() {
     config_memoria = config_create("./configs/memoria.config");
     leer_configuraciones();
 	 //CHECKPOINT 3 lo que realice aca es crear la memoria de usuario 
-
+	inicializar_semaforos();
 	//iniciar_memoria_contigua();
 	int mem = iniciarMemoria();
 
@@ -24,6 +24,9 @@ int main() {
 	
 	while(server_escuchar(fd_escucha_memoria));
 
+	//agregar el tema del ^C que vi en chatgpt para tocar ^C y finalizar el programa
+	//porque si no creo que se queda infinitamente en server_escuchar
+
 	// Termino programa
 	terminar_programa(logger_memoria, config_memoria);
     
@@ -40,19 +43,6 @@ void iniciar_memoria_contigua(){
 	//solo utilizar cant_marcos, user_space, frames_array
 } //IMPORTANTE, la cantidad de elementos del bitarray a veces no termina siendo igual a la cantidad de marcos, redondeando para arriba nos aseguramos de que esta no sea menor
 */
-
-int nro_de_marco_libre(){
-	for(int i=0; i<cant_marcos; i++){
-		bool valor;
-		pthread_mutex_lock(&mutex_frames_array);
-		valor=bitarray_test_bit(frames_array, (off_t) i);
-		pthread_mutex_unlock(&mutex_frames_array);
-		if(!valor)
-			return i;
-		
-	}
-	return -1; //simbolizamos el -1 como que no hay marcos disponibles ----> acá devolver OUT OF MEMORY
-}
 
 void inicializar_semaforos(){
 	//pthread_mutex_init(&mutex_lista_new, NULL);
@@ -72,6 +62,8 @@ void leer_configuraciones(){
 void terminar_programa(){
     config_destroy(config_memoria);
     log_destroy(logger_memoria);
+
+	//hay semaforos o hilos? 
 }
 t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
     
@@ -133,7 +125,7 @@ int server_escuchar() {
 	 
 	int cliente_socket = esperar_cliente(fd_escucha_memoria, logger_memoria, "SOY UN CLIENTE");
 
-	if (cliente_socket != -1) {
+	if (cliente_socket != -1) {// esto si falla podría ser un for de hilos join, cosa de asegurarse que sean solo 3 y q no se invoque a finalizar programa hasta que termine
 		pthread_t hilo;
 		int *args = malloc(sizeof(int)); 
 		args = &cliente_socket;
@@ -141,6 +133,8 @@ int server_escuchar() {
 		pthread_detach(hilo);
 		return 1;
 	}
+
+	//que cada hilo se encargue de liberar sus recursos (semaforos, etc), igual creo que con detach no hace falta
 
 	return 0;
 }
@@ -160,44 +154,54 @@ static void procesar_clientes(void* void_args){
 		}
 		switch (cop) {
 		case SIZE_PAGE:
+			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			send(cliente_socket,&tam_pagina,sizeof(int),NULL);
 			break;
 		case MENSAJE:
+			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			recibir_mensaje(logger_memoria, cliente_socket);
 			//posiblemente haya que enviar una respuesta tambien para indicar que se recibio el mensaje
 			break;
 		case PAQUETE:
+			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			t_list *paquete_recibido = recibir_paquete(cliente_socket);
 			log_info(logger_memoria, "Recibí un paquete con los siguientes valores: ");
 			list_iterate(paquete_recibido, (void*) iterator);
 			break;	
-		case DATOS_PROCESO: // CREAR PROCESO: este codigo SOLO LO ENVIA EL KERNEL 
+		case DATOS_PROCESO: // CREAR PROCESO: este codigo SOLO LO ENVIA EL KERNEL
+			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);// por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
 			iniciar_proceso_a_pedido_de_Kernel(datos_proceso->path, datos_proceso->pid, cliente_socket);
 			send(fd_conexion_kernel,avisoDeFinalizacion,sizeof(int),NULL);
-			free(datos_proceso->path);
+			free(datos_proceso->path);//si string_from_format no genera otro malloc, no hace falta esta linea
 			free(datos_proceso);
 			break;
 		case SOLICITAR_INSTRUCCION:// ESTE CODIGO SOLO LO ENVÍA CPU
+			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			log_info(logger_memoria, "Solicitud de instruccion recibida");
 			procesar_pedido_instruccion(cliente_socket);
 			break;
 		case SOLICITUD_MARCO:
+			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep	
 			log_info(logger_memoria, "Solicitud de marco"); //cuando sergio haga send_pedido_de_marco o como se iame
 			procesar_solicitud_nromarco(cliente_socket);
 			//recibir el paquete (si o si un pid y un numero de pagina)
 			//invocar una funcion que busque un proceso por su pid, acceda a su tabla de paginas y devuelva el numero de marco asociado a un numero de pagina enviado por parametro
 			break;
 		case LECTURA_MEMORIA: //PARA STDOUT
+			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			procesar_lectura_en_memoria(cliente_socket);
 			break;
 		case ESCRITURA_MEMORIA: //PARA STDIN
+			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			procesar_escritura_en_memoria(cliente_socket);
 			break;
 		case REAJUSTAR_TAMANIO_PROCESO:
+			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			procesar_reajuste_de_memoria(cliente_socket);
 			break;
 		case FINALIZAR_PROCESO:
+			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			finalizar_proceso_a_pedido_de_kernel(cliente_socket); //si o si recibe el pid ahi adentro
 			send(fd_conexion_kernel,avisoDeFinalizacion,sizeof(int),NULL);
 			break;
@@ -210,6 +214,7 @@ static void procesar_clientes(void* void_args){
 	log_warning(logger_memoria, "El cliente se desconecto de %s server", "memoria");
 	return;
 }
+
 cod_instruccion instruccion_to_enum(char* instruccion){
 	if(strcmp(instruccion, "SET") == 0){
 		return SET;
@@ -263,7 +268,7 @@ void iniciar_proceso_a_pedido_de_Kernel(char* path, int pid, int socket_kernel) 
 
     // Generar instrucciones y cargarlas a la variable global PROCESO_INSTRUCCIONES
     t_list* instrucciones = leer_pseudocodigo(rutaCompleta);
-    free(rutaCompleta);
+    free(rutaCompleta); //suponiendo que string_from_format genera otra area de memoria
 
     // Crear el objeto de proceso_instrucciones
     t_proceso* proceso_nuevo = malloc(sizeof(t_proceso));
@@ -362,7 +367,6 @@ void procesar_pedido_instruccion(int socket_cpu){
 	t_solicitud_instruccion* solicitud_instruccion = recibir_solicitud_de_instruccion(socket_cpu);
 	t_linea_instruccion* instruccion_a_enviar = buscar_instruccion(solicitud_instruccion->pid, solicitud_instruccion->program_counter );
 	free(solicitud_instruccion);
-	usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 	send_proxima_instruccion(socket_cpu, instruccion_a_enviar);
 }
 /*************************************/
@@ -386,7 +390,7 @@ int iniciarPaginacion(){
         return 0;
     };
     
-    cant_marcos = tam_memoria/ tam_pagina;
+    cant_marcos = tam_memoria/ tam_pagina; //siempre multiplos
     
     log_info(logger_memoria,"Tengo %d marcos de %d bytes en memoria principal",cant_marcos,tam_pagina);
     
@@ -433,8 +437,8 @@ void procesar_solicitud_nromarco(int fd1){
 	//buscar pagina en tdp
 	t_pagina* pagina = buscar_pagina(valoresenbruto->pid, valoresenbruto->numero_pagina);//Obtengo puntero a la tabla de pagina en la lista de procesos.Uso el pid para encontrar el proceso y nro pagina para encontrar el nro marco
     // t_pagina es tabla que tiene un id del proceso, pagina y el marco correspondiente a esa pagina
-	send_marco(fd1, pagina->marco);//devuelvo el NRO DE MARCO, HAY QUE HACER VALIDACION ? SI El proceso todavia no tiene marcos asignados ya que no hizo resize
 	free(valoresenbruto); //excelente
+	send_marco(fd1, pagina->marco);//devuelvo el NRO DE MARCO, HAY QUE HACER VALIDACION ? SI El proceso todavia no tiene marcos asignados ya que no hizo resize
 }
 
 t_pagina* buscar_pagina(int npid, int numero_pagina){
@@ -453,13 +457,7 @@ t_pagina* buscar_pagina(int npid, int numero_pagina){
 }
 pid_y_pag_de_cpu* recv_solicitud_marco(int fd){
 	t_list* paquete = recibir_paquete(fd);
-	/*
-	pid_y_pag_de_cpu* valores = list_get(paquete, 0); 
-	list_destroy(paquete);
-	return valores;
-
-	esto SOLO no es valido, asi no lo envía el cpu, hay que recibir bien el paquete
-	*/
+	
 	int * pid = (int *) list_get(paquete,0);
 	int * n_pagina = (int *) list_get(paquete,1);
 	list_destroy(paquete);
@@ -535,7 +533,7 @@ void procesar_reajuste_de_memoria(int un_fd){
 	uint32_t * p_uint32_t = (uint32_t*) list_get(lista,0); 
 	uint32_t bytes_finales = *p_uint32_t;
 	free(p_uint32_t);
-	int * p_int = (int*) list_get(lista,2); 
+	int * p_int = (int*) list_get(lista,1); 
 	int un_pid = *p_int;
 	free(p_int);
 	list_destroy(lista);
@@ -606,7 +604,7 @@ void aumentar_tamanio_proceso(int un_fd,t_proceso * proceso_reajustado,int pagin
 		int ultima_pagina=list_size(proceso_reajustado->tabla_de_paginas)-1;
 		int bits_encontrados=0;
 		pthread_mutex_lock(&mutex_frames_array);
-		for (int index=0;index<paginas_a_agregar;index++){
+		for (int index=0;index<cant_marcos && bits_encontrados <= paginas_a_agregar ;index++){
 			if(!bitarray_test_bit(frames_array,(off_t)index)){
 				bits_encontrados++;
 				bitarray_set_bit(frames_array,(off_t)index);
@@ -625,7 +623,7 @@ void aumentar_tamanio_proceso(int un_fd,t_proceso * proceso_reajustado,int pagin
 int cantidad_de_marcos_disponibles(){
 	int cantidad_de_marcos_disponibles=0;
 	pthread_mutex_lock(&mutex_frames_array);
-	for (int index=0;index<(cant_marcos-1);index++){
+	for (int index=0;index<cant_marcos;index++){
 		if(!bitarray_test_bit(frames_array,(off_t)index))
 			cantidad_de_marcos_disponibles++;
 	}

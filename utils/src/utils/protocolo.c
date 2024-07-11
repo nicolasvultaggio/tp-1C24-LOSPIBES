@@ -589,7 +589,7 @@ t_datos_proceso* recibir_datos_del_proceso(int fd_kernel){
 	t_list* paquete = recibir_paquete(fd_kernel);
 	t_datos_proceso* datos_proceso = malloc(sizeof(t_datos_proceso)); // Cuando implementen la funcion hagan FREE
 	
-	datos_proceso->path = (char *)list_get(paquete, 0);				
+	datos_proceso->path = (char *)list_get(paquete, 0);	//apuntamos al area de memoria ya reservada al recibir el paquete			
 
 	int* pid = (int *)list_get(paquete,1);
 	datos_proceso->pid = *pid;

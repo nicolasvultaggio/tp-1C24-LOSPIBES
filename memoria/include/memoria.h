@@ -79,7 +79,6 @@ t_linea_instruccion* buscar_instruccion(int pid, int program_counter);
 void send_proxima_instruccion(int filedescriptor, t_linea_instruccion *instruccion);
 void procesar_pedido_instruccion(int socket_cpu);
 void instruccion_destroyer(t_linea_instruccion* instruccion);
-int nro_de_marco_libre();
 int bitsToBytes(int bits);
 void procesar_escritura_en_memoria(int cliente_socket);
 void procesar_lectura_en_memoria(int cliente_socket);
@@ -94,10 +93,13 @@ pid_y_pag_de_cpu* recv_solicitud_marco(int fd);
 int cant_marcos;
 int iniciarMemoria();
 int iniciarPaginacion();
+void procesar_solicitud_nromarco(int fd1);
+void finalizar_proceso_a_pedido_de_kernel(int un_fd);
 int idGlobal;
 char * data;
 t_bitarray* frames_array;
 char * asignarMemoriaBits(int bits);
 t_list tablas_de_paginas;
+int cantidad_de_marcos_disponibles();
 
 #endif
