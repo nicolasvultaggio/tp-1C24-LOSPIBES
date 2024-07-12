@@ -264,7 +264,17 @@ cod_instruccion instruccion_to_enum(char* instruccion){
 }
 void iniciar_proceso_a_pedido_de_Kernel(char* path, int pid, int socket_kernel) {
     // Construir la ruta completa del archivo  
-    char* rutaCompleta = string_from_format("%s%s.txt",path_instrucciones ,path);
+    //char* rutaCompleta = string_from_format("%s%s.txt",path_instrucciones ,path);
+	//SUPONEMOS QUE PATH ES SOLO EL NOMBRE DEL ARCHIVO, CON SU TXT Y TODO
+	//POR ESO TENEMOS QUE METERLE ANTES EL DIRECTORIO DONDE SABREMOS QUE VAN A ESTAR TODOS LOS ARCHIVOS DE PSEUDOCODIGO
+	int size_path= strlen(path); //suponemos que viene con el caracter nulo? chequear en KERNEL-> SI, VIENE CON CARACTER NULO, men
+	int size_path_instrucciones=strlen(path_instrucciones); //suponemos que tiene caracter nulo
+	
+	char * rutaCompleta = malloc(size_path+size_path_instrucciones+1);
+	mempcy(rutaCompleta,path_instrucciones,size_path_instrucciones);
+	mempcy(rutaCompleta+size_path_instrucciones,path,size_path);
+	rutaCompleta[sizeof(rutaCompleta)]='\0';
+	//LISTO CONCATENADO, men
 
     // Generar instrucciones y cargarlas a la variable global PROCESO_INSTRUCCIONES
     t_list* instrucciones = leer_pseudocodigo(rutaCompleta);
