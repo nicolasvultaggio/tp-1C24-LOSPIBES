@@ -512,6 +512,10 @@ void procesar_escritura_en_memoria(int cliente_socket){ //esto es para las inter
 
 	void *a_escribir = list_get(lista,2);
 
+	int * ppid = list_get(lista,3);  //por cada ESCRITURA_MEMORIA en todos los modulos, que al final de todo se envie el pid
+	int pid = *ppid;
+	free(ppid); 
+
 	list_destroy(lista);
 
 	pthread_mutex_lock(&mutex_memoria_principal);
@@ -539,6 +543,10 @@ void procesar_lectura_en_memoria(int cliente_socket){
 	uint32_t * p_direccion_fisica = (uint32_t *) list_get(lista,1);
 	uint32_t direccion_fisica = *p_direccion_fisica;
 	free(p_direccion_fisica);
+	int * ppid = list_get(lista,3);  //por cada LECTURA_MEMORIA en todos los modulos, que al final de todo se envie el pid
+	int pid = *ppid;
+	free(ppid); 
+	
 	list_destroy(lista);
 
 	char * buffer= malloc(bytes);
@@ -588,7 +596,7 @@ void procesar_reajuste_de_memoria(int un_fd){
 				enviar_operacion(un_fd,OK);
 				break;
 			default:
-				log_info(logger_memoria,"PID: %d - Tamaño Actual: %u - Tamaño a Reducir: %u",un_pid,tamanio_viejo,(bytes_finales-tamanio_viejo));
+				log_info(logger_memoria,"PID: %d - Tamaño Actual: %u - Tamaño a Ampliar: %u",un_pid,tamanio_viejo,(bytes_finales-tamanio_viejo));
 				aumentar_tamanio_proceso(un_fd,proceso_reajustado,diferencia_de_paginas);
 				break;
 		}
