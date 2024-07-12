@@ -268,14 +268,16 @@ void iniciar_proceso_a_pedido_de_Kernel(char* path, int pid, int socket_kernel) 
     //char* rutaCompleta = string_from_format("%s%s.txt",path_instrucciones ,path);
 	//SUPONEMOS QUE PATH ES SOLO EL NOMBRE DEL ARCHIVO, CON SU TXT Y TODO
 	//POR ESO TENEMOS QUE METERLE ANTES EL DIRECTORIO DONDE SABREMOS QUE VAN A ESTAR TODOS LOS ARCHIVOS DE PSEUDOCODIGO
+	
+	char * rutaCompleta = string_from_format("%s%s",path_instrucciones,path);
+	/* ¿Qué hace string from format? esto de aca abajo, guardo la logica por si no funciona
 	int size_path= strlen(path); //suponemos que viene con el caracter nulo? chequear en KERNEL-> SI, VIENE CON CARACTER NULO, men
 	int size_path_instrucciones=strlen(path_instrucciones); //suponemos que tiene caracter nulo
-	
 	char * rutaCompleta = malloc(size_path+size_path_instrucciones+1);
 	mempcy(rutaCompleta,path_instrucciones,size_path_instrucciones);
 	mempcy(rutaCompleta+size_path_instrucciones,path,size_path);
 	rutaCompleta[sizeof(rutaCompleta)]='\0';
-	//LISTO CONCATENADO, men
+	*/
 
     // Generar instrucciones y cargarlas a la variable global PROCESO_INSTRUCCIONES
     t_list* instrucciones = leer_pseudocodigo(rutaCompleta);

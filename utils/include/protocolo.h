@@ -7,11 +7,12 @@
 #include<commons/log.h>
 #include<commons/collections/list.h>
 #include<commons/temporal.h>
-#include<string.h>
+#include<commons/string.h>//esta es la de la commons
 #include<commons/config.h>
 #include<netdb.h>
 #include<pthread.h>
 #include<stdint.h>
+#include<string.h>//esta es la estandar de C
 #include<semaphore.h>
 #include<unistd.h>
 #include<stdbool.h>
