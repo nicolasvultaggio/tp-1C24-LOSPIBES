@@ -90,9 +90,9 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
 bool achicar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques, int cant_bloques_actual);
 
 fcb* buscar_archivo(char * name_file); //esta raro porque usa funciones anidadas
-void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones);
+void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones,int pid);
 bool bytes_pertenecen_a_archivo(fcb* archivo, uint32_t posicion, uint32_t tamanio_operacion);
-void write_file(char* nombre_archivo, uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones);
+void write_file(char* nombre_archivo, uint32_t tamanio_escritura,uint32_t puntero_archivo,t_list * traducciones,int pid);
 void escribir_archivo(fcb* archivo, uint32_t posicion_a_escribir, char* buffer);
 off_t buscar_primer_bloque_libre();
 int contar_digitos(int numero);

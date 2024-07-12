@@ -257,6 +257,7 @@ void atender_STDIN(){
         agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(uint32_t));
         agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(uint32_t));//para que sepa cuantos bytes escribir
         agregar_a_paquete(paquete2,string_a_enviar,traduccion->bytes);
+        agregar_a_paquete(paquete2,&(pid),sizeof(int));
         enviar_paquete(paquete2,fd_conexion_memoria);
         eliminar_paquete(paquete2);
 
@@ -314,6 +315,7 @@ void atender_STDOUT(){
         t_paquete * paquete2 = crear_paquete(LECTURA_MEMORIA);
         agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(uint32_t));
         agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(uint32_t));
+        agregar_a_paquete(paquete2,&(pid),sizeof(int));
         enviar_paquete(paquete2,fd_conexion_memoria);
         eliminar_paquete(paquete2);
 
@@ -389,7 +391,7 @@ void atender_DIALFS(){
             
             log_info(logger_io,"PID: %d - Leer Archivo: %s - Tamaño a Leer: %u - Puntero Archivo: %u",pid,nombre_archivo_operacion,tamanio_lectura,puntero_archivo_r);
             
-            read_file(nombre_archivo_operacion, tamanio_lectura,puntero_archivo_r,traducciones_r);
+            read_file(nombre_archivo_operacion, tamanio_lectura,puntero_archivo_r,traducciones_r,pid);
             
             list_destroy_and_destroy_elements(traducciones_r,(void*)traduccion_destroyer);
             
@@ -406,7 +408,7 @@ void atender_DIALFS(){
 
             log_info(logger_io,"PID: %d - Leer Archivo: %s - Tamaño a Leer: %u - Puntero Archivo: %u",pid,nombre_archivo_operacion,tamanio_escritura,puntero_archivo_w);
             
-            write_file(nombre_archivo_operacion, tamanio_escritura,puntero_archivo_w,traducciones_w);
+            write_file(nombre_archivo_operacion, tamanio_escritura,puntero_archivo_w,traducciones_w,pid);
             
             list_destroy_and_destroy_elements(traducciones_w,(void*)traduccion_destroyer);
             
@@ -807,7 +809,7 @@ bool achicar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques, int ca
 }
 
 
-void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones){
+void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones,int pid){
     
     //buscamos leer el archivo
 
@@ -849,6 +851,7 @@ void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_ar
         agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(uint32_t));
         agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(uint32_t));//para que sepa cuantos bytes escribir
         agregar_a_paquete(paquete2,string_a_enviar,traduccion->bytes);
+        agregar_a_paquete(paquete2,&(pid),sizeof(int));
         enviar_paquete(paquete2,fd_conexion_memoria);
         eliminar_paquete(paquete2);
 
@@ -876,7 +879,7 @@ void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_ar
 }
 
 
-void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posicion_a_escribir,t_list * traducciones){
+void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posicion_a_escribir,t_list * traducciones,int pid){
 
     fcb* archivo = buscar_archivo(nombre_archivo);
 
@@ -901,6 +904,7 @@ void write_file(char* nombre_archivo, uint32_t tamanio_escritura, uint32_t posic
         t_paquete * paquete2 = crear_paquete(LECTURA_MEMORIA);
         agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(uint32_t));
         agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(uint32_t));
+        agregar_a_paquete(paquete2,&(pid),sizeof(int));
         enviar_paquete(paquete2,fd_conexion_memoria);
         eliminar_paquete(paquete2);
 

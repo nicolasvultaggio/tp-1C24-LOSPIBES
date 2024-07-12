@@ -305,6 +305,7 @@ void ejecutar_mov_in(char* DATOS, char* DIRECCION){
         t_paquete * paquete2 = crear_paquete(LECTURA_MEMORIA);
         agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(uint32_t));
         agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(uint32_t));
+		agregar_a_paquete(paquete2,&(PCB->PID),sizeof(int));
         enviar_paquete(paquete2,fd_conexion_memoria);
         eliminar_paquete(paquete2);
 
@@ -373,6 +374,7 @@ void ejecutar_mov_out(char* DATOS, char* DIRECCION){
 		agregar_a_paquete(paquete,&(traduccion->direccion_fisica),sizeof(uint32_t));//direccion fisica
 		agregar_a_paquete(paquete,&(traduccion->bytes),sizeof(uint32_t));//cantidad de bytes a escribir
 		agregar_a_paquete(paquete,dato_a_escribir+offset,(int)(traduccion->bytes));//dato a escribir
+		agregar_a_paquete(paquete,&(PCB->PID),sizeof(int));
 		enviar_paquete(paquete,fd_conexion_memoria);
 		eliminar_paquete(paquete);
 
@@ -718,6 +720,7 @@ void ejecutar_copy_string( char* tamanio){
         t_paquete * paquete2 = crear_paquete(LECTURA_MEMORIA);
         agregar_a_paquete(paquete2,&(traduccion->bytes),sizeof(uint32_t));
         agregar_a_paquete(paquete2,&(traduccion->direccion_fisica),sizeof(uint32_t));
+		agregar_a_paquete(paquete2,&(PCB->PID),sizeof(int));
         enviar_paquete(paquete2,fd_conexion_memoria);
         eliminar_paquete(paquete2);
 
@@ -757,6 +760,7 @@ void ejecutar_copy_string( char* tamanio){
 		agregar_a_paquete(paquete,&(traduccion->direccion_fisica),sizeof(uint32_t));//direccion fisica
 		agregar_a_paquete(paquete,&(traduccion->bytes),sizeof(uint32_t));//cantidad de bytes a escribir
 		agregar_a_paquete(paquete,buffer+offset,(int)(traduccion->bytes));//dato a escribir
+		agregar_a_paquete(paquete,&(PCB->PID),sizeof(int));
 		enviar_paquete(paquete,fd_conexion_memoria);
 		eliminar_paquete(paquete);
 
