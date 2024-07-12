@@ -6,6 +6,7 @@
 
 typedef struct {
 	int pid;
+	uint32_t tamanio;
 	t_list* tabla_de_paginas;// SER UNA TABLA t_pagina LINEA 28
 	t_list* instrucciones;
 } t_proceso;//para armar mi lista de procesos en memoria

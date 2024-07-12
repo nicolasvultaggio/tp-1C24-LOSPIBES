@@ -79,6 +79,8 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
 
     f=fopen(ruta,"r");
 	while (fgets(buffer, 256, f) != NULL) {//suponemos que una instruccion nunca dura mas de 256 caracteres
+		printf("Instruccion leida: %s\n",buffer);
+		
 		t_linea_instruccion* una_instruccion = malloc(sizeof(t_linea_instruccion)); 
 		
 		una_instruccion->parametros=list_create(); //crear la lista de parametros
@@ -96,6 +98,7 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
 		int cantidad_de_parametros = cantidad_de_parametros_segun_instruccion(una_instruccion->instruccion);//saber la cantidad de parametros segun la instruccion
 		
 		for(int i = 0; i<cantidad_de_parametros;i++){	//guardar cada elemento del split en la lista de parametros
+			printf("Parametro agregado a la lista de parametros de archivo %s: %s\n",ruta,array_de_instruccion[1+i]);
 			list_add(una_instruccion->parametros,array_de_instruccion[1+i]);
 		}
 		
@@ -179,12 +182,10 @@ static void procesar_clientes(void* void_args){
 			break;
 		case SOLICITAR_INSTRUCCION:// ESTE CODIGO SOLO LO ENVÍA CPU
 			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
-			log_info(logger_memoria, "Solicitud de instruccion recibida");
 			procesar_pedido_instruccion(cliente_socket);
 			break;
 		case SOLICITUD_MARCO:
 			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep	
-			log_info(logger_memoria, "Solicitud de marco"); //cuando sergio haga send_pedido_de_marco o como se iame
 			procesar_solicitud_nromarco(cliente_socket);
 			//recibir el paquete (si o si un pid y un numero de pagina)
 			//invocar una funcion que busque un proceso por su pid, acceda a su tabla de paginas y devuelva el numero de marco asociado a un numero de pagina enviado por parametro
@@ -285,10 +286,12 @@ void iniciar_proceso_a_pedido_de_Kernel(char* path, int pid, int socket_kernel) 
 
     // Crear el objeto de proceso_instrucciones
     t_proceso* proceso_nuevo = malloc(sizeof(t_proceso));
+	proceso_nuevo->tamanio=0;
     proceso_nuevo->pid = pid;
     proceso_nuevo->instrucciones = instrucciones;
 	proceso_nuevo->tabla_de_paginas=list_create(); //solo crea la lista, pero arranca sin elementos ya que no tiene marcos asignados, se le agregan elementos del tipo fila_tabla_de_paginas
-
+	int a=0;
+	log_info(logger_memoria,"PID: %d - Tabla de páginas creada.",pid); //sirve con el 0 solo?
 	push_con_mutex(lista_de_procesos, proceso_nuevo, &mutex_lista_procesos);
 }
 
@@ -302,7 +305,8 @@ void finalizar_proceso_a_pedido_de_kernel(int un_fd){
 	free(ppid);
 	list_destroy(lista);
 
-	
+	log_info(logger_memoria,"FINALIZANDO PROCESO %d",un_pid);
+
 	t_proceso * proceso_a_finalizar = buscar_proceso_en_lista(un_pid);
 
 
@@ -378,6 +382,7 @@ void send_proxima_instruccion(int filedescriptor, t_linea_instruccion* instrucci
 void procesar_pedido_instruccion(int socket_cpu){ 
 
 	t_solicitud_instruccion* solicitud_instruccion = recibir_solicitud_de_instruccion(socket_cpu);
+	log_info(logger_memoria, "Solicitud de instruccion %d del proceso %d ",solicitud_instruccion->program_counter,solicitud_instruccion->pid);
 	t_linea_instruccion* instruccion_a_enviar = buscar_instruccion(solicitud_instruccion->pid, solicitud_instruccion->program_counter );
 	free(solicitud_instruccion);
 	send_proxima_instruccion(socket_cpu, instruccion_a_enviar);
@@ -449,7 +454,9 @@ void procesar_solicitud_nromarco(int fd1){
 
 	//buscar pagina en tdp
 	t_pagina* pagina = buscar_pagina(valoresenbruto->pid, valoresenbruto->numero_pagina);//Obtengo puntero a la tabla de pagina en la lista de procesos.Uso el pid para encontrar el proceso y nro pagina para encontrar el nro marco
-    // t_pagina es tabla que tiene un id del proceso, pagina y el marco correspondiente a esa pagina
+    
+	log_info(logger_memoria,"PID: %d - Pagina: %d- Marco: %d",valoresenbruto->pid,valoresenbruto->numero_pagina,pagina->marco);
+
 	free(valoresenbruto); //excelente
 	send_marco(fd1, pagina->marco);//devuelvo el NRO DE MARCO, HAY QUE HACER VALIDACION ? SI El proceso todavia no tiene marcos asignados ya que no hizo resize
 }
@@ -513,6 +520,8 @@ void procesar_escritura_en_memoria(int cliente_socket){ //esto es para las inter
 	
 	free(a_escribir);
 
+	log_info(logger_memoria,"PID: %d - Accion: ESCRIBIR - Direccion fisica: %u - Tamaño %u",pid,direccion_fisica,bytes);
+
 	char * rta = "Ok";
 	t_paquete * paquete = crear_paquete(ESCRITURA_MEMORIA); //podría ser cualquier codigo de operacion, no me importa
 	agregar_a_paquete(paquete,rta,sizeof(rta));
@@ -538,6 +547,8 @@ void procesar_lectura_en_memoria(int cliente_socket){
 	memcpy(buffer,memoriaPrincipal+direccion_fisica,bytes);  //ojo, buffer sin '\0' al final
 	pthread_mutex_lock(&mutex_memoria_principal);
 
+	log_info(logger_memoria,"PID: %d - Accion: LEER- Direccion fisica: %u - Tamaño %u",pid,direccion_fisica,bytes);
+
 	t_paquete * paquete = crear_paquete(LECTURA_MEMORIA); //podría ser cualquier codigo de operacion, no me importa
 	agregar_a_paquete(paquete,buffer,bytes);//no lo enviamos con el caracter nulo porque en memoria no se guarda el caracter nulo, STDOUT se encarga de agregar el '\0'
 	enviar_paquete(paquete,cliente_socket);
@@ -558,20 +569,26 @@ void procesar_reajuste_de_memoria(int un_fd){
 	list_destroy(lista);
 
 	t_proceso * proceso_reajustado = buscar_proceso_en_lista(un_pid);
-
+	
 	int cantidad_de_paginas_finales = divide_and_ceil(((int) bytes_finales),tam_pagina);
 	int cantidad_de_paginas_actuales = list_size(proceso_reajustado->tabla_de_paginas);
 	
 	int diferencia_de_paginas = cantidad_de_paginas_finales - cantidad_de_paginas_actuales;
 	
+	uint32_t tamanio_viejo= proceso_reajustado->tamanio;
+	proceso_reajustado->tamanio=bytes_finales;
+
 	if(diferencia_de_paginas<0){ //recortar proceso
+		log_info(logger_memoria,"PID: %d - Tamaño Actual: %u - Tamaño a Reducir: %u",un_pid,tamanio_viejo,(tamanio_viejo-bytes_finales));
 		acortar_tamanio_proceso(un_fd,proceso_reajustado,diferencia_de_paginas);
 	}else{
 		switch(diferencia_de_paginas){
 			case 0:
+				log_info(logger_memoria,"PID: %d- Tamaño Actual: %u - Tamaño se mantiene",un_pid,tamanio_viejo);
 				enviar_operacion(un_fd,OK);
 				break;
 			default:
+				log_info(logger_memoria,"PID: %d - Tamaño Actual: %u - Tamaño a Reducir: %u",un_pid,tamanio_viejo,(bytes_finales-tamanio_viejo));
 				aumentar_tamanio_proceso(un_fd,proceso_reajustado,diferencia_de_paginas);
 				break;
 		}
