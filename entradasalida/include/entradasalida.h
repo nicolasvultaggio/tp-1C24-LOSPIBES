@@ -54,7 +54,6 @@ char * path_configuracion;
 char * tipo_de_interfaz;
 int type_interfaz;
 
-t_log* logger_obligatorio;
 t_log* logger_io;
 t_config* config_io;
 
@@ -83,12 +82,12 @@ void avisar_operacion_realizada_kernel();
 
 void create_file(char * name_file);
 void delete_file(char * name_file);
-void truncate_file(char * name_file,uint32_t nuevo_tamanio);
+void truncate_file(char * name_file,uint32_t nuevo_tamanio,int pid);
 char *copiar_datos_desde_archivo( uint32_t tamanio_a_copiar, int posicion_inicial);
 fcb * buscar_archivo_por_bloque_inicial(int primero_bloque_archivo);
-int compactar();
-bool agrandar();
-bool achicar();
+int compactar(int pid);
+bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int cant_bloques_actual,int pid);
+bool achicar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques, int cant_bloques_actual);
 
 fcb* buscar_archivo(char * name_file); //esta raro porque usa funciones anidadas
 void read_file(char* nombre_archivo,uint32_t tamanio_lectura,uint32_t puntero_archivo,t_list * traducciones);

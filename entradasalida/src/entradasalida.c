@@ -19,7 +19,6 @@ int main(int argc, char* argv[]) {
     path_configuracion = argv[2];
     decir_hola(nombre_de_interfaz);
 
-    logger_obligatorio = log_create("../../utils/logs_obligatorios.log",nombre_de_interfaz,1,LOG_LEVEL_INFO); // todos los modulos modifican este archivo de logger, por eso en utils
     logger_io= log_create("entradasalida_logs.log",nombre_de_interfaz,1,LOG_LEVEL_INFO); // crea el puntero al log
     config_io = config_create(path_configuracion); // crea el puntero al archivo de config
     
@@ -189,11 +188,16 @@ void atender_instruccion(){
 }
 //cambiar a recibirlo como una lista? porque si bien se envía como un paquete, se recibe como un mensaje, es compatible? tp0
 char * recibir_unidades_de_tiempo(){ // similar a recibir mensaje del tp0
-    int size;
-    char * buffer = recibir_buffer(&size,fd_conexion_kernel); //cuando se envie una peticion desde kernel: primero codop, despues unidad de tiempo
-    log_info(logger_io, "Kernel me dijo que tengo que esperar << %s >> unidades de tiempo", buffer);
-    // OJO HAY QUE LIBERAR EL BUFFER, o sea, habra que liberar la instruccion luego, SI NO --> MEMORY LEAK, ------ listo, resuelto con el free(unidades_de_tiempo)
-    return buffer;
+    t_list * lista = recibir_paquete(fd_conexion_kernel);
+    
+    int * ppid = list_get(lista,0);
+    int pid = *ppid;
+    free(ppid);
+
+    char * unidades_de_tiempo = list_get(lista,1);
+    log_info(logger_io,"PID: %d - Operacion: IO_GEN_SLEEP ",pid);
+
+    return unidades_de_tiempo;
 }
 
 void atender_GENERICA(){// IO_GEN_SLEEP (Interfaz, Unidades de trabajo), no hace falta validar instruccion, ya se supone que la valido el kernel, y ademas para esta interfaz 
@@ -207,11 +211,18 @@ void atender_GENERICA(){// IO_GEN_SLEEP (Interfaz, Unidades de trabajo), no hace
 void atender_STDIN(){
 
     t_list * lista = recibir_paquete(fd_conexion_kernel);
-    uint32_t * tamanio_escritura = list_get(lista,0);
+
+    int * ppid = list_get(lista,0);
+    int pid = *ppid;
+    free(ppid);
+
+    uint32_t * tamanio_escritura = list_get(lista,1);
     uint32_t tam = *tamanio_escritura;
     free(tamanio_escritura);
-    t_list * traducciones = desempaquetar_traducciones(lista,1);
+    t_list * traducciones = desempaquetar_traducciones(lista,2);
     list_destroy(lista);
+
+    log_info(logger_io,"PID: %d - Operacion: IO_STDIN_READ",pid);
 
     char buffer[tam+1]; //agregamos 1 para poder definir escribir por pantalla
     char *booleano;
@@ -275,11 +286,18 @@ void atender_STDIN(){
 void atender_STDOUT(){
      
     t_list * lista = recibir_paquete(fd_conexion_kernel);
-    uint32_t * tamanio_lectura = list_get(lista,0);
+
+    int * ppid = list_get(lista,0);
+    int pid = *ppid;
+    free(ppid);
+
+    uint32_t * tamanio_lectura = list_get(lista,1);
     uint32_t tam = *tamanio_lectura;
     free(tamanio_lectura);
-    t_list * traducciones = desempaquetar_traducciones(lista,1);
+    t_list * traducciones = desempaquetar_traducciones(lista,2);
     list_destroy(lista);
+
+    log_info(logger_io,"PID: %d - Operacion: IO_STDOUT_WRITE",pid);
 
     char buffer[tam+1];
     
@@ -335,54 +353,74 @@ void atender_DIALFS(){
 
     t_list * lista = recibir_paquete(fd_conexion_kernel);
 
-    int operacion = list_get(lista,0); //siempre el primero
-    free(list_get(lista,0));
+    int * ppid = list_get(lista,0);
+    int pid = *ppid;
+    free(ppid);
 
-    char * nombre_archivo_operacion = list_get(lista,1); //siempre el segundo
+    int * p_operacion= list_get(lista,1);
+    int operacion = * p_operacion; //siempre el primero
+    free(p_operacion);
 
+    char * nombre_archivo_operacion = list_get(lista,2); //siempre el segundo
+
+    
     switch(operacion){
         case FS_CREATE:
+            log_info(logger_io,"PID: %d - Crear Archivo: %s",pid,nombre_archivo_operacion);//me la juego a que nombre_archivo_operacion esta con el '\0' al final
             
             create_file(nombre_archivo_operacion);  
             
             break;
         case FS_DELETE: 
+            log_info(logger_io,"PID: %d - Eliminar Archivo: %s",pid,nombre_archivo_operacion);//me la juego a que nombre_archivo_operacion esta con el '\0' al final
             
             delete_file(nombre_archivo_operacion);
             
             break;
         case FS_READ:
+            uint32_t * p_tamanio_lectura = list_get(lista,3);
+            uint32_t * p_puntero_archivo_r = list_get(lista,4);
+            uint32_t puntero_archivo_r = * p_puntero_archivo_r;
+            uint32_t tamanio_lectura = * p_tamanio_lectura;
+            free(p_puntero_archivo_r);
+            free(p_tamanio_lectura);
+
+            t_list * traducciones_r = desempaquetar_traducciones(lista,5);
             
-            uint32_t tamanio_lectura = list_get(lista,2);
-            uint32_t puntero_archivo_r = list_get(lista,3);
-            t_list * traducciones_r = desempaquetar_traducciones(lista,4);
+            log_info(logger_io,"PID: %d - Leer Archivo: %s - Tamaño a Leer: %u - Puntero Archivo: %u",pid,nombre_archivo_operacion,tamanio_lectura,puntero_archivo_r);
             
             read_file(nombre_archivo_operacion, tamanio_lectura,puntero_archivo_r,traducciones_r);
             
-            free(list_get(lista,2));
-            free(list_get(lista,3));
             list_destroy_and_destroy_elements(traducciones_r,(void*)traduccion_destroyer);
             
             break;
         case FS_WRITE:
             
-            uint32_t tamanio_escritura = list_get(lista,2);
-            uint32_t puntero_archivo_w = list_get(lista,3);
-            t_list * traducciones_w = desempaquetar_traducciones(lista,4);
+            uint32_t * p_tamanio_escritura = list_get(lista,3);
+            uint32_t * p_puntero_archivo_w = list_get(lista,4);
+            uint32_t puntero_archivo_w = * p_puntero_archivo_w;
+            uint32_t tamanio_escritura = * p_tamanio_escritura;
+            free(p_puntero_archivo_w);
+            free(p_tamanio_escritura);
+            t_list * traducciones_w = desempaquetar_traducciones(lista,5);
+
+            log_info(logger_io,"PID: %d - Leer Archivo: %s - Tamaño a Leer: %u - Puntero Archivo: %u",pid,nombre_archivo_operacion,tamanio_escritura,puntero_archivo_w);
             
             write_file(nombre_archivo_operacion, tamanio_escritura,puntero_archivo_w,traducciones_w);
             
-            free(list_get(lista,2));
-            free(list_get(lista,3));
             list_destroy_and_destroy_elements(traducciones_w,(void*)traduccion_destroyer);
             
             break;
         case FS_TRUNCATE:
-            uint32_t nuevo_tamanio_archivo = list_get(lista,2);
             
-            truncate_file(nombre_archivo_operacion,nuevo_tamanio_archivo);
+            uint32_t * p_nuevo_tamanio_archivo = list_get(lista,3);
+            uint32_t nuevo_tamanio_archivo = * p_nuevo_tamanio_archivo;
+            free(p_nuevo_tamanio_archivo);
+
+            log_info(logger_io,"PID: %d - Truncar Archivo: %s - Tamaño: %u",pid,nombre_archivo_operacion,nuevo_tamanio_archivo);
+
+            truncate_file(nombre_archivo_operacion,nuevo_tamanio_archivo,pid);
             
-            free(list_get(lista,2));
             break;
     }
 
@@ -498,7 +536,7 @@ void delete_file(char * name_file){
 
 }
 
-void truncate_file(char * name_file,uint32_t nuevo_tamanio){
+void truncate_file(char * name_file,uint32_t nuevo_tamanio, int pid){
 
 
     fcb * fcb_file=buscar_archivo(name_file);
@@ -518,7 +556,7 @@ void truncate_file(char * name_file,uint32_t nuevo_tamanio){
     bool operacion_exitosa=true;
     
     if (cant_bloques_actual<nueva_cant_bloques){
-        operacion_exitosa=agrandar(fcb_file,nuevo_tamanio,nueva_cant_bloques,cant_bloques_actual);
+        operacion_exitosa=agrandar(fcb_file,nuevo_tamanio,nueva_cant_bloques,cant_bloques_actual,pid);
     }else if(cant_bloques_actual>nueva_cant_bloques){
         operacion_exitosa=achicar(fcb_file,nuevo_tamanio,nueva_cant_bloques,cant_bloques_actual);
     }
@@ -533,8 +571,8 @@ void truncate_file(char * name_file,uint32_t nuevo_tamanio){
 
 }
 
-bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int cant_bloques_actual){    
-
+bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int cant_bloques_actual,int pid){    
+    
     uint32_t tamanio_actual = (uint32_t)(fcb_file->tamanio_archivo);
     int cantidad_de_bloques_a_agrandar = nueva_cant_bloques - cant_bloques_actual;
     int espacios_libres = 0;
@@ -583,7 +621,7 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
             posicion_primer_bloque_nueva_ubicacion = a;
         }else{//no tenemos ningun hueco con ese espacio, por lo tanto si o si va a haber que compactar
             usleep(retraso_compactacion*1000);
-            posicion_primer_bloque_nueva_ubicacion = compactar(); 
+            posicion_primer_bloque_nueva_ubicacion = compactar(pid); 
         }
         
         
@@ -613,7 +651,7 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
 
 char *copiar_datos_desde_archivo(uint32_t tamanio_a_copiar, int posicion_inicial){
 
-    char* buffer_destino = (char *)malloc(tamanio_a_copiar);
+    char* buffer_destino = malloc(tamanio_a_copiar);
     memcpy(buffer_destino, buffer_bloques + posicion_inicial, tamanio_a_copiar);
 
     return buffer_destino;
@@ -673,14 +711,14 @@ int hay_hueco_de_esa_cantidad_de_bloques_en_otro_lugar_del_bitmap(int nueva_cant
 
 }
 
-int compactar(){
+int compactar(int pid){
+    log_info(logger_io,"PID: %d - Inicio Compactación");
     int primer_espacio_libre;
     int primer_bloque_a_mover_del_archivo;
 
     bool seguir_compactando = true;
 
     while(seguir_compactando){
-
         primer_espacio_libre = buscar_0_a_partir_de(0);
         int fin_hueco = buscar_posicion_fin_de_hueco(primer_espacio_libre);
         if(fin_hueco == tamanio_bitmap){
@@ -728,6 +766,8 @@ int compactar(){
         }
         
     }
+
+    log_info(logger_io,"PID: %d - Fin Compactación.");
 
     return posicion_ultimo_bloque_ocupado;
     
@@ -945,7 +985,7 @@ void inicializar_archivos(){
 
 void abrir_bitmap(){
     int fd;
-    tamanio_bitmap = ceil(block_count / 8);
+    tamanio_bitmap = ceil((double)block_count / 8);
 
     // Verificar si el archivo existe
     if(access(path_bitmap, F_OK) == (-1)){ // acces verifica que el archivo EXISTA

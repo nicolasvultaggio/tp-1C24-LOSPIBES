@@ -761,7 +761,7 @@ void atender_vuelta_dispatch(){
                                     element_interfaz * interfaz__fc = interfaz_existe_y_esta_conectada(nombre_interfaz_fc); //puntero al elemento original de la lista, ojo
                                     posible_motivo_desalojo=INTERFAZ_INVALIDA;
                                     if(interfaz__fc){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
-                                        if(dialFS_acepta_instruccion(interfaz__fc)){
+                                        if(dialFS_acepta_instruccion(instruccion_fc)){
                                             free(instruccion_fc); //ya no me importa la instruccion, (ya se cual es)
                                             free(nombre_interfaz_fc); //ya no me importa el nombre
                                             //debemos mantener la referencia a tiempo_a_esperar
@@ -799,7 +799,7 @@ void atender_vuelta_dispatch(){
                                     element_interfaz * interfaz_fsd = interfaz_existe_y_esta_conectada(nombre_interfaz_fsd); //puntero al elemento original de la lista, ojo
                                     posible_motivo_desalojo=INTERFAZ_INVALIDA;
                                     if(interfaz_fsd){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
-                                        if(dialFS_acepta_instruccion(interfaz_fsd)){
+                                        if(dialFS_acepta_instruccion(instruccion_fsd)){
                                             free(instruccion_fsd); //ya no me importa la instruccion, (ya se cual es)
                                             free(nombre_interfaz_fsd); //ya no me importa el nombre
                                             //debemos mantener la referencia a tiempo_a_esperar
@@ -838,7 +838,7 @@ void atender_vuelta_dispatch(){
                                     element_interfaz * interfaz_fst = interfaz_existe_y_esta_conectada(nombre_interfaz_fst); //puntero al elemento original de la lista, ojo
                                     posible_motivo_desalojo=INTERFAZ_INVALIDA;
                                     if(interfaz_fst){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
-                                        if(dialFS_acepta_instruccion(interfaz_fst)){
+                                        if(dialFS_acepta_instruccion(instruccion_fst)){
                                             free(instruccion_fst); //ya no me importa la instruccion, (ya se cual es)
                                             free(nombre_interfaz_fst); //ya no me importa el nombre
                                             list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
@@ -880,7 +880,7 @@ void atender_vuelta_dispatch(){
                                     element_interfaz * interfaz_fsw = interfaz_existe_y_esta_conectada(nombre_interfaz_fsw); //puntero al elemento original de la lista, ojo
                                     posible_motivo_desalojo=INTERFAZ_INVALIDA;
                                     if(interfaz_fsw){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
-                                        if(dialFS_acepta_instruccion(interfaz_fsw)){
+                                        if(dialFS_acepta_instruccion(instruccion_fsw)){
                                             free(instruccion_fsw); //ya no me importa la instruccion, (ya se cual es)
                                             free(nombre_interfaz_fsw); //ya no me importa el nombre
                                             list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
@@ -922,7 +922,7 @@ void atender_vuelta_dispatch(){
                                     element_interfaz * interfaz_fsr = interfaz_existe_y_esta_conectada(nombre_interfaz_fsr); //puntero al elemento original de la lista, ojo
                                     posible_motivo_desalojo=INTERFAZ_INVALIDA;
                                     if(interfaz_fsr){ //entra si no es un puntero nulo (casos: lista vacía (no hay interfaces conectadas), o no hay alguna interfaz con ese nombre)
-                                        if(dialFS_acepta_instruccion(interfaz_fsr)){
+                                        if(dialFS_acepta_instruccion(instruccion_fsr)){
                                             free(instruccion_fsr); //ya no me importa la instruccion, (ya se cual es)
                                             free(nombre_interfaz_fsr); //ya no me importa el nombre
                                             list_destroy(lista); //ya no me interesa la lista, saque toda su informacion necesaria
@@ -1391,6 +1391,7 @@ void atender_interfaz_generica(element_interfaz * datos_interfaz){
             pcb_block_gen * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,datos_interfaz->mutex_procesos_blocked);//agarra el primero de la cola de blocked 
             //contenido del paquete de instruccion
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
+            agregar_a_paquete(paquete,&(proceso_a_atender->el_pcb->PID),sizeof(int));
             agregar_a_paquete(paquete,proceso_a_atender->unidad_de_tiempo,strlen(proceso_a_atender->unidad_de_tiempo)+1);//unidad de tiempo
             if (enviar_paquete_io(paquete,*(datos_interfaz->fd_conexion_con_interfaz)) == (-1) ){ //devuelve -1 la interfaz había cerrado la conexion
                 push_con_mutex(datos_interfaz->cola_bloqueados,proceso_a_atender,datos_interfaz->mutex_procesos_blocked);//lo vuelvo a meter en la cola de bloqueados para procesar la desconexion de la interfaz
@@ -1416,6 +1417,7 @@ void atender_interfaz_STDIN(element_interfaz * datos_interfaz){
             pcb_block_STDIN * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,datos_interfaz->mutex_procesos_blocked);//agarra el primero de la cola de blocked 
             //contenido del paquete de instruccion
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
+            agregar_a_paquete(paquete,&(proceso_a_atender->el_pcb->PID),sizeof(int));
             agregar_a_paquete(paquete,proceso_a_atender->tamanio_lectura,sizeof(uint32_t));
             empaquetar_traducciones(paquete,proceso_a_atender->traducciones);
             if (enviar_paquete_io(paquete,*(datos_interfaz->fd_conexion_con_interfaz)) == (-1) ){ //devuelve -1 la interfaz había cerrado la conexion
@@ -1444,6 +1446,7 @@ void atender_interfaz_STDOUT(element_interfaz * datos_interfaz){
             pcb_block_STDOUT * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,datos_interfaz->mutex_procesos_blocked);//agarra el primero de la cola de blocked 
             //contenido del paquete de instruccion
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
+            agregar_a_paquete(paquete,&(proceso_a_atender->el_pcb->PID),sizeof(int));
             agregar_a_paquete(paquete,proceso_a_atender->tamanio_escritura,sizeof(uint32_t));
             empaquetar_traducciones(paquete,proceso_a_atender->traducciones);
             
@@ -1478,6 +1481,7 @@ void atender_interfaz_dialFS(element_interfaz * datos_interfaz){
             size_t tamanio_nombre_archivo = strlen(p_nombre_archivo);
 
             t_paquete * paquete = crear_paquete(INSTRUCCION);// paquet creado, ahora agregamos el contenido segund el tipo de instruccion
+            agregar_a_paquete(paquete,&(proceso_a_atender->el_pcb->PID),sizeof(int));
             agregar_a_paquete(paquete,&(proceso_a_atender->instruccion_fs),sizeof(int));
             agregar_a_paquete(paquete,p_nombre_archivo,tamanio_nombre_archivo+1); //sabemos que el nombre del archivo estará sí o sí
             
