@@ -49,7 +49,8 @@ void leer_configuraciones();
 //MUTEX
 void inicializar_semaforos();
 pthread_mutex_t mutex_lista_procesos; 
-pthread_mutex_t mutex_frames_array; 
+pthread_mutex_t mutex_frames_array;
+pthread_mutex_t mutex_memoria_principal; 
 
 /*
 char * user_space;

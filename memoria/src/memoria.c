@@ -45,9 +45,11 @@ void iniciar_memoria_contigua(){
 */
 
 void inicializar_semaforos(){
-	//pthread_mutex_init(&mutex_lista_new, NULL);
+	
 	pthread_mutex_init(&mutex_lista_procesos, NULL);
 	pthread_mutex_init(&mutex_frames_array, NULL);
+	pthread_mutex_init(&mutex_memoria_principal, NULL);
+	
 }
 
 //Esta pensado para que en un futuro lea mas de una configuracion. 
@@ -153,8 +155,7 @@ static void procesar_clientes(void* void_args){
 			return;
 		}
 		switch (cop) {
-		case SIZE_PAGE:
-			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
+		case SIZE_PAGE://solo ocurre una vez
 			send(cliente_socket,&tam_pagina,sizeof(int),NULL);
 			break;
 		case MENSAJE:
@@ -457,8 +458,9 @@ t_pagina* buscar_pagina(int npid, int numero_pagina){
 		t_proceso* un_proceso = (t_proceso*) t ;
         return un_proceso->pid == npid;
     };//lo hizo nico, y segun el compilador lo entiende aunque este en blanco, -SOy nico, lo usaste bien 
+	pthread_mutex_lock(&mutex_lista_procesos);
 	t_proceso* proceso = list_find(lista_de_procesos,(void*) encontrar_pid);
-
+	pthread_mutex_unlock(&mutex_lista_procesos);
 	//buscar pagina en tdp
 	t_pagina* pagina = list_get(proceso->tabla_de_paginas, numero_pagina);//aca obtengo puntero q apunta a la tabla de pagina alli obtengo marco
 	// IMPORTANTE, para encontrar el t_pagina SE PUEDE usar list_get en vez de list_find ¿POR QUÉ? porque justo COINCIDE el numero de pagina con el numero de elemento en la lista o sea: PAGINA O -> PAGINA1 -> PAGINA 2 -> PAGINA 3 | OJO esto no es así con los marcos
@@ -503,8 +505,10 @@ void procesar_escritura_en_memoria(int cliente_socket){ //esto es para las inter
 
 	list_destroy(lista);
 
+	pthread_mutex_lock(&mutex_memoria_principal);
 	memcpy(memoriaPrincipal+direccion_fisica,a_escribir,bytes); //OJO, nosotros no escribimos en memoria con caracter nulo, por eso no es strlen(string_a_escribir)+1
-
+	pthread_mutex_unlock(&mutex_memoria_principal);
+	
 	free(a_escribir);
 
 	char * rta = "Ok";
@@ -527,7 +531,10 @@ void procesar_lectura_en_memoria(int cliente_socket){
 	list_destroy(lista);
 
 	char * buffer= malloc(bytes);
+	
+	pthread_mutex_lock(&mutex_memoria_principal);
 	memcpy(buffer,memoriaPrincipal+direccion_fisica,bytes);  //ojo, buffer sin '\0' al final
+	pthread_mutex_lock(&mutex_memoria_principal);
 
 	t_paquete * paquete = crear_paquete(LECTURA_MEMORIA); //podría ser cualquier codigo de operacion, no me importa
 	agregar_a_paquete(paquete,buffer,bytes);//no lo enviamos con el caracter nulo porque en memoria no se guarda el caracter nulo, STDOUT se encarga de agregar el '\0'
