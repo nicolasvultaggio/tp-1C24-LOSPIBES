@@ -173,7 +173,7 @@ static void procesar_clientes(void* void_args){
 			t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);// por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
 			iniciar_proceso_a_pedido_de_Kernel(datos_proceso->path, datos_proceso->pid, cliente_socket);
 			send(fd_conexion_kernel,avisoDeFinalizacion,sizeof(int),NULL);
-			free(datos_proceso->path);//si string_from_format no genera otro malloc, no hace falta esta linea
+			free(datos_proceso->path);//hace falta esta linea porque ya no necesitamos el path solo
 			free(datos_proceso);
 			break;
 		case SOLICITAR_INSTRUCCION:// ESTE CODIGO SOLO LO ENVÍA CPU
