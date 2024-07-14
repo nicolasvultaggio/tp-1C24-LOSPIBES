@@ -1037,49 +1037,6 @@ t_list* iniciar_recursos_en_proceso(){
 	return lista;
 }
 
-/*
-t_list* iniciar_recursos_en_proceso(){V2
-	t_list* lista = list_create();
-	
-	for(int i = 0; i<cantidad_de_recursos; i++){
-        log_info(logger_kernel,"Cantidad de recursos: %d",cantidad_de_recursos);
-        recurso* recurso_buscado = list_get(lista_recursos,i);
-        char* nombreRecursoEncontrado = recurso_buscado->nombreRecurso;
-        log_info(logger_kernel,"Recurso sacado de la lista: %s", recurso_buscado->nombreRecurso);
-        log_info(logger_kernel,"Recurso encontrado: %s", nombreRecursoEncontrado);
-		recurso_asignado* recurso = malloc(sizeof(recurso_asignado));
-		recurso->nombreRecurso = malloc(strlen(nombreRecursoEncontrado) + 1);
-		strcpy(recurso->nombreRecurso, nombreRecursoEncontrado);
-		recurso->instancias = 0;
-		list_add(lista, recurso);
-//		log_warning(logger, "Se inicio %s con %d instancias.", recurso->nombre_recurso, recurso->instancias);
-	}
-
-	return lista;
-}
-
-*/
-/*
-t_list* iniciar_recursos_en_proceso(){V1
-	t_list* lista = list_create();
-
-	for(int i = 0; i<cantidad_de_recursos; i++){
-            char* nombre_obtenido = list_get(lista_recursos,i); // esta lista de recursos viene del config
-
-            if(nombre_obtenido != NULL){
-            recurso_asignado* recurso = malloc(sizeof(recurso_asignado)); 
-            recurso->nombreRecurso = malloc(strlen(nombre_obtenido) + 1);
-            strcpy(recurso->nombreRecurso, nombre_obtenido);
-            recurso->instancias = 0; 
-            list_add(lista, recurso);
-        }else {
-            printf("Error: nombre_obtenido es NULL en el índice %d\n", i);
-        }
-	}
-
-	return lista;
-}
-*/
 
 int simulacion_wait(pcb* proceso, char* recurso_wait){
     int se_bloquearia;
