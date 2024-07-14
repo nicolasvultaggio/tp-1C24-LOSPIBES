@@ -8,7 +8,8 @@
 
 /* VARIABLES DE LOG y CONFIG */
 t_log* logger_cpu;
-t_config* config_cpu;
+t_config* config_generales;
+t_config* config_prueba;
 pcb* PCB;
 
 t_list * lista_interrupciones;
@@ -30,6 +31,8 @@ sem_t sem_recibir_pcb;
 sem_t sem_execute;
 sem_t sem_interrupcion;
 
+
+char* path_configuracion;
 /* PARAMETROS CONFIG */
 char* ip_propio;
 char* puerto_cpu_dispatch; 

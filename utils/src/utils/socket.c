@@ -17,8 +17,12 @@ int crear_conexion(char *ip,char *puerto, t_log * unLogger, char * conectado)
 	int socket_cliente = socket(server_info->ai_family, server_info->ai_socktype, server_info-> ai_protocol);
 
 	// Ahora que tenemos el socket, vamos a conectarlo
-	connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
-	log_info(unLogger,"Conectado a %s ", conectado);
+	if(connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen) == (-1)){
+		log_info(unLogger,"Fallo la conexion con %s", conectado);
+	}else{
+		log_info(unLogger,"Conectado a %s ", conectado);
+
+	}
 	freeaddrinfo(server_info);
 
 	return socket_cliente;
@@ -57,7 +61,12 @@ int esperar_cliente(int socket_servidor, t_log * un_log, char * cliente)
 {
 	// Aceptamos un nuevo cliente
 	int socket_cliente = accept(socket_servidor,NULL,NULL);
-	log_info(un_log, "Se conectó el cliente %s ", cliente);
+	if(socket_cliente == (-1)){
+		log_info(un_log,"Ocurrio un error en el accept");
+	}else{
+		log_info(un_log, "Se conectó el cliente %s ", cliente);
+
+	}
 	return socket_cliente;
 }
 

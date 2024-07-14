@@ -35,8 +35,12 @@ int fd_conexion_server;
 
 char* puerto_propio;
 
+
+char * path_configuracion;
+
 t_log* logger_memoria;
-t_config* config_memoria;
+t_config* config_generales;
+t_config* config_prueba;
 
 
 int fd_conexion_kernel;

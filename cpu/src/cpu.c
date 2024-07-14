@@ -5,8 +5,10 @@ int main(int argc, char* argv[]){
 	decir_hola("CPU");
     
     logger_cpu = log_create("cpu_logs.log","cpu",1,LOG_LEVEL_INFO);
-    config_cpu = config_create("./configs/cpu.config");
+    config_generales = config_create("./configs/generales.config");
 
+	path_configuracion = argv[1];
+	config_prueba = config_create(path_configuracion);
 	log_info(logger_cpu, "INICIA CPUTA");
 
     leer__configuraciones();
@@ -23,31 +25,37 @@ int main(int argc, char* argv[]){
 	log_info(logger_cpu, "Handshake a MEMORIA realizado");
 	
 	inicializar_tlb();
+	int aviso_de_conexion = 1;
+	
+	
+
+
+
 
 	/* COMENZAMOS CON LA LOCURA DE HILOS */
-	pthread_t *hilo_dispatch = malloc(sizeof(pthread_t));
-	pthread_t *hilo_interrupt = malloc(sizeof(pthread_t));
-	pthread_t *hilo_cilo_instruccion = malloc(sizeof(pthread_t));
+	pthread_t hilo_dispatch ;
+	pthread_t hilo_interrupt ;
+	pthread_t hilo_cilo_instruccion ;
 
-	pthread_create(hilo_dispatch, NULL, (void*)dispatch, NULL);
-	pthread_create(hilo_interrupt, NULL, (void*)interrupcion, NULL);
-	pthread_create(hilo_cilo_instruccion, NULL, (void*)fetch, NULL);
+	pthread_create(&hilo_dispatch, NULL, (void*)dispatch, NULL);
+	pthread_create(&hilo_interrupt, NULL, (void*)interrupcion, NULL);
+	pthread_create(&hilo_cilo_instruccion, NULL, (void*)fetch, NULL);
 	
-	pthread_join(*hilo_dispatch, NULL);
-	pthread_join(*hilo_interrupt, NULL);
-	pthread_join(*hilo_cilo_instruccion, NULL);
+	pthread_join(hilo_dispatch, NULL);
+	pthread_join(hilo_interrupt, NULL);
+	pthread_join(hilo_cilo_instruccion, NULL);
 
     return terminar_programa();   
 }
 
 /* OBTENER PARAMETROS DE .CONFIG */
 void leer__configuraciones(){
-    ip_memoria = config_get_string_value(config_cpu,"IP_MEMORIA");
-    puerto_memoria = config_get_string_value(config_cpu,"PUERTO_MEMORIA");
-    puerto_cpu_dispatch = config_get_string_value(config_cpu,"PUERTO_ESCUCHA_DISPATCH");
-    puerto_cpu_interrupt = config_get_string_value(config_cpu,"PUERTO_ESCUCHA_INTERRUPT");
-	cantidad_entradas_tlb = config_get_string_value(config_cpu,"CANTIDAD_ENTRADAS_TLB");
-	algoritmo_tlb = config_get_string_value(config_cpu,"ALGORITMO_TLB");
+    ip_memoria = config_get_string_value(config_generales,"IP_MEMORIA");
+    puerto_memoria = config_get_string_value(config_generales,"PUERTO_MEMORIA");
+    puerto_cpu_dispatch = config_get_string_value(config_generales,"PUERTO_ESCUCHA_DISPATCH");
+    puerto_cpu_interrupt = config_get_string_value(config_generales,"PUERTO_ESCUCHA_INTERRUPT");
+	cantidad_entradas_tlb = config_get_string_value(config_prueba,"CANTIDAD_ENTRADAS_TLB");
+	algoritmo_tlb = config_get_string_value(config_prueba,"ALGORITMO_TLB");
 }
 
 /* Inicializo SEMAFOROS */
@@ -67,13 +75,14 @@ void inicializar_semaforos(){
 void dispatch(){
 
 	fd_cpu_dispatch = iniciar_servidor(NULL, puerto_cpu_dispatch,logger_cpu,"CPU");
-	log_info(logger_cpu, "Levantado el puerto DISPATCH");	
+	log_info(logger_cpu, "Esperando que se conecte el kernel mediante dispatch");
 	fd_escucha_dispatch  = esperar_cliente(fd_cpu_dispatch, logger_cpu, "Kernell (dispatch)");
 
 	while (1) {
 		sem_wait(&sem_recibir_pcb);
+		log_info(logger_cpu,"Me puse a escuchar PCBS");
 		switch (recibir_operacion(fd_escucha_dispatch, logger_cpu, "Kernell (dispatch)")) {
-		case PCBBITO:
+		case CODE_PCB:
 			PCB = recibir_pcb(fd_escucha_dispatch);
 			sem_post(&sem_execute);
 			break;
@@ -263,12 +272,21 @@ void ejecutar_set( char* registro, char* valor){
 	void * p_registro=capturar_registro(enum_registro);
 	size_t tam_registro = size_registro(enum_registro);
 
+	
+	
+
 	switch (tam_registro)
 	{
 	case sizeof(uint8_t):
+		uint8_t * pp8 = (uint8_t*) p_registro;
+		uint8_t p8 = *pp8;
+		log_info(logger_cpu,"Registro: %s, Valor: %s, Valor actual del registro: %u",registro,valor,p8);
 		memcpy(p_registro,&valor8,tam_registro);
 		break;
 	case sizeof(uint32_t):
+		uint32_t * pp32 = (uint32_t*) p_registro;
+		uint32_t p32 = *pp32;
+		log_info(logger_cpu,"Registro: %s, Valor: %s, Valor actual del registro: %u",registro,valor,p32);
 	 	memcpy(p_registro,&valor32,tam_registro);
 		break;
 	}
@@ -1174,10 +1192,11 @@ nodo_tlb * administrar_tlb( int PID, int numero_pagina, int marco){ //a revisar
 
 /* CHECK INTERRUPT */
 void interrupcion() {
-
+	
 	fd_cpu_interrupt = iniciar_servidor(NULL, puerto_cpu_interrupt, logger_cpu, "CPU");
-	log_info(logger_cpu, "Leavantado el puerto INTERRUPT");
+	log_info(logger_cpu, "Esperando que se conecte kernel a INTERRUPT");
 	fd_escucha_interrupt = esperar_cliente(fd_cpu_interrupt,logger_cpu, "Kernel (interrupt)");
+
 	while (1) {
 		switch (recibir_operacion(fd_escucha_interrupt, logger_cpu, "Kernel (interrupt)")) {
 		case INTERR:
@@ -1286,9 +1305,10 @@ int terminar_programa(){
     if(logger_cpu != NULL){
 		log_destroy(logger_cpu);
 	}
-	if(config_cpu != NULL){
-		config_destroy(config_cpu);
+	if(config_prueba != NULL){
+		config_destroy(config_prueba);
 	}
+	config_destroy(config_generales);
     liberar_conexion(fd_conexion_memoria);
 
 	return EXIT_SUCCESS;

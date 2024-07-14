@@ -1,9 +1,13 @@
 #include <../../memoria/include/memoria.h>
-int main() {
+int main(int argc, char* argv[]){
 
     logger_memoria = log_create("memoria_logs.log","memoria",1,LOG_LEVEL_INFO);
-    config_memoria = config_create("./configs/memoria.config");
-    leer_configuraciones();
+    config_generales = config_create("./configs/generales.config");
+    
+    path_configuracion = argv[1];
+	config_prueba = config_create(path_configuracion);
+	lista_de_procesos = list_create();
+	leer_configuraciones();
 	 //CHECKPOINT 3 lo que realice aca es crear la memoria de usuario 
 	inicializar_semaforos();
 	//iniciar_memoria_contigua();
@@ -28,7 +32,7 @@ int main() {
 	//porque si no creo que se queda infinitamente en server_escuchar
 
 	// Termino programa
-	terminar_programa(logger_memoria, config_memoria);
+	terminar_programa();
     
     //CHECKPOINT 3
 	
@@ -54,15 +58,16 @@ void inicializar_semaforos(){
 
 //Esta pensado para que en un futuro lea mas de una configuracion. 
 void leer_configuraciones(){
-    puerto_propio = config_get_string_value(config_memoria,"PUERTO_PROPIO");
-    tam_memoria= config_get_int_value(config_memoria, "TAM_MEMORIA");
-    tam_pagina= config_get_int_value(config_memoria,"TAM_PAGINA");
-    path_instrucciones=config_get_string_value(config_memoria,"PATH_INSTRUCCIONES");
-    retardo_respuesta= config_get_int_value(config_memoria,"RETARDO_RESPUESTA");
+    puerto_propio = config_get_string_value(config_generales,"PUERTO_PROPIO");
+    tam_memoria= config_get_int_value(config_prueba, "TAM_MEMORIA");
+    tam_pagina= config_get_int_value(config_prueba,"TAM_PAGINA");
+    path_instrucciones=config_get_string_value(config_generales,"PATH_INSTRUCCIONES");
+    retardo_respuesta= config_get_int_value(config_prueba,"RETARDO_RESPUESTA");
 }
 
 void terminar_programa(){
-    config_destroy(config_memoria);
+    config_destroy(config_generales);
+	config_destroy(config_prueba);
     log_destroy(logger_memoria);
 
 	//hay semaforos o hilos? 
@@ -71,13 +76,21 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
     
     t_list* instrucciones = list_create();
     FILE* f;
-    char *buffer = malloc(256);
+	log_info(logger_memoria,"La ruta que me llego es: %s",ruta);
+    char* buffer = malloc(256);
     //char* palabra;
     //char* instruccion_leida= NULL;
     //char* parametros[5];
     //int contadordeparametros;
+	
 
     f=fopen(ruta,"r");
+	if (f == NULL)
+	{
+		log_info(logger_memoria,"Error al archivo el archivo MOSTRO: %s", ruta);
+	}
+	
+
 	while (fgets(buffer, 256, f) != NULL) {//suponemos que una instruccion nunca dura mas de 256 caracteres
 		printf("Instruccion leida: %s\n",buffer);
 		
@@ -177,7 +190,11 @@ static void procesar_clientes(void* void_args){
 			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);// por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
 			iniciar_proceso_a_pedido_de_Kernel(datos_proceso->path, datos_proceso->pid, cliente_socket);
-			send(fd_conexion_kernel,avisoDeFinalizacion,sizeof(int),NULL);
+			log_info(logger_memoria,"Termine de crear el proceso, le mando la notificacion a kernel");
+			if(send(cliente_socket, &avisoDeFinalizacion, sizeof(int), 0) == -1){
+				log_info(logger_memoria,"Error enviando la notificacion a kernel");
+			}
+			log_info(logger_memoria,"Notificacion enviada");
 			free(datos_proceso->path);//hace falta esta linea porque ya no necesitamos el path solo
 			free(datos_proceso);
 			break;
@@ -270,8 +287,9 @@ void iniciar_proceso_a_pedido_de_Kernel(char* path, int pid, int socket_kernel) 
     //char* rutaCompleta = string_from_format("%s%s.txt",path_instrucciones ,path);
 	//SUPONEMOS QUE PATH ES SOLO EL NOMBRE DEL ARCHIVO, CON SU TXT Y TODO
 	//POR ESO TENEMOS QUE METERLE ANTES EL DIRECTORIO DONDE SABREMOS QUE VAN A ESTAR TODOS LOS ARCHIVOS DE PSEUDOCODIGO
-	
+	log_info(logger_memoria,"EL path que me llego es: %s",path);
 	char * rutaCompleta = string_from_format("%s%s",path_instrucciones,path);
+	log_info(logger_memoria, "EL path completo es %s",rutaCompleta);
 	/* ¿Qué hace string from format? esto de aca abajo, guardo la logica por si no funciona
 	int size_path= strlen(path); //suponemos que viene con el caracter nulo? chequear en KERNEL-> SI, VIENE CON CARACTER NULO, men
 	int size_path_instrucciones=strlen(path_instrucciones); //suponemos que tiene caracter nulo
@@ -346,12 +364,13 @@ t_linea_instruccion* buscar_instruccion(int pid, int program_counter){
 	
 	bool es_proceso_de_pid(void* arg){
 		t_proceso * un_proceso = (t_proceso *) arg;
-		return un_proceso->pid == program_counter;
+		return ((un_proceso->pid) == pid);
 	};
 	
 	//pthread_mutex_lock(&mutex_lista_procesos); //cambio de lugar los mutex porque creo que va a funcionar mejor, si no descomentar
 	t_proceso* proceso = list_find(lista_de_procesos,(void*)es_proceso_de_pid);
 	//pthread_mutex_unlock(&mutex_lista_procesos);
+	
 
 	return list_get(proceso->instrucciones, program_counter);
 }//BUSCA LA INSTRUCCION EN LA LISTA QUE CREAMOS CUANDO KERNEL PIDIO INCIAR PROCESO, YA ESTA CREADA EN UNA VARIABLE GLOBAL
@@ -368,9 +387,10 @@ void send_proxima_instruccion(int filedescriptor, t_linea_instruccion* instrucci
 	
 	agregar_a_paquete(paquete,&cantidad_de_parametros,sizeof(int)); //hace falta hacer esto? ya habíamos generado una funcion que te devolvia la cantidad de parametros segun el cod_instruccion
 
-	for(int i =0; ;i++){
-		char * aux = list_get(instruccion->parametros,0);
+	for(int i =0; i<cantidad_de_parametros ;i++){
+		char * aux = list_get(instruccion->parametros,i);
 		agregar_a_paquete(paquete,aux,strlen(aux)+1);//suponemos que los parametros llegan con el fin de linea, eso depende de string_split
+		log_info(logger_memoria,"Parametro agregado: %s", aux);
 	}
 
 	enviar_paquete(paquete, filedescriptor);
