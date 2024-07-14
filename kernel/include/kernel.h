@@ -83,6 +83,7 @@ t_list* cola_exit_liberados;
 t_list* lista_recursos;
 t_list* cola_block;
 
+int cantidad_de_recursos;
 int generador_pid = 0;
 
 sem_t sem_multiprogramacion; 

@@ -190,7 +190,7 @@ pcb *crear_pcb(){
     un_pcb->registros.SI = 0;
     un_pcb->registros.DI = 0;
 
-    un_pcb->recursos_asignados = list_create();
+    un_pcb->recursos_asignados = iniciar_recursos_en_proceso();
 
     return un_pcb;
 }
@@ -1018,27 +1018,68 @@ void atender_vuelta_dispatch(){
     }
 }
 
-
-
-//--------------------------
-/*
+//Volvi a hacer todo aca re mal pero bueno funciona. La idea es que los procesos tengan lso recursos pero con 0 instancias, entonces es mucho mas facil manejarlos.
 t_list* iniciar_recursos_en_proceso(){
 	t_list* lista = list_create();
-	int cantidad_recursos = string_array_size(recursos);
+	char** recursos2 = config_get_array_value(config_prueba, "RECURSOS");
+	int cantidad_recursos = string_array_size(recursos2);
 	for(int i = 0; i<cantidad_recursos; i++){
-		char* nombre_obtenido = recursos[i]; // esta lista de recursos viene del config
-		recurso_asignado* recurso = malloc(sizeof(recurso_asignado)); 
-		recurso->nombreRecurso = malloc(strlen(nombre_obtenido) + 1);
-		strcpy(recurso->nombreRecurso, nombre_obtenido);
-		recurso->instancias = instancias[i]; // esta lista de instancias viene del config
+		char* string = recursos2[i];
+		recurso_asignado* recurso = malloc(sizeof(recurso_asignado));
+		recurso->nombreRecurso = malloc(sizeof(char) * strlen(string) + 1);
+		strcpy(recurso->nombreRecurso, string);
+		recurso->instancias = 0;
 		list_add(lista, recurso);
 	}
-	string_array_destroy(recursos);
+
+	string_array_destroy(recursos2);
+
+	return lista;
+}
+
+/*
+t_list* iniciar_recursos_en_proceso(){V2
+	t_list* lista = list_create();
+	
+	for(int i = 0; i<cantidad_de_recursos; i++){
+        log_info(logger_kernel,"Cantidad de recursos: %d",cantidad_de_recursos);
+        recurso* recurso_buscado = list_get(lista_recursos,i);
+        char* nombreRecursoEncontrado = recurso_buscado->nombreRecurso;
+        log_info(logger_kernel,"Recurso sacado de la lista: %s", recurso_buscado->nombreRecurso);
+        log_info(logger_kernel,"Recurso encontrado: %s", nombreRecursoEncontrado);
+		recurso_asignado* recurso = malloc(sizeof(recurso_asignado));
+		recurso->nombreRecurso = malloc(strlen(nombreRecursoEncontrado) + 1);
+		strcpy(recurso->nombreRecurso, nombreRecursoEncontrado);
+		recurso->instancias = 0;
+		list_add(lista, recurso);
+//		log_warning(logger, "Se inicio %s con %d instancias.", recurso->nombre_recurso, recurso->instancias);
+	}
+
+	return lista;
+}
+
+*/
+/*
+t_list* iniciar_recursos_en_proceso(){V1
+	t_list* lista = list_create();
+
+	for(int i = 0; i<cantidad_de_recursos; i++){
+            char* nombre_obtenido = list_get(lista_recursos,i); // esta lista de recursos viene del config
+
+            if(nombre_obtenido != NULL){
+            recurso_asignado* recurso = malloc(sizeof(recurso_asignado)); 
+            recurso->nombreRecurso = malloc(strlen(nombre_obtenido) + 1);
+            strcpy(recurso->nombreRecurso, nombre_obtenido);
+            recurso->instancias = 0; 
+            list_add(lista, recurso);
+        }else {
+            printf("Error: nombre_obtenido es NULL en el índice %d\n", i);
+        }
+	}
 
 	return lista;
 }
 */
-//---------------------------------------
 
 int simulacion_wait(pcb* proceso, char* recurso_wait){
     int se_bloquearia;
@@ -1161,14 +1202,15 @@ void quitar_recurso(char* recurso_a_sacar, pcb* pcb){
 	}
 }
 
+
 //Esta funcion nos devuelve la lista de recursos 
 t_list* inicializar_recursos(){
 	t_list* lista = list_create();
 	int* instancias_recursos = arrayDeStrings_a_arrayDeInts(instancias);
 	string_array_destroy(instancias);
-	int cantidad_recursos = string_array_size(recursos);
+	cantidad_de_recursos = string_array_size(recursos);
 
-	for(int i = 0; i < cantidad_recursos; i++){ // sobre cada recurso hace:
+	for(int i = 0; i < cantidad_de_recursos; i++){ // sobre cada recurso hace:
 		char* nombreRecurso = recursos[i];  // obtiene el "nombre"
 		recurso* recurso = malloc(sizeof(recurso)); // reserva memoria para la estructura
 		recurso->nombreRecurso = malloc(sizeof(char) * strlen(nombreRecurso) + 1); // reserva la memoria para el nombre
