@@ -576,6 +576,8 @@ void procesar_reajuste_de_memoria(int un_fd){
 	free(p_int);
 	list_destroy(lista);
 
+	pthread_mutex_lock(&mutex_lista_procesos);
+
 	t_proceso * proceso_reajustado = buscar_proceso_en_lista(un_pid);
 	
 	int cantidad_de_paginas_finales = divide_and_ceil(((int) bytes_finales),tam_pagina);
@@ -601,6 +603,8 @@ void procesar_reajuste_de_memoria(int un_fd){
 				break;
 		}
 	}
+
+	pthread_mutex_unlock(&mutex_lista_procesos);
 }
 
 t_proceso *buscar_proceso_en_lista(int un_pid){//IMPORTANTE: NO IMPLEMENTA MUTEX, siempre usarlo afuera
