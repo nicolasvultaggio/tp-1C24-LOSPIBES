@@ -15,18 +15,19 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
+
     nombre_de_interfaz = argv[1]; //argv[0] es el comando en sí, por eso no se usa
     path_configuracion = argv[2];
     decir_hola(nombre_de_interfaz);
 
     logger_io= log_create("entradasalida_logs.log",nombre_de_interfaz,1,LOG_LEVEL_INFO); // crea el puntero al log
-    config_io = config_create(path_configuracion); // crea el puntero al archivo de config
-    
+    config_prueba = config_create(path_configuracion); // crea el puntero al archivo de config
+    config_generales = config_create("./configs/generales.config");
+
     leer_configuraciones();//eso, guarda toda la info necesaria del archivo de las configuraciones
     
-    inicializar_archivos();
 
-    if(iniciar_conexiones()){
+    if(!iniciar_conexiones()){
         log_info(logger_io,"Error al iniciar conexión al Kernel");
         terminar_programa();
         exit (2);
@@ -43,14 +44,14 @@ int main(int argc, char* argv[]) {
 
 void leer_configuraciones(){
 
-   tipo_de_interfaz = config_get_string_value(config_io,"TIPO_INTERFAZ");
-   if(!strcmp(tipo_de_interfaz,"Generica")){
+   tipo_de_interfaz = config_get_string_value(config_prueba,"TIPO_INTERFAZ");
+   if(!strcmp(tipo_de_interfaz,"GENERICA")){
         type_interfaz = GENERICA;
     }else if(!strcmp(tipo_de_interfaz,"STDIN")){
         type_interfaz = STDIN;
     }else if(!strcmp(tipo_de_interfaz,"STDOUT")){
         type_interfaz = STDOUT;
-    }else if(!strcmp(tipo_de_interfaz,"DialFS")){
+    }else if(!strcmp(tipo_de_interfaz,"DIALFS")){
         type_interfaz = DIALFS;
     }else{
         log_info(logger_io,"Tipo de interfaz desconocido");
@@ -58,39 +59,41 @@ void leer_configuraciones(){
     
     switch(type_interfaz){ // Hay algunas que se leen en todos los casos pero la repeticion de logica nos chupa la cabeza de la chota
         case GENERICA:
-            tiempo_unidad_trabajo = atoi(config_get_string_value(config_io,"TIEMPO_UNIDAD_TRABAJO"));
-            ip_kernel = config_get_string_value(config_io,"IP_KERNEL");
-            puerto_kernel = config_get_string_value(config_io,"PUERTO_KERNEL");
+            tiempo_unidad_trabajo = atoi(config_get_string_value(config_prueba,"TIEMPO_UNIDAD_TRABAJO"));
+            ip_kernel = config_get_string_value(config_generales,"IP_KERNEL");
+            puerto_kernel = config_get_string_value(config_generales,"PUERTO_KERNEL");
             log_info(logger_io,"Tipo de interfaz iniciada: %s", tipo_de_interfaz);
             break;
         case STDIN:
-            ip_memoria = config_get_string_value(config_io,"IP_MEMORIA");
-            puerto_memoria = config_get_string_value(config_io,"PUERTO_MEMORIA");
-            ip_kernel = config_get_string_value(config_io,"IP_KERNEL");
-            puerto_kernel = config_get_string_value(config_io,"PUERTO_KERNEL");
+            ip_memoria = config_get_string_value(config_generales,"IP_MEMORIA");
+            puerto_memoria = config_get_string_value(config_generales,"PUERTO_MEMORIA");
+            ip_kernel = config_get_string_value(config_generales,"IP_KERNEL");
+            puerto_kernel = config_get_string_value(config_generales,"PUERTO_KERNEL");
             log_info(logger_io,"Tipo de interfaz iniciada: %s", tipo_de_interfaz);
             break;
         case STDOUT:
-            tiempo_unidad_trabajo = atoi(config_get_string_value(config_io,"TIEMPO_UNIDAD_TRABAJO"));
-            ip_memoria = config_get_string_value(config_io,"IP_MEMORIA");
-            puerto_memoria = config_get_string_value(config_io,"PUERTO_MEMORIA");
-            ip_kernel = config_get_string_value(config_io,"IP_KERNEL");
-            puerto_kernel = config_get_string_value(config_io,"PUERTO_KERNEL");
+            tiempo_unidad_trabajo = atoi(config_get_string_value(config_prueba,"TIEMPO_UNIDAD_TRABAJO"));
+            ip_memoria = config_get_string_value(config_generales,"IP_MEMORIA");
+            puerto_memoria = config_get_string_value(config_generales,"PUERTO_MEMORIA");
+            ip_kernel = config_get_string_value(config_generales,"IP_KERNEL");
+            puerto_kernel = config_get_string_value(config_generales,"PUERTO_KERNEL");
             log_info(logger_io,"Tipo de interfaz iniciada: %s", tipo_de_interfaz);
             break;
         case DIALFS:
-            tiempo_unidad_trabajo = atoi(config_get_string_value(config_io,"TIEMPO_UNIDAD_TRABAJO"));
-            ip_kernel = config_get_string_value(config_io,"IP_KERNEL");
-            puerto_kernel = config_get_string_value(config_io,"PUERTO_KERNEL");
-            ip_memoria = config_get_string_value(config_io,"IP_MEMORIA");
-            puerto_memoria = config_get_string_value(config_io,"PUERTO_MEMORIA");
-            path_base_dialfs = config_get_string_value(config_io,"PATH_BASE_DIALFS");
-            block_size = atoi(config_get_string_value(config_io,"BLOCK_SIZE"));
-            block_count = atoi(config_get_string_value(config_io,"BLOCK_COUNT"));
-            retraso_compactacion = atoi(config_get_string_value(config_io,"RETRASO_COMPACTACION"));
-            path_bitmap = config_get_string_value(config_io,"PATH_BITMAP");
-            path_bloques = config_get_string_value(config_io,"PATH_BLOQUES");
+            tiempo_unidad_trabajo = atoi(config_get_string_value(config_prueba,"TIEMPO_UNIDAD_TRABAJO"));
+            ip_kernel = config_get_string_value(config_generales,"IP_KERNEL");
+            puerto_kernel = config_get_string_value(config_generales,"PUERTO_KERNEL");
+            ip_memoria = config_get_string_value(config_generales,"IP_MEMORIA");
+            puerto_memoria = config_get_string_value(config_generales,"PUERTO_MEMORIA");
+            path_base_dialfs = config_get_string_value(config_prueba,"PATH_BASE_DIALFS");
+            block_size = atoi(config_get_string_value(config_prueba,"BLOCK_SIZE"));
+            block_count = atoi(config_get_string_value(config_prueba,"BLOCK_COUNT"));
+            retraso_compactacion = atoi(config_get_string_value(config_prueba,"RETRASO_COMPACTACION"));
+            path_bitmap = config_get_string_value(config_prueba,"PATH_BITMAP");
+            path_bloques = config_get_string_value(config_prueba,"PATH_BLOQUES");
             log_info(logger_io,"Tipo de interfaz iniciada: %s", tipo_de_interfaz);
+            inicializar_archivos();
+
             break;
         default:
             log_info(logger_io,"Tipo de interfaz desconocido");
@@ -1024,9 +1027,9 @@ void abrir_bitmap(){
         close(fd);
         exit(1);
     }
-
     // Crear el bitarray con el buffer mapeado
     bitmap = bitarray_create_with_mode(buffer_bitmap, tamanio_bitmap, MSB_FIRST);
+    log_info(logger_io,"Bitmap creado correctamente");
 
     close(fd);
 }
@@ -1068,6 +1071,7 @@ void abrir_archivo_bloques(){
         exit(1);
     }
 
+    log_info(logger_io,"Archivo de bloques creado correctamente");
     close(fd);
 }
 
@@ -1083,9 +1087,10 @@ void terminar_programa()
 	if(logger_io != NULL){
 		log_destroy(logger_io);
 	}
-	if(config_io != NULL){
-		config_destroy(config_io);
+	if(config_prueba != NULL){
+		config_destroy(config_prueba);
 	}
+    config_destroy(config_generales);
     liberar_conexion(fd_conexion_kernel);
     liberar_conexion(fd_conexion_memoria);
 }

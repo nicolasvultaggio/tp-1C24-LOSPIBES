@@ -16,8 +16,8 @@ typedef struct {
     char * nombre;
     vuelta_type tipo;
     t_list * cola_bloqueados;
-    sem_t  * sem_procesos_blocked; //es mas facil su manejo si su valor lo manejamos desde distintas referencias
-    pthread_mutex_t * mutex_procesos_blocked; // para mutua exclusion de la cola bloqueados
+    sem_t sem_procesos_blocked; //es mas facil su manejo si su valor lo manejamos desde distintas referencias
+    pthread_mutex_t mutex_procesos_blocked; // para mutua exclusion de la cola bloqueados
 } element_interfaz;
 
 typedef struct {
@@ -122,8 +122,10 @@ void quitar_recurso(char* recurso_a_sacar, pcb* pcb);
 
 //no sabemos cuales haran falta todavía, pero por las dudas los declaro
 t_log* logger_kernel;
-t_config* config_kernel;
+t_config* config_generales;
+t_config* config_prueba;
 t_log * logger_obligatorio;
+char* path_configuracion;
 
 //FUNCIONES DENTRO DEL MAIN
 void leer_configuraciones();

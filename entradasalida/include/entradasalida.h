@@ -55,7 +55,8 @@ char * tipo_de_interfaz;
 int type_interfaz;
 
 t_log* logger_io;
-t_config* config_io;
+t_config* config_prueba;
+t_config* config_generales;
 
 void leer_configuraciones();
 void terminar_programa();

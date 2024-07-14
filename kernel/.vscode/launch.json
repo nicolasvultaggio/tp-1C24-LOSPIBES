@@ -9,7 +9,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": [],
+      "args": ["/home/utnso/Desktop/tp-2024-1c-Grupo-5/kernel/config/pruebaPlani.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
