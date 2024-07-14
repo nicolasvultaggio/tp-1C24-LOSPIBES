@@ -389,7 +389,7 @@ void enviar_pcb(pcb* PCB, int un_fd, op_code OPERACION, motivo_desalojo MOTIVO, 
 			-Sergio:ES NECESARIO COLOCAR LOS MOTIVOS EN LOS UE NO SE AGREGA INFORMACION AL PCB? 
 			-Nico: tiene razon Sergio, creo que no haría falta poner el resto porque total no agregan mas informacion, podría salir del switch ahora
 			(cuando el resto lo vea pongan que opinan)
-		*/
+   			-Tincho: si
 		case EXITO:
 			break;
 		case EXIT_CONSOLA:
@@ -404,6 +404,7 @@ void enviar_pcb(pcb* PCB, int un_fd, op_code OPERACION, motivo_desalojo MOTIVO, 
 			break;
 		case SIN_MEMORIA:
 			break;
+		*/
 		default:
 			break;
 	}
@@ -728,43 +729,29 @@ uint32_t recibir_valor_leido_memoria(int fd_memoria){
 int cantidad_de_parametros_segun_instruccion(cod_instruccion una_instruccion){
 	switch(una_instruccion){
 		case SET:
-		return 2 ;
 		case MOV_IN :
-		return 2 ;
 		case MOV_OUT:
-		return 2;
 		case SUM:
-		return 2;
 		case SUB :
-		return 2;
 		case JNZ:
-		return 2;
-		case RESIZE:
-		return 1;
-		case COPY_STRING:
-		return 1;
-		case WAIT:
-		return 1 ;
-		case SIGNAL:
-		return 1;
 		case IO_GEN_SLEEP:
-		return 2 ;
-		case IO_STDIN_READ:
-		return 3;
-		case IO_STDOUT_WRITE:
-		return 3 ;
 		case IO_FS_CREATE:
-		return 2;
 		case IO_FS_DELETE:
-		return 2;
+			return 2;
+		case RESIZE:
+		case COPY_STRING:
+		case WAIT:
+		case SIGNAL:
+			return 1;
+		case IO_STDIN_READ:
+		case IO_STDOUT_WRITE:
 		case IO_FS_TRUNCATE:
-		return 3;
+			return 3 ;
 		case IO_FS_WRITE:
-		return 5 ;
 		case IO_FS_READ:
-		return 5;
+			return 5;
 		case EXIT:
-		return 0 ;
+			return 0 ;
 	}
 }
 
