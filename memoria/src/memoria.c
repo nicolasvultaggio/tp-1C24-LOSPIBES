@@ -103,10 +103,13 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
 			buffer[len-1]='\0'; //quitamos el salto de linea de la instruccion en caso de que no sea la ultima
 		}
 		
+		log_info(logger_memoria,"Instruccion completa leida de pseudocodigo: %s", buffer);
 		char ** array_de_instruccion = string_split(buffer," "); //separar cada parte de la linea
 		
-		una_instruccion->instruccion=instruccion_to_enum(array_de_instruccion[0]);
 
+		log_info(logger_memoria,"Instruccion leida: %s", array_de_instruccion[0]);
+		una_instruccion->instruccion=instruccion_to_enum(array_de_instruccion[0]);
+		log_info(logger_memoria,"codigo de instruccion: %d", una_instruccion->instruccion);
 
 		int cantidad_de_parametros = cantidad_de_parametros_segun_instruccion(una_instruccion->instruccion);//saber la cantidad de parametros segun la instruccion
 		
@@ -223,7 +226,10 @@ static void procesar_clientes(void* void_args){
 		case FINALIZAR_PROCESO:
 			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			finalizar_proceso_a_pedido_de_kernel(cliente_socket); //si o si recibe el pid ahi adentro
-			send(fd_conexion_kernel,avisoDeFinalizacion,sizeof(int),NULL);
+			if(send(cliente_socket, &avisoDeFinalizacion, sizeof(int), 0) == -1){
+				log_info(logger_memoria,"Error enviando la notificacion a kernel");
+			}
+			log_info(logger_memoria,"Notificacion enviada");
 			break;
 		default:
 			log_error(logger_memoria, "Codigo de operacion no reconocido en memoria");
@@ -252,7 +258,6 @@ cod_instruccion instruccion_to_enum(char* instruccion){
 		return IO_STDIN_READ;
 	} else if(strcmp(instruccion, "SIGNAL") == 0){
 		return SIGNAL;
-
 	} else if(strcmp(instruccion, "MOV_OUT") == 0){
 		return MOV_OUT;
 	} else if(strcmp(instruccion, "MOV_IN") == 0){
@@ -280,7 +285,10 @@ cod_instruccion instruccion_to_enum(char* instruccion){
      else if (strcmp(instruccion, "IO_FS_READ") == 0){
 		return IO_FS_READ;
 	}
-	return EXIT_FAILURE;
+	 else if(strcmp(instruccion, "IO_GEN_SLEEP") == 0){
+		return IO_GEN_SLEEP;
+	 }
+	return 19;
 }
 void iniciar_proceso_a_pedido_de_Kernel(char* path, int pid, int socket_kernel) {
     // Construir la ruta completa del archivo  
@@ -367,9 +375,9 @@ t_linea_instruccion* buscar_instruccion(int pid, int program_counter){
 		return ((un_proceso->pid) == pid);
 	};
 	
-	//pthread_mutex_lock(&mutex_lista_procesos); //cambio de lugar los mutex porque creo que va a funcionar mejor, si no descomentar
+	
 	t_proceso* proceso = list_find(lista_de_procesos,(void*)es_proceso_de_pid);
-	//pthread_mutex_unlock(&mutex_lista_procesos);
+	
 	
 
 	return list_get(proceso->instrucciones, program_counter);
@@ -382,15 +390,16 @@ void send_proxima_instruccion(int filedescriptor, t_linea_instruccion* instrucci
 	t_paquete* paquete = crear_paquete(PROXIMA_INSTRUCCION);
 
 	agregar_a_paquete(paquete, &(instruccion->instruccion), sizeof(cod_instruccion));
-	
+	log_info(logger_memoria,"Codigo de instruccion: %d", instruccion->instruccion);
+
 	int cantidad_de_parametros = list_size(instruccion->parametros);
 	
-	agregar_a_paquete(paquete,&cantidad_de_parametros,sizeof(int)); //hace falta hacer esto? ya habíamos generado una funcion que te devolvia la cantidad de parametros segun el cod_instruccion
+	//agregar_a_paquete(paquete,&cantidad_de_parametros,sizeof(int)); //hace falta hacer esto? ya habíamos generado una funcion que te devolvia la cantidad de parametros segun el cod_instruccion
 
 	for(int i =0; i<cantidad_de_parametros ;i++){
 		char * aux = list_get(instruccion->parametros,i);
 		agregar_a_paquete(paquete,aux,strlen(aux)+1);//suponemos que los parametros llegan con el fin de linea, eso depende de string_split
-		log_info(logger_memoria,"Parametro agregado: %s", aux);
+		log_info(logger_memoria,"Parametro agregado:%s en la posicion: %d", aux,i);
 	}
 
 	enviar_paquete(paquete, filedescriptor);
@@ -405,8 +414,8 @@ void procesar_pedido_instruccion(int socket_cpu){
 	pthread_mutex_lock(&mutex_lista_procesos); //implemento estos mutex para que nadie pueda ni siquiera modificar los datos de la lista, aantes solo bloqueabamos al buscar un elemento
 	t_linea_instruccion* instruccion_a_enviar = buscar_instruccion(solicitud_instruccion->pid, solicitud_instruccion->program_counter );
 	free(solicitud_instruccion);
-	send_proxima_instruccion(socket_cpu, instruccion_a_enviar);
 	pthread_mutex_unlock(&mutex_lista_procesos);
+	send_proxima_instruccion(socket_cpu, instruccion_a_enviar);
 }
 /*************************************/
 int iniciarMemoria(){
@@ -479,8 +488,8 @@ void procesar_solicitud_nromarco(int fd1){
 	log_info(logger_memoria,"PID: %d - Pagina: %d- Marco: %d",valoresenbruto->pid,valoresenbruto->numero_pagina,pagina->marco);
 
 	free(valoresenbruto); //excelente
-	send_marco(fd1, pagina->marco);//devuelvo el NRO DE MARCO, HAY QUE HACER VALIDACION ? SI El proceso todavia no tiene marcos asignados ya que no hizo resize
 	pthread_mutex_unlock(&mutex_lista_procesos);
+	send_marco(fd1, pagina->marco);//devuelvo el NRO DE MARCO, HAY QUE HACER VALIDACION ? SI El proceso todavia no tiene marcos asignados ya que no hizo resize
 }
 
 t_pagina* buscar_pagina(int npid, int numero_pagina){
@@ -489,9 +498,9 @@ t_pagina* buscar_pagina(int npid, int numero_pagina){
 		t_proceso* un_proceso = (t_proceso*) t ;
         return un_proceso->pid == npid;
     };//lo hizo nico, y segun el compilador lo entiende aunque este en blanco, -SOy nico, lo usaste bien 
-	//pthread_mutex_lock(&mutex_lista_procesos);
+	
 	t_proceso* proceso = list_find(lista_de_procesos,(void*) encontrar_pid);
-	//pthread_mutex_unlock(&mutex_lista_procesos);
+	
 	//buscar pagina en tdp
 	t_pagina* pagina = list_get(proceso->tabla_de_paginas, numero_pagina);//aca obtengo puntero q apunta a la tabla de pagina alli obtengo marco
 	// IMPORTANTE, para encontrar el t_pagina SE PUEDE usar list_get en vez de list_find ¿POR QUÉ? porque justo COINCIDE el numero de pagina con el numero de elemento en la lista o sea: PAGINA O -> PAGINA1 -> PAGINA 2 -> PAGINA 3 | OJO esto no es así con los marcos
@@ -634,9 +643,7 @@ t_proceso *buscar_proceso_en_lista(int un_pid){//IMPORTANTE: NO IMPLEMENTA MUTEX
 		return un_proceso_c->pid == un_pid;
 	};//no importa que esta en blanco es un tema del editor de texto, el compilador lo va a poder compilar
 
-	//pthread_mutex_lock(&mutex_lista_procesos); // saco el mutex de aca porque esto bloquearia solo al buscar, pero nosotros queremos bloquear durante toda la modificacion de datos
 	t_proceso * proceso_encontrado = list_find(lista_de_procesos, (void*)es_proceso_con_pid);
-	//pthread_mutex_unlock(&mutex_lista_procesos);
 
 	return proceso_encontrado;
 

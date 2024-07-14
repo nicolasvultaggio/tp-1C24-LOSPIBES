@@ -3,7 +3,8 @@
 int main(int argc, char* argv[]){
     
 	decir_hola("CPU");
-    
+    PCB = NULL;
+
     logger_cpu = log_create("cpu_logs.log","cpu",1,LOG_LEVEL_INFO);
     config_generales = config_create("./configs/generales.config");
 
@@ -80,10 +81,16 @@ void dispatch(){
 
 	while (1) {
 		sem_wait(&sem_recibir_pcb);
-		log_info(logger_cpu,"Me puse a escuchar PCBS");
 		switch (recibir_operacion(fd_escucha_dispatch, logger_cpu, "Kernell (dispatch)")) {
 		case CODE_PCB:
-			PCB = recibir_pcb(fd_escucha_dispatch);
+			t_list* paquete = recibir_paquete(fd_escucha_dispatch);
+			if (PCB)
+			{
+				pcb_destroy(PCB);
+				PCB = NULL;
+			}
+			
+			PCB = guardar_datos_del_pcb(paquete);
 			sem_post(&sem_execute);
 			break;
 		case -1:
@@ -91,7 +98,7 @@ void dispatch(){
 			fd_escucha_dispatch = esperar_cliente(fd_cpu_dispatch, logger_cpu, "Kernel (dispatch)");
 			break;
 		default:
-			log_warning(logger_cpu,"Operacion desconocida.");
+			log_warning(logger_cpu,"Operacion desconocida DISPATCH.");
 			break;
 		}
 	}
@@ -136,6 +143,7 @@ t_linea_instruccion * prox_instruccion(int pid, int program_counter){
 
 /* DECODE interpreto las intrucciones y las mando a ejecutar */
 void decode (t_linea_instruccion* instruccion, pcb* PCB){
+	log_info(logger_cpu,"Codigo de instruccion recibido: %d", instruccion->instruccion);
 	t_list * parametros = instruccion->parametros;
 	void * parametro1=NULL;
 	void * parametro2=NULL;
@@ -146,6 +154,8 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 		case SET: 
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
+			log_info(logger_cpu,"El parametro 1 es: %s",(char*) parametro1);
+			log_info(logger_cpu,"El parametro 2 es: %s",(char*) parametro2);
 			log_info(logger_cpu, "PID: %d - Ejecutando SET %s %s", PCB->PID, (char*)parametro1, (char*)parametro2);
 			ejecutar_set( (char*)parametro1, (char*)parametro2);
 			break;
@@ -271,9 +281,6 @@ void ejecutar_set( char* registro, char* valor){
 	enum_reg_cpu enum_registro= registro_to_enum(registro);
 	void * p_registro=capturar_registro(enum_registro);
 	size_t tam_registro = size_registro(enum_registro);
-
-	
-	
 
 	switch (tam_registro)
 	{
@@ -1200,6 +1207,7 @@ void interrupcion() {
 	while (1) {
 		switch (recibir_operacion(fd_escucha_interrupt, logger_cpu, "Kernel (interrupt)")) {
 		case INTERR:
+			log_info(logger_cpu,"Acabo de recibir una interrupcion");
 			element_interrupcion* nueva_interrupcion = recibir_motiv_desalojo(fd_escucha_interrupt);
 			push_con_mutex(lista_interrupciones,nueva_interrupcion,&mutex_lista_interrupciones);
 			break;
@@ -1208,7 +1216,7 @@ void interrupcion() {
 			fd_escucha_interrupt = esperar_cliente(fd_cpu_interrupt,logger_cpu, "Kernel (interrupt)");
 			break;
 		default:
-			log_warning(logger_cpu,"Operacion desconocida.");
+			log_warning(logger_cpu,"Operacion desconocida INTERRUPCION.");
 			break;
 		}
 	}
@@ -1218,41 +1226,58 @@ void interrupcion() {
 
 
 void check_interrupt (){
+	log_info(logger_cpu,"Es exit: %d", es_exit);
+	log_info(logger_cpu,"hubo desalojo: %d", hubo_desalojo);
+	log_info(logger_cpu,"wait o signal: %d", wait_o_signal);
+	
 	pthread_mutex_lock(&mutex_lista_interrupciones);//posta que aca esta bien
 	//la idea es decirle al kernel si hubo interrupcion por fin de consola
 	if(!es_exit){//si es exit entonces no me importa ninguna interrupcion
+		
 		element_interrupcion * interrupcion_actual = seleccionar_interrupcion();
 		if(interrupcion_actual!=NULL){
+			log_info(logger_cpu," hubo interrupcion");
 			if(hubo_desalojo){ //ojo con wait, wait apenas desaloja, se debe esperar una respuesta del kernel, que diga si ese pcb se bloqueo o no, si se bloqueo->hubo_desalojo=true y si no se bloqueo, hubo_desalojo=false
 				//aca entra con cualquier syscall, y los casos en los que wait y signal desalojarian al proceso
+				log_info(logger_cpu," Hubo interrupcion pero se desalojo el proceso");
 				send(fd_escucha_dispatch,&(interrupcion_actual->motivo),sizeof(motivo_desalojo),NULL); //avisamos que tipo de interrupcion hubo al kernel
 				sem_post(&sem_recibir_pcb);//nos ponemos a escuchar otro pcb
 			}else{ //no hubo desalojo-> habra que atender la interrupcion
+				log_info(logger_cpu," Hubo interrupcion y no se desalojo el proceso");
 				if(wait_o_signal){ //tiene logica distinta porque debe esperar a que el kernel maneje los casos de wait y signal, antes solo habíamos hecho la simulacion de que pasaria
 					//aca entra en los casos en los que wait y signal no bloquean al proceso
+					log_info(logger_cpu," Hubo interrupcion y es de wait o signal");
 					send(fd_escucha_dispatch,&(interrupcion_actual->motivo),sizeof(motivo_desalojo),NULL); //avisamos que tipo de interrupcion hubo al kernel, que ya tenia el pcb.
 					sem_post(&sem_recibir_pcb);//nos ponemos a escuchar otro pcb
 				}else{ 
-					//aca entra si hubo cualquier instruccion no desalojante 
+					//aca entra si hubo cualquier instruccion no desalojante
+					log_info(logger_cpu," Hubo interrupcion y no es wait o signal"); 
 					enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,interrupcion_actual->motivo,NULL,NULL,NULL,NULL,NULL);
 					sem_post(&sem_recibir_pcb);
 				}
 			}
 		}else{
+			log_info(logger_cpu,"NO Hubo interrupcion");
 			if(hubo_desalojo){ // cualquier syscall- wait y signal en casos bloqueantes
+				log_info(logger_cpu,"NO Hubo interrupcion pero se desalojo y no son wait o signal");
 				motivo_desalojo a = VACIO;
 				send(fd_escucha_dispatch,&a,sizeof(motivo_desalojo),NULL); //avisamos al kernel que no hubo interrupcion de fin de consola
 				sem_post(&sem_recibir_pcb);
 			}else{
 				if(wait_o_signal){ // cualquier funcion no syscall y wait y signal en casos no bloqueantes
+					log_info(logger_cpu,"NO Hubo interrupcion pero se desalojo por wait o signal");
 					int a = 777; //solo mando esto para que wait o signal se pueda destrabar
 					send(fd_cpu_dispatch,&a,sizeof(int),NULL);
 				}
 				sem_post(&sem_execute);
 			}
 		}
+	}else{
+		sem_post(&sem_recibir_pcb);
 	}
+	
 	list_destroy_and_destroy_elements(lista_interrupciones,(void*)free);
+	lista_interrupciones = list_create();
 	pthread_mutex_unlock(&mutex_lista_interrupciones);
 }
 /*
@@ -1270,6 +1295,7 @@ element_interrupcion * recibir_motiv_desalojo(int fd_escucha_interrupt){
 	element_interrupcion * nueva_interrupcion = malloc(sizeof(element_interrupcion));
 	nueva_interrupcion->motivo= *motivo;
 	nueva_interrupcion->pid = * el_pid;
+	log_info(logger_cpu,"Interrupcion recibida al PID: %d, por motivo: %d",nueva_interrupcion->pid,nueva_interrupcion->motivo);
 	free(motivo);
 	free(el_pid);
 	list_destroy(paquete);
@@ -1277,27 +1303,45 @@ element_interrupcion * recibir_motiv_desalojo(int fd_escucha_interrupt){
 }
 
 element_interrupcion * seleccionar_interrupcion(){
-	
+	int pidPCB = PCB->PID;
+
+	bool encontrar_interrupcion_por_fin_de_consola(void* elemento) {
+		element_interrupcion *p = (element_interrupcion *) elemento;
+		return (pidPCB== p->pid) && (p->motivo == EXIT_CONSOLA);
+	}
+
+	bool encontrar_interrupcion_por_fin_de_quantum(void* elemento) {
+		element_interrupcion *p = (element_interrupcion *) elemento;
+		return (pidPCB == p->pid) && (p->motivo == FIN_QUANTUM);
+	}
 
 	element_interrupcion * interrupcion_encontrada = NULL;
 
+	if (list_is_empty(lista_interrupciones))
+	{
+		log_info(logger_cpu,"NO se recibieron interrupciones");
+		return interrupcion_encontrada;
+	}
+
 	interrupcion_encontrada = list_find(lista_interrupciones,(void*)encontrar_interrupcion_por_fin_de_consola);
 	if(!interrupcion_encontrada){
-		list_find(lista_interrupciones,(void*)encontrar_interrupcion_por_fin_de_quantum);
+		log_info(logger_cpu,"NO se encontro interrupcion por fin de consola");
+		interrupcion_encontrada = list_find(lista_interrupciones,(void*)encontrar_interrupcion_por_fin_de_quantum);
+		if (!interrupcion_encontrada){
+			log_info(logger_cpu,"No se encontro interrupcion por fin de quantum");
+		}else{
+			log_info(logger_cpu,"Interrupcion por fin de quantum");
+		}
+		
+	}else{
+		log_info(logger_cpu,"Interrupcion por fin de consola");
+
 	}
+
 
 	return interrupcion_encontrada;
 }
 
-bool encontrar_interrupcion_por_fin_de_consola(void* elemento) {
-    element_interrupcion *p = (element_interrupcion *) elemento;
-    return PCB->PID == p->pid && p->motivo == EXIT_CONSOLA;
-}
-
-bool encontrar_interrupcion_por_fin_de_quantum(void* elemento) {
-    element_interrupcion *p = (element_interrupcion *) elemento;
-    return PCB->PID == p->pid && p->motivo == FIN_QUANTUM;
-}
 
 
 /* LIBERAR MEMORIA USADA POR CPU */

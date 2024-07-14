@@ -250,7 +250,7 @@ bool validacion_de_instrucciones(char* leido){
         resultado_validacion = true; //Aaca hatendriamos que verificar si el PID que manda existe, despues vemos como lo hacemos
     }else if(strcmp(comando_consola[0] , "DETENER_PLANIFICACION") == 0){
         resultado_validacion = true;
-    }else if(strcmp(comando_consola[0] , "INICIAR_PLANIFICAION") == 0){
+    }else if(strcmp(comando_consola[0] , "INICIAR_PLANIFICACION") == 0){
         resultado_validacion = true;
     }else if(strcmp(comando_consola[0] , "MULTIPROGRAMACION") == 0){
         resultado_validacion = true; //Hay que validar que el grado de multiprogramacion que manda es un int
@@ -275,7 +275,7 @@ void atender_instruccion_valida(char* leido){
         finalizar_proceso(comando_consola[1]);
     }else if(strcmp(comando_consola[0] , "DETENER_PLANIFICACION") == 0){
         detener_planificacion();
-    }else if(strcmp(comando_consola[0] , "INICIAR_PLANIFICAION") == 0){
+    }else if(strcmp(comando_consola[0] , "INICIAR_PLANIFICACION") == 0){
         iniciar_planificacion();
     }else if(strcmp(comando_consola[0] , "MULTIPROGRAMACION") == 0){
         cambiar_multiprogramacion(comando_consola[1]);
@@ -478,6 +478,7 @@ void procesos_en_exit(){
         pthread_mutex_lock(&mutex_envio_memoria);
         enviar_liberar_proceso(pcbFinalizado, fd_conexion_memoria); //OJO, si este es el unico hil
         recv(fd_conexion_memoria,&rta_memoria,sizeof(int),MSG_WAITALL);
+        log_info(logger_kernel,"Recibi de memoria: %d", rta_memoria);
         pthread_mutex_unlock(&mutex_envio_memoria);
         liberar_recursos(pcbFinalizado); // Esta es para que los procesos bloqueados en los recursos que tenia el pcbFinalizado se desbloqueen
         list_add(cola_exit_liberados,pcbFinalizado); //ESTAR ATENTO A SI EN UN FUTURO NECESITA MUTEX, -soy Nico: no creo, debería ser el unico que pushee a esta lista
@@ -533,18 +534,13 @@ char* motivo_a_string(motivo_desalojo motivo){
     }
 };
 
-void pcb_destroy(pcb* pcb){
-    for (int i = 0; i < list_size(pcb->recursos_asignados); i++)
-    {
-        recurso* recurso_asignado = list_get(pcb->recursos_asignados, i);
-        recurso_destroy(recurso_asignado);
-    }
-    list_destroy(pcb->recursos_asignados);
-    free(pcb);
-}
+
+
 void recurso_destroy(recurso* recurso) {
     free(recurso->nombreRecurso);
-    list_destroy_and_destroy_elements(recurso->cola_block_asignada, free);
+    if (!list_size(recurso->cola_block_asignada)){
+        list_destroy_and_destroy_elements(recurso->cola_block_asignada, free);
+    }
     pthread_mutex_destroy(&recurso->mutex_asignado);
     free(recurso);
 }
@@ -622,7 +618,12 @@ void atender_vuelta_dispatch(){
             op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");
             t_list * lista = recibir_paquete(fd_conexion_dispatch); 
             pcb* pcb_actualizado = guardar_datos_del_pcb(lista);
-            int final_pcb = fin_pcb(lista); //Te devuelve el numero del elemento de la lista donde esta el ultimo recurso, osea del final del pcb
+            pcb* pcb_desactualizado = pop_con_mutex(cola_exec, &mutex_lista_exec);
+            pcb_destroy(pcb_desactualizado);
+            int cantidadDeRecursos = list_size(pcb_actualizado->recursos_asignados);
+            log_info(logger_kernel,"Cantidad de recursos: %d",cantidadDeRecursos);
+            int final_pcb = fin_pcb(pcb_actualizado); //Te devuelve el numero del elemento de la lista donde esta el ultimo recurso, osea del final del pcb
+            log_info(logger_kernel,"Final del pcb: %d",final_pcb);
             switch(codop){
                 case PCB_ACTUALIZADO:
 		        switch(pcb_actualizado -> motivo){
@@ -1170,7 +1171,7 @@ t_list* inicializar_recursos(){
 	for(int i = 0; i < cantidad_de_recursos; i++){ // sobre cada recurso hace:
 		char* nombreRecurso = recursos[i];  // obtiene el "nombre"
 		recurso* recurso = malloc(sizeof(recurso)); // reserva memoria para la estructura
-		recurso->nombreRecurso = malloc(sizeof(char) * strlen(nombreRecurso) + 1); // reserva la memoria para el nombre
+		recurso->nombreRecurso = malloc(strlen(nombreRecurso) + 1); // reserva la memoria para el nombre
 		strcpy(recurso->nombreRecurso, recurso); // le encaja el nombre a la estructura en el espacio para el nombre
 		t_list* cola_block = list_create(); // crea la lista de blockeados para futuros procesos 
 		recurso->id = i; // le asigna un identificador

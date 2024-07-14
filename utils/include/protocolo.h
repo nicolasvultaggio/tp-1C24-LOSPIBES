@@ -247,7 +247,7 @@ typedef struct {
 } nodo_lectura_escritura; //para que sirve? es la unidad mas basica de escritura o lectura, no hace falta mas desgloce: leer "bytes" bytes desde la direccion fisica, o escribir "bytes" bytes desde la direccion fisica
 
 void empaquetar_pcb(t_paquete* paquete, pcb* PCB,motivo_desalojo MOTIVO);
-int fin_pcb(t_list* lista);
+int fin_pcb(pcb* pcb);
 void empaquetar_recursos(t_paquete* paquete, t_list* lista_de_recursos);
 t_list* desempaquetar_recursos(t_list* paquete, int cantidad);
 t_paquete* crear_paquete(op_code OPERACION);
@@ -258,6 +258,7 @@ void eliminar_paquete(t_paquete* paquete);
 void iterator(char* value, t_log *logger);
 void traduccion_destroyer(void * traduccion);
 t_list * desempaquetar_traducciones(t_list* paquete, int index_cantidad);
+void pcb_destroy(pcb* pcb);
 /* SENDS */
 void enviar_mensaje(char* mensaje, int socket_cliente);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);

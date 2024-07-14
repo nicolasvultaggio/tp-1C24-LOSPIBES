@@ -130,18 +130,31 @@ n+4 instancias_asignadas(recurso2)
 .
 */
 
-int fin_pcb(t_list* lista){
-	int * final = (int*) list_get(lista,15);
-    int cantidad_de_recursos = *final; //OJO DEVUELVE UN PUNTERO
-    int cantidad_de_atributos_recursos = cantidad_de_recursos * 2;
-
+int fin_pcb(pcb* pcb){
+	int cantidad_de_recursos = list_size(pcb->recursos_asignados);
+	printf("Cantidad de recursos: %d", cantidad_de_recursos);
+    int elementosDeLaListaQueSonRecursos = cantidad_de_recursos * 2;
+	
     //return cantidad_de_recursos + cantidad_de_atributos_recursos; 
-	return 15 + cantidad_de_atributos_recursos -1; //TOMI FIJATE SI esta corrección está mejor
+	return 15 + elementosDeLaListaQueSonRecursos; //TOMI FIJATE SI esta corrección está mejor
 }
-
+/*
+PID
+.
+.
+.
+.
+ULTIMO REGISTRO; 14
+CANTIDAD RECURSOS =2; 15
+NOMBRE 16
+INSTANCIA 17
+NOMBRE 18
+INSTANCIA 19
+*/
 
 void empaquetar_recursos(t_paquete* paquete, t_list* lista_de_recursos){
 	int cantidad_recursos = list_size(lista_de_recursos);
+	printf("La cantidad de recursos es: %d \n", cantidad_recursos);
 	agregar_a_paquete(paquete, &(cantidad_recursos), sizeof(int));//Agregamos la CANTIDAD de RECURSOS
 	for(int i = 0; i<cantidad_recursos; i++){
 		recurso_asignado* recurso_asignado = list_get(lista_de_recursos, i);
@@ -217,6 +230,18 @@ void traduccion_destroyer(void * traduccion){
 	nodo_lectura_escritura * traduccion_c = (nodo_lectura_escritura *) traduccion;
 	free(traduccion_c);
 }
+
+void pcb_destroy(pcb* pcb){
+    int tamanioListaRecursos = list_size(pcb->recursos_asignados);
+    for (int i = 0; i < tamanioListaRecursos; i++)
+    {
+        recurso_asignado* recurso_asignado = list_get(pcb->recursos_asignados, i);
+        //recurso_destroy(recurso_asignado);
+    }
+    free(pcb);
+}
+//void recurso_destroy_pcb(recurso_asignado* recurso_pcb)
+
 /* FUNCIONES DE PAQUETE */
 t_paquete* crear_paquete(op_code OPERACION)
 {
