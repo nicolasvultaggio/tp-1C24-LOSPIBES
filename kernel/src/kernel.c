@@ -4,7 +4,7 @@ int main(int argc, char* argv[]) {
     
     decir_hola("KERNEL");
 
-    logger_kernel = log_create("kernel_logs.log","kernel",1,LOG_LEVEL_INFO);
+    logger_kernel = log_create("kernel_logs.log","kernel",1,LOG_LEVEL_INFO && LOG_LEVEL_DEBUG);
     config_generales = config_create("./config/generales.config");
     
     path_configuracion = argv[1];
@@ -97,11 +97,11 @@ void iniciar_proceso(char *pathPasadoPorConsola){
     
     pthread_mutex_lock(&mutex_envio_memoria); // MUTEX para que no se envie nada a memoria mientras q memoria este atendiendo otras cosas de KERNEL
     enviar_datos_proceso(path, proceso_nuevo->PID, fd_conexion_memoria); // ENVIO PATH Y PID PARA QUE CUANDO CPU PIDA MANDE PID Y PC, Y AHI MEMORIA TENGA EL PID PARA IDENTIFICAR
-    log_info(logger_kernel,"Esperando aviso de que creo el proceso");
+    log_debug(logger_kernel,"Esperando aviso de que creo el proceso");
     if (recv(fd_conexion_memoria, &rta_memoria, sizeof(int), MSG_WAITALL) == -1) {
         log_error(logger_kernel, "Error recibiendo la notificación de memoria");
     } else {
-        log_info(logger_kernel, "Memoria creo el proceso");
+        log_debug(logger_kernel, "Memoria creo el proceso");
     }
 
     pthread_mutex_unlock(&mutex_envio_memoria);
@@ -153,7 +153,7 @@ pcb* buscar_proceso_para_finalizar(int pid_a_buscar){
 void finalizar_proceso(char* PID){
     int pid_busado = atoi(PID);
     detener_planificacion();
-    log_info(logger_kernel,"Se detiene la planificacion para buscar el procesos a finalizar");
+    log_debug(logger_kernel,"Se detiene la planificacion para buscar el procesos a finalizar");
     pcb* pcb_buscado = buscar_proceso_para_finalizar(pid_busado);
 
     if(strcmp(string_de_estado(pcb_buscado->estado), "EXEC") == 0){ 
@@ -165,7 +165,7 @@ void finalizar_proceso(char* PID){
         sem_post(&sem_procesos_exit);
     }
     iniciar_planificacion();
-    log_info(logger_kernel,"Se reanuda la planificacion ");
+    log_debug(logger_kernel,"Se reanuda la planificacion ");
 }
 
 pcb *crear_pcb(){
@@ -241,7 +241,7 @@ bool validacion_de_instrucciones(char* leido){
         if (comando_consola[1]){
             if (es_path(comando_consola[1])){
             resultado_validacion = true;
-            log_info(logger_kernel,"Se ejecutara el proceso indicado");
+            log_debug(logger_kernel,"Se ejecutara el proceso indicado");
         }
         }else{
             log_info(logger_kernel,"NO ingreso un PATH");
@@ -478,7 +478,7 @@ void procesos_en_exit(){
         pthread_mutex_lock(&mutex_envio_memoria);
         enviar_liberar_proceso(pcbFinalizado, fd_conexion_memoria); //OJO, si este es el unico hil
         recv(fd_conexion_memoria,&rta_memoria,sizeof(int),MSG_WAITALL);
-        log_info(logger_kernel,"Recibi de memoria: %d", rta_memoria);
+        log_debug(logger_kernel,"Recibi de memoria: %d", rta_memoria);
         pthread_mutex_unlock(&mutex_envio_memoria);
         liberar_recursos(pcbFinalizado); // Esta es para que los procesos bloqueados en los recursos que tenia el pcbFinalizado se desbloqueen
         list_add(cola_exit_liberados,pcbFinalizado); //ESTAR ATENTO A SI EN UN FUTURO NECESITA MUTEX, -soy Nico: no creo, debería ser el unico que pushee a esta lista
@@ -621,9 +621,9 @@ void atender_vuelta_dispatch(){
             pcb* pcb_desactualizado = pop_con_mutex(cola_exec, &mutex_lista_exec);
             pcb_destroy(pcb_desactualizado);
             int cantidadDeRecursos = list_size(pcb_actualizado->recursos_asignados);
-            log_info(logger_kernel,"Cantidad de recursos: %d",cantidadDeRecursos);
+            log_debug(logger_kernel,"Cantidad de recursos: %d",cantidadDeRecursos);
             int final_pcb = fin_pcb(pcb_actualizado); //Te devuelve el numero del elemento de la lista donde esta el ultimo recurso, osea del final del pcb
-            log_info(logger_kernel,"Final del pcb: %d",final_pcb);
+            log_debug(logger_kernel,"Final del pcb: %d",final_pcb);
             switch(codop){
                 case PCB_ACTUALIZADO:
 		        switch(pcb_actualizado -> motivo){
@@ -1237,7 +1237,7 @@ void despachador(){
             cambiar_estado(pcb_a_enviar,EXECUTE);
             push_con_mutex(cola_exec,pcb_a_enviar,&mutex_lista_exec); // uso con mutex porque posiblemente varios hilos agregen a exec
             enviar_pcb(pcb_a_enviar, fd_conexion_dispatch,CODE_PCB,VACIO,NULL,NULL,NULL,NULL,NULL);//falta motivo de desalojo
-            log_info(logger_kernel,"Envie PCB");
+            log_debug(logger_kernel,"Envie PCB");
             sem_post(&sem_atender_rta);//signal para indicar que se despacho? no se si hace falta
             if(!strcmp(algoritmo_de_planificacion,"RR")){
                 manejar_quantum_RR(pcb_a_enviar->PID);
@@ -1422,7 +1422,7 @@ void procesar_conexion_interfaz(void * arg){
     element_interfaz * datos_interfaz = malloc(sizeof(element_interfaz));//falta liberar, posiblemente cuando se desconecte la interfaz
     datos_interfaz->fd_conexion_con_interfaz = fd_conexion_io;//otra a referencia al mismo malloc recibido por parametro, usar para liberar / liberado
     datos_interfaz->nombre = preguntar_nombre_interfaz((*fd_conexion_io)); //falta liberar, posiblemente cuando se desconecte interfaz, ¿Por qué es dinámico? porque en principio, no se sabe el tamaño que ocupara el nombre / liberado
-    log_info(logger_kernel,"El nombre de la interfaz es: %s", datos_interfaz->nombre);
+    log_debug(logger_kernel,"El nombre de la interfaz es: %s", datos_interfaz->nombre);
     datos_interfaz->tipo = (vuelta_type) preguntar_tipo_interfaz((*fd_conexion_io));
     datos_interfaz->cola_bloqueados=list_create();  //pcbs_bloqueados es una lista de pcb_block
     sem_init(&(datos_interfaz->sem_procesos_blocked),0,0); 
@@ -1675,7 +1675,7 @@ char * preguntar_nombre_interfaz(int un_fd){
     if(recibir_operacion(un_fd,logger_kernel,"IO") == NOMBRE_INFORMADO){ //envio con codigo de operacion para poder usar funciones de commons, realmente no hace falta
     int size;
 	char* buffer = recibir_buffer(&size, un_fd); 
-	log_info(logger_kernel, "Nombre recibido: %s", buffer);
+	log_debug(logger_kernel, "Nombre recibido: %s", buffer);
 	return(buffer); //ojo, no se esta liberando el buffer de memoria dinamica
     }   
 }

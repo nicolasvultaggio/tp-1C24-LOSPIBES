@@ -1,7 +1,7 @@
 #include <../../memoria/include/memoria.h>
 int main(int argc, char* argv[]){
 
-    logger_memoria = log_create("memoria_logs.log","memoria",1,LOG_LEVEL_INFO);
+    logger_memoria = log_create("memoria_logs.log","memoria",1,LOG_LEVEL_INFO && LOG_LEVEL_DEBUG);
     config_generales = config_create("./configs/generales.config");
     
     path_configuracion = argv[1];
@@ -20,7 +20,7 @@ int main(int argc, char* argv[]){
     //CHECKPOINT 1 *************/
     fd_escucha_memoria = iniciar_servidor(NULL, puerto_propio,logger_memoria,"Memoria");
     
-    log_info(logger_memoria, "Puerto de memoria habilitado para sus clientes");
+    log_debug(logger_memoria, "Puerto de memoria habilitado para sus clientes");
 
     //***************************CHECKPOINT 2*************************+
     
@@ -76,7 +76,7 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
     
     t_list* instrucciones = list_create();
     FILE* f;
-	log_info(logger_memoria,"La ruta que me llego es: %s",ruta);
+	log_debug(logger_memoria,"La ruta que me llego es: %s",ruta);
     char* buffer = malloc(256);
     //char* palabra;
     //char* instruccion_leida= NULL;
@@ -103,13 +103,13 @@ t_list * leer_pseudocodigo(char* ruta){ //tenía que devolver un puntero a lista
 			buffer[len-1]='\0'; //quitamos el salto de linea de la instruccion en caso de que no sea la ultima
 		}
 		
-		log_info(logger_memoria,"Instruccion completa leida de pseudocodigo: %s", buffer);
+		log_debug(logger_memoria,"Instruccion completa leida de pseudocodigo: %s", buffer);
 		char ** array_de_instruccion = string_split(buffer," "); //separar cada parte de la linea
 		
 
-		log_info(logger_memoria,"Instruccion leida: %s", array_de_instruccion[0]);
+		log_debug(logger_memoria,"Instruccion leida: %s", array_de_instruccion[0]);
 		una_instruccion->instruccion=instruccion_to_enum(array_de_instruccion[0]);
-		log_info(logger_memoria,"codigo de instruccion: %d", una_instruccion->instruccion);
+		log_debug(logger_memoria,"codigo de instruccion: %d", una_instruccion->instruccion);
 
 		int cantidad_de_parametros = cantidad_de_parametros_segun_instruccion(una_instruccion->instruccion);//saber la cantidad de parametros segun la instruccion
 		
@@ -175,7 +175,7 @@ static void procesar_clientes(void* void_args){
 		}
 		switch (cop) {
 		case SIZE_PAGE://solo ocurre una vez
-			log_info(logger_memoria, "Le dije al CPU de que tamanio son las paginas: %d",tam_pagina);
+			log_debug(logger_memoria, "Le dije al CPU de que tamanio son las paginas: %d",tam_pagina);
 			send(cliente_socket,&tam_pagina,sizeof(int),NULL);
 			break;
 		case MENSAJE:
@@ -186,18 +186,18 @@ static void procesar_clientes(void* void_args){
 		case PAQUETE:
 			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			t_list *paquete_recibido = recibir_paquete(cliente_socket);
-			log_info(logger_memoria, "Recibí un paquete con los siguientes valores: ");
+			log_debug(logger_memoria, "Recibí un paquete con los siguientes valores: ");
 			list_iterate(paquete_recibido, (void*) iterator);
 			break;	
 		case DATOS_PROCESO: // CREAR PROCESO: este codigo SOLO LO ENVIA EL KERNEL
 			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);// por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h
 			iniciar_proceso_a_pedido_de_Kernel(datos_proceso->path, datos_proceso->pid, cliente_socket);
-			log_info(logger_memoria,"Termine de crear el proceso, le mando la notificacion a kernel");
+			log_debug(logger_memoria,"Termine de crear el proceso, le mando la notificacion a kernel");
 			if(send(cliente_socket, &avisoDeFinalizacion, sizeof(int), 0) == -1){
-				log_info(logger_memoria,"Error enviando la notificacion a kernel");
+				log_debug(logger_memoria,"Error enviando la notificacion a kernel");
 			}
-			log_info(logger_memoria,"Notificacion enviada");
+			log_debug(logger_memoria,"Notificacion enviada");
 			free(datos_proceso->path);//hace falta esta linea porque ya no necesitamos el path solo
 			free(datos_proceso);
 			break;
@@ -227,9 +227,9 @@ static void procesar_clientes(void* void_args){
 			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			finalizar_proceso_a_pedido_de_kernel(cliente_socket); //si o si recibe el pid ahi adentro
 			if(send(cliente_socket, &avisoDeFinalizacion, sizeof(int), 0) == -1){
-				log_info(logger_memoria,"Error enviando la notificacion a kernel");
+				log_debug(logger_memoria,"Error enviando la notificacion a kernel");
 			}
-			log_info(logger_memoria,"Notificacion enviada");
+			log_debug(logger_memoria,"Notificacion enviada");
 			break;
 		default:
 			log_error(logger_memoria, "Codigo de operacion no reconocido en memoria");
@@ -295,9 +295,9 @@ void iniciar_proceso_a_pedido_de_Kernel(char* path, int pid, int socket_kernel) 
     //char* rutaCompleta = string_from_format("%s%s.txt",path_instrucciones ,path);
 	//SUPONEMOS QUE PATH ES SOLO EL NOMBRE DEL ARCHIVO, CON SU TXT Y TODO
 	//POR ESO TENEMOS QUE METERLE ANTES EL DIRECTORIO DONDE SABREMOS QUE VAN A ESTAR TODOS LOS ARCHIVOS DE PSEUDOCODIGO
-	log_info(logger_memoria,"EL path que me llego es: %s",path);
+	log_debug(logger_memoria,"EL path que me llego es: %s",path);
 	char * rutaCompleta = string_from_format("%s%s",path_instrucciones,path);
-	log_info(logger_memoria, "EL path completo es %s",rutaCompleta);
+	log_debug(logger_memoria, "EL path completo es %s",rutaCompleta);
 	/* ¿Qué hace string from format? esto de aca abajo, guardo la logica por si no funciona
 	int size_path= strlen(path); //suponemos que viene con el caracter nulo? chequear en KERNEL-> SI, VIENE CON CARACTER NULO, men
 	int size_path_instrucciones=strlen(path_instrucciones); //suponemos que tiene caracter nulo
@@ -332,7 +332,7 @@ void finalizar_proceso_a_pedido_de_kernel(int un_fd){
 	free(ppid);
 	list_destroy(lista);
 
-	log_info(logger_memoria,"FINALIZANDO PROCESO %d",un_pid);
+	log_debug(logger_memoria,"FINALIZANDO PROCESO %d",un_pid);
 
 	pthread_mutex_lock(&mutex_lista_procesos);
 	t_proceso * proceso_a_finalizar = buscar_proceso_en_lista(un_pid);
@@ -390,7 +390,7 @@ void send_proxima_instruccion(int filedescriptor, t_linea_instruccion* instrucci
 	t_paquete* paquete = crear_paquete(PROXIMA_INSTRUCCION);
 
 	agregar_a_paquete(paquete, &(instruccion->instruccion), sizeof(cod_instruccion));
-	log_info(logger_memoria,"Codigo de instruccion: %d", instruccion->instruccion);
+	log_debug(logger_memoria,"Codigo de instruccion: %d", instruccion->instruccion);
 
 	int cantidad_de_parametros = list_size(instruccion->parametros);
 	
@@ -399,7 +399,7 @@ void send_proxima_instruccion(int filedescriptor, t_linea_instruccion* instrucci
 	for(int i =0; i<cantidad_de_parametros ;i++){
 		char * aux = list_get(instruccion->parametros,i);
 		agregar_a_paquete(paquete,aux,strlen(aux)+1);//suponemos que los parametros llegan con el fin de linea, eso depende de string_split
-		log_info(logger_memoria,"Parametro agregado:%s en la posicion: %d", aux,i);
+		log_debug(logger_memoria,"Parametro agregado:%s en la posicion: %d", aux,i);
 	}
 
 	enviar_paquete(paquete, filedescriptor);
@@ -410,7 +410,7 @@ void send_proxima_instruccion(int filedescriptor, t_linea_instruccion* instrucci
 void procesar_pedido_instruccion(int socket_cpu){ 
 
 	t_solicitud_instruccion* solicitud_instruccion = recibir_solicitud_de_instruccion(socket_cpu);
-	log_info(logger_memoria, "Solicitud de instruccion %d del proceso %d ",solicitud_instruccion->program_counter,solicitud_instruccion->pid);
+	log_debug(logger_memoria, "Solicitud de instruccion %d del proceso %d ",solicitud_instruccion->program_counter,solicitud_instruccion->pid);
 	pthread_mutex_lock(&mutex_lista_procesos); //implemento estos mutex para que nadie pueda ni siquiera modificar los datos de la lista, aantes solo bloqueabamos al buscar un elemento
 	t_linea_instruccion* instruccion_a_enviar = buscar_instruccion(solicitud_instruccion->pid, solicitud_instruccion->program_counter );
 	free(solicitud_instruccion);
@@ -421,7 +421,7 @@ void procesar_pedido_instruccion(int socket_cpu){
 int iniciarMemoria(){
 	
 	idGlobal = 0;
-	log_info(logger_memoria, "RAM: %d",tam_memoria);
+	log_debug(logger_memoria, "RAM: %d",tam_memoria);
     int control = iniciarPaginacion();
     
     return control; //DEVUELVE 0 SI FALLA LA ELEGIDA
@@ -440,7 +440,7 @@ int iniciarPaginacion(){
     
     cant_marcos = tam_memoria/ tam_pagina; //siempre multiplos
     
-    log_info(logger_memoria,"Tengo %d marcos de %d bytes en memoria principal",cant_marcos,tam_pagina);
+    log_debug(logger_memoria,"Tengo %d marcos de %d bytes en memoria principal",cant_marcos,tam_pagina);
     
     data = asignarMemoriaBits(cant_marcos);//entero a bit
     

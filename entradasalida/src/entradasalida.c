@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
     path_configuracion = argv[2];
     decir_hola(nombre_de_interfaz);
 
-    logger_io= log_create("entradasalida_logs.log",nombre_de_interfaz,1,LOG_LEVEL_INFO); // crea el puntero al log
+    logger_io= log_create("entradasalida_logs.log",nombre_de_interfaz,1,LOG_LEVEL_INFO && LOG_LEVEL_DEBUG); // crea el puntero al log
     config_prueba = config_create(path_configuracion); // crea el puntero al archivo de config
     config_generales = config_create("./configs/generales.config");
 
@@ -598,7 +598,7 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
             bitarray_set_bit(bitmap,(off_t)(posicion_ultimo_bloque));
             posicion_ultimo_bloque ++;
             if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
-                log_info(logger_io, "ERROR al sincronizar los cambios en linea:598"); //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
+                log_debug(logger_io, "ERROR al sincronizar los cambios en linea:598"); //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
                 return false;
             }
         }
@@ -614,7 +614,7 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
             bitarray_clean_bit(bitmap,(off_t)(fcb_file->bloque_inicial + i));
         }
         if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
-                log_info(logger_io, "ERROR al sincronizar los cambios en linea:574"); //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
+                log_debug(logger_io, "ERROR al sincronizar los cambios en linea:574"); //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
                 return false;
         }
         
@@ -637,7 +637,7 @@ bool agrandar(fcb* fcb_file,uint32_t nuevo_tamanio,int nueva_cant_bloques,int ca
             posicion_ultimo_bloque ++;
         }
         if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
-            log_info(logger_io, "ERROR al sincronizar los cambios en linea:597"); //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
+            log_debug(logger_io, "ERROR al sincronizar los cambios en linea:597"); //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
             return false;
         }
         fcb_file->bloque_inicial = posicion_primer_bloque_nueva_ubicacion;
@@ -752,11 +752,11 @@ int compactar(int pid){
             }
 
             if(msync(buffer_bitmap, tamanio_bitmap, MS_SYNC) == -1){
-                log_info(logger_io, "ERROR al sincronizar los cambios en linea:716"); //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
+                log_debug(logger_io, "ERROR al sincronizar los cambios en linea:716"); //Me da paja pensar el msj de error, si pasa un error ya tenemos la linea y fue
                 return false;
             }
             if (msync(buffer_bloques, tamanio_bloques, MS_SYNC) == -1) {
-                log_info(logger_io, "ERROR al sincronizar los cambios en buffer_bloques en linea:720");
+                log_debug(logger_io, "ERROR al sincronizar los cambios en buffer_bloques en linea:720");
                 return -1;
             }
         }
@@ -997,7 +997,7 @@ void abrir_bitmap(){
     // Verificar si el archivo existe
     if(access(path_bitmap, F_OK) == (-1)){ // acces verifica que el archivo EXISTA
         // Si el archivo no existe, hay que crearlo. Con OPEN tambien podemos crearlo si le ponemos el flag o_create.
-        log_info(logger_io, "El archivo bitmap no existe, creamos uno nuevo.");
+        log_debug(logger_io, "El archivo bitmap no existe, creamos uno nuevo.");
         //Como se lee este open? Si existe abrilo con permiso de lectura y escritura -> es la parte de open(path_bitmap, O_RDWR) | si no existe crealo y dale permiso de lectura y escritura la parte de open(lo anterior| o_create, s_irsusr | siwusr)
         fd = open(path_bitmap, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
         if (fd == (-1)) {
@@ -1029,7 +1029,7 @@ void abrir_bitmap(){
     }
     // Crear el bitarray con el buffer mapeado
     bitmap = bitarray_create_with_mode(buffer_bitmap, tamanio_bitmap, MSB_FIRST);
-    log_info(logger_io,"Bitmap creado correctamente");
+    log_debug(logger_io,"Bitmap creado correctamente");
 
     close(fd);
 }
@@ -1042,7 +1042,7 @@ void abrir_archivo_bloques(){
     // Verificar si el archivo existe
     if(access(path_bloques, F_OK) == (-1)){// acces verifica que el archivo EXISTA
         // El archivo no existe, hay que crearlo (TODA LA EXPLICACION DEL OPEN ESTA ARRIBA, ANDA A LEERLO LA CONCHA DE TU RENEGRIDA MADRE)
-        log_info(logger_io, "El archivo de bloques no existe, creamos uno nuevo");
+        log_debug(logger_io, "El archivo de bloques no existe, creamos uno nuevo");
         fd = open(path_bloques, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
         if (fd == (-1)) {
             log_error(logger_io, "No pude crear el archivo de bloques");
@@ -1071,7 +1071,7 @@ void abrir_archivo_bloques(){
         exit(1);
     }
 
-    log_info(logger_io,"Archivo de bloques creado correctamente");
+    log_debug(logger_io,"Archivo de bloques creado correctamente");
     close(fd);
 }
 
