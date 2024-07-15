@@ -236,11 +236,16 @@ void pcb_destroy(pcb* pcb){
     for (int i = 0; i < tamanioListaRecursos; i++)
     {
         recurso_asignado* recurso_asignado = list_get(pcb->recursos_asignados, i);
-        //recurso_destroy(recurso_asignado);
+        free(recurso_asignado->nombreRecurso);
+		free(recurso_asignado);
     }
     free(pcb);
 }
-//void recurso_destroy_pcb(recurso_asignado* recurso_pcb)
+
+
+
+
+
 
 /* FUNCIONES DE PAQUETE */
 t_paquete* crear_paquete(op_code OPERACION)
