@@ -81,7 +81,9 @@ void dispatch(){
 
 	while (1) {
 		sem_wait(&sem_recibir_pcb);
-		switch (recibir_operacion(fd_escucha_dispatch, logger_cpu, "Kernell (dispatch)")) {
+		int operacion = recibir_operacion(fd_escucha_dispatch, logger_cpu, "Kernell (dispatch)");
+		log_debug(logger_cpu,"Operacion recibida: %d", operacion);
+		switch (operacion){
 		case CODE_PCB:
 			t_list* paquete = recibir_paquete(fd_escucha_dispatch);
 			if (PCB)
@@ -449,11 +451,11 @@ void ejecutar_io_fs_create(char * nombre_interfaz,char * nombre_archivo){
 	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
 	agregar_a_paquete(paquete,nombre_archivo,strlen(nombre_archivo)+1);
 	
-	enviar_paquete(paquete,fd_cpu_dispatch);
+	enviar_paquete(paquete,fd_escucha_dispatch);
 	//sem_post(&sem_recibir_pcb);
 	eliminar_paquete(paquete);
 
-	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
+	recv(fd_escucha_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
 	//es_exit=false;  //siempre modificar
 	//es_bloqueante=true; //modificar siempre que es_exit = false
 	//es_wait = false;  //modificar si se pone a bloqueante = true
@@ -475,9 +477,9 @@ void ejecutar_io_fs_delete(char * nombre_interfaz,char * nombre_archivo){
 	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
 	agregar_a_paquete(paquete,nombre_archivo,strlen(nombre_archivo)+1);
 
-	enviar_paquete(paquete,fd_cpu_dispatch);
+	enviar_paquete(paquete,fd_escucha_dispatch);
 	
-	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
+	recv(fd_escucha_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
 	eliminar_paquete(paquete);
 	//es_exit=false;  //siempre modificar
 	//es_bloqueante=true; //modificar siempre que es_exit = false
@@ -508,9 +510,9 @@ void ejecutar_io_fs_truncate(char * nombre_interfaz,char * nombre_archivo,char *
 	agregar_a_paquete(paquete,nombre_archivo,strlen(nombre_archivo)+1);
 	agregar_a_paquete(paquete,&tamanio,sizeof(uint32_t));
 
-	enviar_paquete(paquete,fd_cpu_dispatch);
+	enviar_paquete(paquete,fd_escucha_dispatch);
 	
-	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
+	recv(fd_escucha_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
 	
 	eliminar_paquete(paquete);
 	//es_exit=false;  //siempre modificar
@@ -553,10 +555,10 @@ void ejecutar_io_fs_write(char * nombre_interfaz,char * nombre_archivo,char * re
 	
 	empaquetar_traducciones(paquete,traducciones);
 	
-	enviar_paquete(paquete,fd_cpu_dispatch);
+	enviar_paquete(paquete,fd_escucha_dispatch);
 	//sem_post(&sem_recibir_pcb);
 
-	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
+	recv(fd_escucha_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
 	
 	eliminar_paquete(paquete);
 	//es_exit=false;  //siempre modificar
@@ -597,9 +599,9 @@ void ejecutar_io_fs_read(char * nombre_interfaz,char * nombre_archivo,char * reg
 	
 	empaquetar_traducciones(paquete,traducciones);
 	
-	enviar_paquete(paquete,fd_cpu_dispatch);
+	enviar_paquete(paquete,fd_escucha_dispatch);
 	//sem_post(&sem_recibir_pcb);
-	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
+	recv(fd_escucha_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
 
 	eliminar_paquete(paquete);
 	//es_exit=false;  //siempre modificar
@@ -853,7 +855,7 @@ void ejecutar_signal(char* nombre_recurso){
 void ejecutar_io_gen_sleep( char* instruccion, char* interfaz, char* unidad_de_tiempo){
 	int buffersito;
 	enviar_pcb(PCB, fd_escucha_dispatch, INTERFAZ, SOLICITAR_INTERFAZ_GENERICA, instruccion, interfaz, unidad_de_tiempo,NULL,NULL);
-	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
+	recv(fd_escucha_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
 	//sem_post(&sem_recibir_pcb);
 	//es_exit=false;  //siempre modificar
 	//es_bloqueante=true; //modificar siempre que es_exit = false
@@ -888,10 +890,10 @@ void ejecutar_io_stdin_read(char * nombre_interfaz, char * registro_direccion, c
 	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
 	agregar_a_paquete(paquete,&tamanio_a_leer,sizeof(uint32_t));
 	empaquetar_traducciones(paquete,traducciones);
-	enviar_paquete(paquete,fd_cpu_dispatch);
+	enviar_paquete(paquete,fd_escucha_dispatch);
 	//sem_post(&sem_recibir_pcb); todavía no
 	
-	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
+	recv(fd_escucha_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
 
 	eliminar_paquete(paquete);
 	//es_exit=false;  //siempre modificar
@@ -924,9 +926,9 @@ void ejecutar_io_stdout_write(char * nombre_interfaz, char * registro_direccion,
 	agregar_a_paquete(paquete,nombre_interfaz,strlen(nombre_interfaz)+1);
 	agregar_a_paquete(paquete,&tamanio_a_escribir,sizeof(uint32_t));
 	empaquetar_traducciones(paquete,traducciones);
-	enviar_paquete(paquete,fd_cpu_dispatch);
+	enviar_paquete(paquete,fd_escucha_dispatch);
 	
-	recv(fd_cpu_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
+	recv(fd_escucha_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
 
 	eliminar_paquete(paquete);
 	//es_exit=false;  //siempre modificar
@@ -996,6 +998,8 @@ enum_reg_cpu registro_to_enum(char * registro){
 		return SI;
 	} else if(strcmp(registro, "DI") == 0){
 		return DI;
+	} else if(strcmp(registro, "PC") == 0){
+		return PC;
 	}
 
 }
@@ -1208,7 +1212,7 @@ void interrupcion() {
 		switch (recibir_operacion(fd_escucha_interrupt, logger_cpu, "Kernel (interrupt)")) {
 		case INTERR:
 			log_debug(logger_cpu,"Acabo de recibir una interrupcion");
-			element_interrupcion* nueva_interrupcion = recibir_motiv_desalojo(fd_escucha_interrupt);
+			element_interrupcion* nueva_interrupcion = recibir_motiv_desalojo();
 			push_con_mutex(lista_interrupciones,nueva_interrupcion,&mutex_lista_interrupciones);
 			break;
 		case -1:
@@ -1267,7 +1271,7 @@ void check_interrupt (){
 				if(wait_o_signal){ // cualquier funcion no syscall y wait y signal en casos no bloqueantes
 					log_debug(logger_cpu,"NO Hubo interrupcion pero se desalojo por wait o signal");
 					int a = 777; //solo mando esto para que wait o signal se pueda destrabar
-					send(fd_cpu_dispatch,&a,sizeof(int),NULL);
+					send(fd_escucha_dispatch,&a,sizeof(int),NULL);
 				}
 				sem_post(&sem_execute);
 			}
@@ -1276,8 +1280,16 @@ void check_interrupt (){
 		sem_post(&sem_recibir_pcb);
 	}
 	
-	list_destroy_and_destroy_elements(lista_interrupciones,(void*)free);
-	lista_interrupciones = list_create();
+	if(!list_is_empty(lista_interrupciones)){
+		list_destroy_and_destroy_elements(lista_interrupciones,(void*)free);
+		bool seVacio = lista_interrupciones == NULL;
+		if(seVacio){
+			log_debug(logger_cpu,"Lista interrupciones vaciada");
+		}else{
+			log_debug(logger_cpu,"La lista interrupciones NO se vacio");
+		}
+		lista_interrupciones = list_create();
+	}
 	pthread_mutex_unlock(&mutex_lista_interrupciones);
 }
 /*
@@ -1287,14 +1299,14 @@ void liberar_interrupcion_actual(){
 	return;
 }
 */
-element_interrupcion * recibir_motiv_desalojo(int fd_escucha_interrupt){
-	int sera_INTERR=recibir_operacion(fd_escucha_interrupt,logger_cpu,"Kernel-Interrupcion recibida");
+element_interrupcion * recibir_motiv_desalojo(){
 	t_list* paquete = recibir_paquete(fd_escucha_interrupt);
 	motivo_desalojo* motivo =(motivo_desalojo*) list_get(paquete, 0);
-	int* el_pid =(int*) list_get(paquete, 1);
+	void* el_pid = list_get(paquete, 1);
+	int* el_pid_int = (int*) el_pid;
 	element_interrupcion * nueva_interrupcion = malloc(sizeof(element_interrupcion));
 	nueva_interrupcion->motivo= *motivo;
-	nueva_interrupcion->pid = * el_pid;
+	nueva_interrupcion->pid = * el_pid_int;
 	log_info(logger_cpu,"Interrupcion recibida al PID: %d, por motivo: %d",nueva_interrupcion->pid,nueva_interrupcion->motivo);
 	free(motivo);
 	free(el_pid);

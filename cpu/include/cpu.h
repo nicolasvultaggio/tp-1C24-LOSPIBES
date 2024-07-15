@@ -128,7 +128,7 @@ void * capturar_registro(enum_reg_cpu registro);
 void interrupcion();
 bool encontrar_interrupcion_por_fin_de_consola(void* elemento);
 bool encontrar_interrupcion_por_fin_de_quantum(void* elemento);
-element_interrupcion * recibir_motiv_desalojo(int fd_escucha_interrupt);
+element_interrupcion * recibir_motiv_desalojo();
 element_interrupcion * seleccionar_interrupcion();
 void check_interrupt();
 

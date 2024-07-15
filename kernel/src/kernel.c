@@ -113,38 +113,48 @@ void iniciar_proceso(char *pathPasadoPorConsola){
 
 
 pcb* buscar_proceso_para_finalizar(int pid_a_buscar){ 
-    pcb* pcbEncontrado;
-    int posicionPCB = buscar_posicion_proceso(cola_new, pid_a_buscar);
-    //creo que deberías parar todas las colas al mismo tiempo amigo
-    if (posicionPCB != -1) {
-        pcbEncontrado = remove_con_mutex(cola_new, &mutex_lista_new, posicionPCB);
-    } else {
-        posicionPCB = buscar_posicion_proceso(cola_ready, pid_a_buscar);
-        if (posicionPCB != -1) {
-            pcbEncontrado = remove_con_mutex(cola_ready, &mutex_lista_ready, posicionPCB);
-        } else {
-            posicionPCB = buscar_posicion_proceso(cola_ready_aux, pid_a_buscar);
-            if (posicionPCB != -1) {
-                pcbEncontrado = remove_con_mutex(cola_ready_aux, &mutex_lista_ready, posicionPCB);
-            } else {
-                posicionPCB = buscar_posicion_proceso(cola_exec, pid_a_buscar);
-                if(posicionPCB != -1){
-                    pcbEncontrado = remove_con_mutex(cola_exec, &mutex_lista_exec, posicionPCB);
-                } else{
-                posicionPCB = buscar_posicion_proceso(cola_block, pid_a_buscar);
-                    if(posicionPCB != -1){
-                        pcbEncontrado = remove_con_mutex(cola_block, &mutex_cola_block, posicionPCB);
-                    }
-                    else{
-                        log_info(logger_kernel, "NO se encontro el proceso");
+    pcb* proceso;
+
+    bool es_proceso_de_pid(void* arg){
+		pcb * un_proceso = (pcb*) arg;
+		return ((un_proceso->PID) == pid_a_buscar);
+	};
+	
+	pthread_mutex_lock(&mutex_lista_new);
+    pthread_mutex_lock(&mutex_lista_exit);
+    pthread_mutex_lock(&mutex_lista_exec);
+    pthread_mutex_lock(&mutex_lista_ready);
+    pthread_mutex_lock(&mutex_cola_block);
+
+    proceso = list_find(cola_new,(void*)es_proceso_de_pid);
+    if (!proceso){
+        proceso = list_find(cola_exit,(void*)es_proceso_de_pid);
+        if(!proceso){
+            proceso = list_find(cola_ready,(void*)es_proceso_de_pid);
+        if(!proceso){
+            proceso = list_find(cola_ready_aux,(void*)es_proceso_de_pid);
+            if(!proceso){
+                proceso = list_find(cola_block,(void*)es_proceso_de_pid);
+                if(!proceso){
+                    proceso = list_find(cola_exec,(void*)es_proceso_de_pid);
                     }
                 }
-
             }
+
         }
+
     }
 
-    return pcbEncontrado;
+    
+    pthread_mutex_unlock(&mutex_lista_new);
+    pthread_mutex_unlock(&mutex_lista_exit);
+    pthread_mutex_unlock(&mutex_lista_exec);
+    pthread_mutex_unlock(&mutex_lista_ready);
+    pthread_mutex_unlock(&mutex_cola_block);
+
+
+
+    return proceso;
     
 }
 
@@ -374,6 +384,13 @@ void cambiar_multiprogramacion(char* nuevoGrado){
 
 //LISTAS: EXIT
 void enlistar_procesos() {
+    
+    pthread_mutex_lock(&mutex_lista_new);
+    pthread_mutex_lock(&mutex_lista_exit);
+    pthread_mutex_lock(&mutex_lista_exec);
+    pthread_mutex_lock(&mutex_lista_ready);
+    pthread_mutex_lock(&mutex_cola_block);
+
     t_list* lista_pids_new = obtener_lista_pid(cola_new);
     char* lista_new = de_lista_a_string(lista_pids_new);
 
@@ -391,7 +408,7 @@ void enlistar_procesos() {
     t_list* lista_pids_block = obtener_lista_pid(cola_block);
     char* lista_block = de_lista_a_string(lista_pids_block);
 
-    t_list* lista_pids_exit = obtener_lista_pid(cola_exit);
+    t_list* lista_pids_exit = obtener_lista_pid(cola_exit_liberados);
     char* lista_exit = de_lista_a_string(lista_pids_exit);
 
     log_info(logger_kernel, "Estados en: \n -NEW: [%s] \n -READY: [%s] \n -EXEC: [%s] \n -BLOCK: [%s] \n -EXIT: [%s]", lista_new, lista_ready_completa, lista_exec, lista_block, lista_exit);
@@ -412,6 +429,16 @@ void enlistar_procesos() {
     list_destroy(lista_pids_exec);
     list_destroy(lista_pids_block);
     list_destroy(lista_pids_exit);
+
+    
+    pthread_mutex_unlock(&mutex_lista_new);
+    pthread_mutex_unlock(&mutex_lista_exit);
+    pthread_mutex_unlock(&mutex_lista_exec);
+    pthread_mutex_unlock(&mutex_lista_ready);
+    pthread_mutex_unlock(&mutex_cola_block);
+
+
+    
 }
 /*
 void enlistar_procesos(){
@@ -618,6 +645,7 @@ void atender_vuelta_dispatch(){
             op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");
             t_list * lista = recibir_paquete(fd_conexion_dispatch); 
             pcb* pcb_actualizado = guardar_datos_del_pcb(lista);
+            bool estaVacia = list_is_empty(cola_exec);
             pcb* pcb_desactualizado = pop_con_mutex(cola_exec, &mutex_lista_exec);
             pcb_destroy(pcb_desactualizado);
             int cantidadDeRecursos = list_size(pcb_actualizado->recursos_asignados);
@@ -635,6 +663,11 @@ void atender_vuelta_dispatch(){
                         break;
 		            case EXITO:
                     	cambiar_estado(pcb_actualizado, EXITT);
+                    	push_con_mutex(cola_exit, pcb_actualizado, &mutex_lista_exit);
+                    	sem_post(&sem_procesos_exit);
+                        break;
+                    case EXIT_CONSOLA:
+                        cambiar_estado(pcb_actualizado, EXITT);
                     	push_con_mutex(cola_exit, pcb_actualizado, &mutex_lista_exit);
                     	sem_post(&sem_procesos_exit);
                         break;
@@ -1092,7 +1125,6 @@ void manejar_wait(pcb* proceso, char* recurso_wait){
 		} else {
 			agregar_recurso(recurso_buscado->nombreRecurso, proceso); //Hay que asignarle el recurso usado al pcb AGREGAR LISTA DE RECURSOS A LA ESTRUCTURA PCB. Aca es donde me di cuenta que todo se iba a la mierda con el empaquetado
 			push_con_mutex(cola_exec, proceso, &mutex_lista_exec);
-			//enviar_pcb(proceso,fd_conexion_dispatch,PCBBITO,VACIO,NULL,NULL,NULL,NULL,NULL);
             //rta_a_cpu=0; // 0 porque es FALSO que hubo desalojo
         }
 	}
@@ -1116,12 +1148,15 @@ void manejar_signal(pcb* proceso, char* recurso_signal){
 		quitar_recurso(recurso_buscado->nombreRecurso, proceso);
 		if(recurso_buscado->instancias <= 0){
 			pcb* proceso_desbloqueado = pop_con_mutex(recurso_buscado->cola_block_asignada, &recurso_buscado->mutex_asignado);
+
+            list_remove_element(cola_block,proceso);
+
 			agregar_recurso(recurso_buscado->nombreRecurso, proceso_desbloqueado);
 			procesar_vuelta_blocked_a_ready(proceso_desbloqueado, RECURSOVT);
 		}
 		push_con_mutex(cola_exec, proceso, &mutex_lista_exec);
         //rta_a_cpu = 0; //no hubo desalojo
-		//enviar_pcb(proceso,fd_conexion_dispatch,PCBBITO,VACIO,NULL,NULL,NULL,NULL,NULL);
+
 	}
     //send(fd_conexion_dispatch,&rta_a_cpu,sizeof(int),NULL);
 }
@@ -1237,7 +1272,7 @@ void despachador(){
             cambiar_estado(pcb_a_enviar,EXECUTE);
             push_con_mutex(cola_exec,pcb_a_enviar,&mutex_lista_exec); // uso con mutex porque posiblemente varios hilos agregen a exec
             enviar_pcb(pcb_a_enviar, fd_conexion_dispatch,CODE_PCB,VACIO,NULL,NULL,NULL,NULL,NULL);//falta motivo de desalojo
-            log_debug(logger_kernel,"Envie PCB");
+            log_debug(logger_kernel,"Envie el PCB: %d",pcb_a_enviar->PID);
             sem_post(&sem_atender_rta);//signal para indicar que se despacho? no se si hace falta
             if(!strcmp(algoritmo_de_planificacion,"RR")){
                 manejar_quantum_RR(pcb_a_enviar->PID);
@@ -1336,6 +1371,7 @@ void enviar_interrupcion(motivo_desalojo motivo, int pid){
     t_paquete* paquete = crear_paquete(INTERR);
 	agregar_a_paquete(paquete, &motivo, sizeof(motivo_desalojo));
     agregar_a_paquete(paquete, &pid, sizeof(int));
+    log_debug(logger_kernel,"PID interrumpio: %d con motivo: %d", pid, motivo);
 	enviar_paquete(paquete, fd_conexion_interrupt);
 	eliminar_paquete(paquete);
 }
@@ -1452,6 +1488,9 @@ void atender_interfaz_generica(element_interfaz * datos_interfaz){
         while(leer_debe_planificar_con_mutex()){ // genera algo de espera activa cuando debe_planificar = 0;
             sem_wait(&(datos_interfaz->sem_procesos_blocked));
             pcb_block_gen * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,&(datos_interfaz->mutex_procesos_blocked));//agarra el primero de la cola de blocked 
+           
+            list_remove_element(cola_block,proceso_a_atender->el_pcb);
+    
             //contenido del paquete de instruccion
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
             agregar_a_paquete(paquete,&(proceso_a_atender->el_pcb->PID),sizeof(int));
@@ -1461,6 +1500,7 @@ void atender_interfaz_generica(element_interfaz * datos_interfaz){
                 liberar_datos_interfaz(datos_interfaz);//debe liberar estructuras, poner pcbs en exit 
             }else{
                 int notificacion = recibir_operacion(*(datos_interfaz->fd_conexion_con_interfaz),logger_kernel,datos_interfaz->nombre);
+                log_debug(logger_kernel,"Notificacion recibida de la interfaz %s, es: %d", datos_interfaz->nombre, notificacion);
                 if(notificacion == 1 ){ // la interfaz devolvio el numero 1, entonces la operacion salio bien papa
                     procesar_vuelta_blocked_a_ready(proceso_a_atender,GENERICA);
                 }else if(notificacion  == (-1) ){ //recibir operacion devuelve -1 en caso de que se haya desconectado la interfaz
@@ -1478,6 +1518,9 @@ void atender_interfaz_STDIN(element_interfaz * datos_interfaz){
         while(leer_debe_planificar_con_mutex()){ // genera algo de espera activa cuando debe_planificar = 0;
             sem_wait(&(datos_interfaz->sem_procesos_blocked));
             pcb_block_STDIN * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,&(datos_interfaz->mutex_procesos_blocked));//agarra el primero de la cola de blocked 
+
+            list_remove_element(cola_block,proceso_a_atender->el_pcb);
+
             //contenido del paquete de instruccion
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
             agregar_a_paquete(paquete,&(proceso_a_atender->el_pcb->PID),sizeof(int));
@@ -1507,6 +1550,9 @@ void atender_interfaz_STDOUT(element_interfaz * datos_interfaz){
         while(leer_debe_planificar_con_mutex()){ // genera algo de espera activa cuando debe_planificar = 0;
             sem_wait(&(datos_interfaz->sem_procesos_blocked));
             pcb_block_STDOUT * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,&(datos_interfaz->mutex_procesos_blocked));//agarra el primero de la cola de blocked 
+
+            list_remove_element(cola_block,proceso_a_atender->el_pcb);
+
             //contenido del paquete de instruccion
             t_paquete * paquete = crear_paquete(INSTRUCCION);//   codigo de operacion: INSTRUCCION
             agregar_a_paquete(paquete,&(proceso_a_atender->el_pcb->PID),sizeof(int));
@@ -1536,7 +1582,10 @@ void atender_interfaz_dialFS(element_interfaz * datos_interfaz){
     while(1){ //este es para que se pueda pausar y reanudar planificacion 
         while(leer_debe_planificar_con_mutex()){ // genera algo de espera activa cuando debe_planificar = 0;
             sem_wait(&(datos_interfaz->sem_procesos_blocked));
-            pcb_block_dialFS * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,&(datos_interfaz->mutex_procesos_blocked));//agarra el primero de la cola de blocked 
+            pcb_block_dialFS * proceso_a_atender = pop_con_mutex(datos_interfaz->cola_bloqueados,&(datos_interfaz->mutex_procesos_blocked));//agarra el primero de la cola de blocked
+
+            list_remove_element(cola_block,proceso_a_atender->el_pcb);
+
             //Ahora, contenido del paquete de instruccion
             
             //nombre del archivo estara en todos los paquetes
@@ -1690,9 +1739,9 @@ int preguntar_tipo_interfaz(int un_fd){
 
 
 void liberar_datos_interfaz(element_interfaz * datos_interfaz){ // se invoca cuando el kernel detecte que la interfaz se desconecto, en el hilo este que va actualizando cola de bloqueados
-    pthread_mutex_lock(&mutex_lista_interfaces);
+
     list_remove_element(interfaces_conectadas,datos_interfaz); //removimos la interfaz de la lista de interfaces conectadas
-    pthread_mutex_unlock(&mutex_lista_interfaces);
+
     //ahora hay que liberar su informacion
     free(datos_interfaz->fd_conexion_con_interfaz);//si se esta haciendo esto, ya se le hizo close
     free(datos_interfaz->nombre);
