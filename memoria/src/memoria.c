@@ -178,17 +178,6 @@ static void procesar_clientes(void* void_args){
 			log_debug(logger_memoria, "Le dije al CPU de que tamanio son las paginas: %d",tam_pagina);
 			send(cliente_socket,&tam_pagina,sizeof(int),NULL);
 			break;
-		case MENSAJE:
-			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
-			recibir_mensaje(logger_memoria, cliente_socket);
-			//posiblemente haya que enviar una respuesta tambien para indicar que se recibio el mensaje
-			break;
-		case PAQUETE:
-			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
-			t_list *paquete_recibido = recibir_paquete(cliente_socket);
-			log_debug(logger_memoria, "Recibí un paquete con los siguientes valores: ");
-			list_iterate(paquete_recibido, (void*) iterator);
-			break;	
 		case DATOS_PROCESO: // CREAR PROCESO: este codigo SOLO LO ENVIA EL KERNEL
 			usleep(retardo_respuesta*1000);//chequear de cuanto debe ser este sleep
 			t_datos_proceso* datos_proceso = recibir_datos_del_proceso(cliente_socket);// por que esta en protocolo.h? si es una funcion que conoce solo la memoria, puede estar en memoria.h

@@ -4,9 +4,10 @@ int main(int argc, char* argv[]) {
     
     decir_hola("KERNEL");
 
-    logger_kernel = log_create("kernel_logs.log","kernel",1,LOG_LEVEL_INFO && LOG_LEVEL_DEBUG);
+    logger_kernel = log_create("kernel_logs.log","kernel",1,LOG_LEVEL_INFO && LOG_LEVEL_DEBUG && LOG_LEVEL_WARNING);
     config_generales = config_create("./config/generales.config");
     
+    tiempo_transcurrido_en_cpu = 0;
     path_configuracion = argv[1];
 	config_prueba = config_create(path_configuracion);
 
@@ -184,7 +185,8 @@ pcb *crear_pcb(){
     pcb *un_pcb = malloc(sizeof(pcb));
     un_pcb->PID = asignar_pid();
     un_pcb->PC = 0; 
-    un_pcb->QUANTUM = atoi(quantum);
+    //un_pcb->QUANTUM = atoi(quantum);
+    un_pcb->QUANTUM = 0;
     un_pcb->motivo = PROCESO_ACTIVO; 
     un_pcb->estado = NEW;
     
@@ -440,46 +442,7 @@ void enlistar_procesos() {
 
     
 }
-/*
-void enlistar_procesos(){
-    t_list* lista_pids_new = obtener_lista_pid(cola_new);
-    char* lista_new = de_lista_a_string(lista_pids_new);
 
-    t_list* lista_pids_ready = obtener_lista_pid(cola_ready);
-    char* lista_ready = de_lista_a_string(lista_pids_ready);
-    t_list* lista_pids_ready_prioridad = obtener_lista_pid(cola_ready_aux);
-    char* lista_ready_aux = de_lista_a_string(lista_pids_ready_prioridad);
-
-    list_add_all(lista_ready, lista_ready_aux); //AGREGA TODOS LOS ELEMENTOS DE LA LISTA DE AUX A LA DE READY
-    char* lista_ready_completa = de_lista_a_string(lista_ready); // Segun el chamaco CHAT GPT hay que volver a pasarla a strings
-
-    t_list* lista_pids_exec = obtener_lista_pid(cola_exec);
-    char* lista_exec = de_lista_a_string(lista_pids_exec);
-
-    t_list* lista_pids_block = obtener_lista_pid(cola_block);
-    char* lista_block = de_lista_a_string(lista_pids_block);
-
-    t_list* lista_pids_exit = obtener_lista_pid(cola_exit);
-    char* lista_exit = de_lista_a_string(lista_pids_exit);
-
-    log_info(logger_kernel, "Estados en: \n -NEW: [%s] \n -READY: [%s] \n -EXEC: [%s] \n -BLOCK: [%s] \n -EXIT: [%s]", lista_new, lista_ready, lista_exec, lista_block, lista_exit);
-
-    
-    free(lista_new);
-    free(lista_ready);
-    free(lista_ready_aux);
-    free(lista_exec);
-    free(lista_block);
-    free(lista_exit);
-
-    list_destroy(lista_pids_new);
-    list_destroy(lista_pids_ready);
-    list_destroy(lista_pids_ready_prioridad);
-    list_destroy(lista_pids_exec);
-    list_destroy(lista_pids_block);
-    list_destroy(lista_pids_exit);
-}
-*/
 
 void planificar_largo_plazo(){
     pthread_t hilo_ready;
@@ -643,8 +606,17 @@ void atender_vuelta_dispatch(){
             //int no_despachar=false; //habra casos en los que luego de atender el desalojo, no despachamos otro
             sem_wait(&sem_atender_rta);//esperar a que se haya despachado un pcb
             op_code codop= recibir_operacion(fd_conexion_dispatch,logger_kernel,"CPU");
+            /*
+            temporal_stop(cronometro);
+            tiempo_transcurrido_en_cpu = temporal_gettime(cronometro);
+            temporal_destroy(cronometro);
             t_list * lista = recibir_paquete(fd_conexion_dispatch); 
             pcb* pcb_actualizado = guardar_datos_del_pcb(lista);
+            if(tiempo_transcurrido_en_cpu >= pcb_actualizado->QUANTUM){
+   
+            }
+            */
+           
             bool estaVacia = list_is_empty(cola_exec);
             pcb* pcb_desactualizado = pop_con_mutex(cola_exec, &mutex_lista_exec);
             pcb_destroy(pcb_desactualizado);
@@ -693,6 +665,9 @@ void atender_vuelta_dispatch(){
                     switch(pcb_actualizado -> motivo){
                         int simulacion;
                         int rta_cpu;
+                        if(tiempo_transcurrido_en_cpu < atoi(quantum)){ 
+                            pcb_actualizado->QUANTUM = atoi(quantum) - tiempo_transcurrido_en_cpu;
+                        }
                         case SOLICITAR_WAIT:
                             char * recurso_wait = list_get(lista , final_pcb+1);
                             simulacion = simulacion_wait(pcb_actualizado,recurso_wait);
@@ -1271,13 +1246,14 @@ void despachador(){
             pcb_a_enviar = obtener_pcb_segun_algoritmo(algoritmo_de_planificacion); // obtiene un pcb de la cola de ready
             cambiar_estado(pcb_a_enviar,EXECUTE);
             push_con_mutex(cola_exec,pcb_a_enviar,&mutex_lista_exec); // uso con mutex porque posiblemente varios hilos agregen a exec
-            enviar_pcb(pcb_a_enviar, fd_conexion_dispatch,CODE_PCB,VACIO,NULL,NULL,NULL,NULL,NULL);//falta motivo de desalojo
             log_debug(logger_kernel,"Envie el PCB: %d",pcb_a_enviar->PID);
+            cronometro = temporal_create(); // Luego de manejarlo en vuelta_dispatch hacerle destroy.
+            enviar_pcb(pcb_a_enviar, fd_conexion_dispatch,CODE_PCB,VACIO,NULL,NULL,NULL,NULL,NULL);//falta motivo de desalojo
             sem_post(&sem_atender_rta);//signal para indicar que se despacho? no se si hace falta
             if(!strcmp(algoritmo_de_planificacion,"RR")){
-                manejar_quantum_RR(pcb_a_enviar->PID);
+                manejar_quantum_RR(pcb_a_enviar);
             }else if(!strcmp(algoritmo_de_planificacion,"VRR")){
-                manejar_quantum_VRR(pcb_a_enviar->PID);
+                manejar_quantum_VRR(pcb_a_enviar);
             }
         }
     }
@@ -1336,42 +1312,73 @@ char* string_de_estado(estadosDeLosProcesos estado){
 		}
 }
 
-void manejar_quantum_RR(int pid){
+void manejar_quantum_RR(pcb* pcb){
     //como debe realizarse paralelamente a la ejecucion del proceso, tenemos que delegarlo a un hilo
     pthread_t hilo_manejo_quantum_RR;
-	pthread_create(&hilo_manejo_quantum_RR, NULL, (void*) reducir_quantum, (void*)(intptr_t) pid); //necesita PID para manejarle el quantum a ese proceso
+	pthread_create(&hilo_manejo_quantum_RR, NULL, (void*) reducir_quantum_RR, (void*) pcb); //necesita PID para manejarle el quantum a ese proceso
 	pthread_detach(hilo_manejo_quantum_RR);//                                 (void*) porque si o si debe recibir ese tipo de dato
     //                                                                     (intptr_) para hacer que pid (un int) empiece a ocupar una cantidad de bytes necesaria para ser un puntero
 }//                                                                        gracias CHATGPT                                 
 
-void reducir_quantum(void *ppid){ // como todo hilo, es esa su especificacion
-    int pid = (int)(intptr_t)ppid; // casteo de nuevo, puntero gen -> intptr_t -> int
-    int quantum_como_int = atoi(quantum); // paso el numero quantum (char) a entero
-    usleep(quantum_como_int*1000);//microsegundo * 1000 = milisegundo
+void reducir_quantum_RR(void *pcb_a_enviar){ // como todo hilo, es esa su especificacion
+
+    pcb* pcb_a_reducir = (pcb*)pcb_a_enviar; // casteo de nuevo, puntero gen -> intptr_t -> int
+    int quantum_RR = atoi(quantum);// paso el numero quantum (char) a entero
+    usleep(quantum_RR*1000);//microsegundo * 1000 = milisegundo
     if(!list_is_empty(cola_exec)){ // entra al if si SE SIGUE EJECTUANDO EL PROCESO
         pthread_mutex_lock(&mutex_lista_exec); // con mutex porque es caso de lectura y escritura
         pcb * pcb_retirado_de_exec = list_get(cola_exec,0); // obtiene el pcb, sin removerlo de exec
-        pthread_mutex_lock(&mutex_lista_exec);
-        if(pcb_retirado_de_exec->PID == pid){
-            enviar_interrupcion(FIN_QUANTUM,pid);
+        pthread_mutex_unlock(&mutex_lista_exec);
+        if(pcb_retirado_de_exec->PID == pcb_a_reducir->PID){
+            enviar_interrupcion(FIN_QUANTUM,pcb_a_reducir->PID);
         }
     }
 }
 
-void manejar_quantum_VRR(int pid){
-    cronometro = temporal_create();
-    manejar_quantum_RR(pid);
+void manejar_quantum_VRR(pcb* pcb){
+    //como debe realizarse paralelamente a la ejecucion del proceso, tenemos que delegarlo a un hilo
+    pthread_t hilo_manejo_quantum_RR;
+	pthread_create(&hilo_manejo_quantum_RR, NULL, (void*) reducir_quantum_VRR, (void*) pcb); //necesita PID para manejarle el quantum a ese proceso
+	pthread_detach(hilo_manejo_quantum_RR);//                                 (void*) porque si o si debe recibir ese tipo de dato
+    //                                                                     (intptr_) para hacer que pid (un int) empiece a ocupar una cantidad de bytes necesaria para ser un puntero
+}//  
+
+
+/*
+void reducir_quantum_VRR(void *pcb_a_enviar){ // como todo hilo, es esa su especificacion
+    pcb* pcb_a_reducir = (pcb*)pcb_a_enviar; // casteo de nuevo, puntero gen -> intptr_t -> int
+    t_temporal* cronometro;
+    int quantumGeneral = atoi(quantum); 
+    int quantum_VRR = quantumGeneral - pcb_a_reducir->QUANTUM; 
+    log_debug(logger_kernel,"EL quantum es: %d", quantum_VRR);
+    cronometro = temporal_create(); // arranca a contar timepo
+    usleep(quantum_VRR*1000);//microsegundo * 1000 = milisegundo
+    log_debug(logger_kernel,"Termine el usleep");
     temporal_stop(cronometro);
     tiempo_transcurrido_en_cpu = temporal_gettime(cronometro);
+    if (tiempo_transcurrido_en_cpu <= quantumGeneral){
+        pcb_a_reducir->QUANTUM = tiempo_transcurrido_en_cpu;
+    }
+    
+    log_debug(logger_kernel,"El tiempo transcurrido en CPU fue: %d", tiempo_transcurrido_en_cpu);
     temporal_destroy(cronometro);
-}                             
+    if(!list_is_empty(cola_exec)){ // entra al if si SE SIGUE EJECTUANDO EL PROCESO
+        pthread_mutex_lock(&mutex_lista_exec); // con mutex porque es caso de lectura y escritura
+        pcb * pcb_retirado_de_exec = list_get(cola_exec,0); // obtiene el pcb, sin removerlo de exec
+        pthread_mutex_unlock(&mutex_lista_exec);
+        if(pcb_retirado_de_exec->PID == pcb_a_reducir->PID){
+            enviar_interrupcion(FIN_QUANTUM,pcb_a_reducir->PID);
+        }
+    }
+}
+*/
 
 
 void enviar_interrupcion(motivo_desalojo motivo, int pid){
     t_paquete* paquete = crear_paquete(INTERR);
 	agregar_a_paquete(paquete, &motivo, sizeof(motivo_desalojo));
     agregar_a_paquete(paquete, &pid, sizeof(int));
-    log_debug(logger_kernel,"PID interrumpio: %d con motivo: %d", pid, motivo);
+    log_warning(logger_kernel,"PID interrumpio: %d con motivo: %d", pid, motivo);
 	enviar_paquete(paquete, fd_conexion_interrupt);
 	eliminar_paquete(paquete);
 }

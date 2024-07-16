@@ -20,10 +20,9 @@ int main(int argc, char* argv[]){
 
 	/* CONECTO CPU CON MEMORIA */
 	fd_conexion_memoria = crear_conexion(ip_memoria, puerto_memoria, logger_cpu, "CPU");
-	enviar_mensaje("Hola, soy CPU!", fd_conexion_memoria);
+
 	//posiblemente haya que esperar una respuesta del mensaje antes de enviar otra cosa, para que sepamos que el cliente ya esta escuchando de nuevo
-	snd_handshake(fd_conexion_memoria);
-	log_debug(logger_cpu, "Handshake a MEMORIA realizado");
+
 	
 	inicializar_tlb();
 	int aviso_de_conexion = 1;
@@ -1276,6 +1275,18 @@ void check_interrupt (){
 		log_debug(logger_cpu,"C.I: ES EXIT - IGNORO TODAS LAS INTERRUPCIONES");
 		sem_post(&sem_recibir_pcb);
 	}
+	/*
+	if (!list_is_empty(lista_interrupciones)) {
+		list_destroy_and_destroy_elements(lista_interrupciones, (void*)free);
+		lista_interrupciones = list_create();
+		if (lista_interrupciones != NULL && list_is_empty(lista_interrupciones)) {
+			log_debug(logger_cpu, "C.I: LISTA DE INTERRUPCIONES VACIADA");
+		} else {
+			log_debug(logger_cpu, "C.I: NO SE VACIO LA LISTA DE INTERRUPCIONES");
+		}
+		log_debug(logger_cpu, "C.I: RECREADA LA LISTA DE INTERRUPCIONES");
+	}
+	*/
 	
 	if(!list_is_empty(lista_interrupciones)){
 		list_destroy_and_destroy_elements(lista_interrupciones,(void*)free);
@@ -1289,6 +1300,7 @@ void check_interrupt (){
 		log_debug(logger_cpu,"C.I: RECREADA LA LISTA DE INTERRUPCIONES");
 	}
 	pthread_mutex_unlock(&mutex_lista_interrupciones);
+	
 }
 /*
 void liberar_interrupcion_actual(){

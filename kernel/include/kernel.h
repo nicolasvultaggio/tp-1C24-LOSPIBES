@@ -55,6 +55,7 @@ typedef struct{
 	pthread_mutex_t mutex_asignado;
 }recurso;
 
+t_temporal* cronometro;
 
 t_list * interfaces_conectadas;
 int fd_escucha_kernel;
@@ -173,11 +174,11 @@ pcb * obtener_pcb_segun_algoritmo(char * algoritmo);
 bool colaVacia(t_list* colaDeEstado);
 void cambiar_estado(pcb * un_pcb , estadosDeLosProcesos estado);
 char* string_de_estado(estadosDeLosProcesos estado);
-void manejar_quantum_RR(int pid);
-void manejar_quantum_VRR(int pid);
-t_temporal* cronometro;
+void manejar_quantum_RR(pcb* pcb);
+void manejar_quantum_VRR(pcb* pcb);
 int tiempo_transcurrido_en_cpu;
-void reducir_quantum(void *args);
+void reducir_quantum_RR(void *args);
+void reducir_quantum_VRR(void *args);
 
 
 
