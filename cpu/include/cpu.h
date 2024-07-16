@@ -28,7 +28,7 @@ pthread_mutex_t mutex_lista_interrupciones;
 /* SEMAFOROS */
 pthread_mutex_t mutex_motivo_x_consola; //what este para que es
 sem_t sem_recibir_pcb;
-sem_t sem_execute;
+sem_t sem_fetch;
 sem_t sem_interrupcion;
 
 

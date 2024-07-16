@@ -737,7 +737,7 @@ int cantidad_de_parametros_segun_instruccion(cod_instruccion una_instruccion){
 		case MOV_IN :
 		case MOV_OUT:
 		case SUM:
-		case SUB :
+		case SUB :/*									WTF NO SABIA QUE ESTO SE PODIA HACER MEN*/
 		case JNZ:
 		case IO_GEN_SLEEP:
 		case IO_FS_CREATE:

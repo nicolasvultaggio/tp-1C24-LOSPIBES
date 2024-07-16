@@ -27,11 +27,6 @@ int main(int argc, char* argv[]){
 	
 	inicializar_tlb();
 	int aviso_de_conexion = 1;
-	
-	
-
-
-
 
 	/* COMENZAMOS CON LA LOCURA DE HILOS */
 	pthread_t hilo_dispatch ;
@@ -67,7 +62,7 @@ void inicializar_semaforos(){
 	//pthread_mutex_init(&mutex_motivo_x_consola, NULL);
 
 	sem_init(&sem_recibir_pcb, 0, 1);
-	sem_init(&sem_execute, 0, 0);
+	sem_init(&sem_fetch, 0, 0);
 	sem_init(&sem_interrupcion, 0, 0);
 
 	
@@ -93,7 +88,7 @@ void dispatch(){
 			}
 			
 			PCB = guardar_datos_del_pcb(paquete);
-			sem_post(&sem_execute);
+			sem_post(&sem_fetch);
 			break;
 		case -1:
 			log_error(logger_cpu, "El cliente se desconecto.");
@@ -111,7 +106,7 @@ void fetch (){
 
 	while(1){
 
-		sem_wait(&sem_execute);
+		sem_wait(&sem_fetch);
 		t_linea_instruccion* proxima_instruccion = prox_instruccion(PCB->PID, PCB->PC);
 		log_info(logger_cpu, "PID: %d - FETCH - Program Counter: %d", PCB->PID, PCB->PC);
 		PCB->PC++;
@@ -158,93 +153,96 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			parametro2 =  list_get(parametros,1);
 			log_debug(logger_cpu,"El parametro 1 es: %s",(char*) parametro1);
 			log_debug(logger_cpu,"El parametro 2 es: %s",(char*) parametro2);
-			log_info(logger_cpu, "PID: %d - Ejecutando SET %s %s", PCB->PID, (char*)parametro1, (char*)parametro2);
+			log_info(logger_cpu, "PID: %d - Ejecutando: SET %s %s", PCB->PID, (char*)parametro1, (char*)parametro2);
 			ejecutar_set( (char*)parametro1, (char*)parametro2);
 			break;
 		case MOV_IN: 
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
-			log_info(logger_cpu, "PID: %d - Ejecutando MOV_IN %s %s", PCB->PID, (char*)parametro1, (char*)parametro2);
+			log_info(logger_cpu, "PID: %d - Ejecutando: MOV_IN %s %s", PCB->PID, (char*)parametro1, (char*)parametro2);
 			ejecutar_mov_in((char*)parametro1, (char*)parametro2); // ANTES ESTABA ejecutar_mov_in(PCB, (char*)parametro1, (char*)parametro2); Asi en todas las funciones de abajo
 			break;
 		case MOV_OUT: 
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
-			log_info(logger_cpu, "PID: %d - Ejecutando MOV_OUT %s %s", PCB->PID, (char*)parametro1,(char*) parametro2);
+			log_info(logger_cpu, "PID: %d - Ejecutando: MOV_OUT %s %s", PCB->PID, (char*)parametro1,(char*) parametro2);
 			ejecutar_mov_out((char*) parametro1, (char*)parametro2);
 			break;
 		case SUM: 
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
-			log_info(logger_cpu, "PID: %d - Ejecutando SUM %s %s", PCB->PID, (char*)parametro1, (char*)parametro2);
+			log_info(logger_cpu, "PID: %d - Ejecutando: SUM %s %s", PCB->PID, (char*)parametro1, (char*)parametro2);
 			ejecutar_sum((char*) parametro1, (char*)parametro2);
 			break;
 		case SUB: 
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
-			log_info(logger_cpu, "PID: %d - Ejecutando SUB %s %s", PCB->PID,(char*) parametro1,(char*) parametro2);
+			log_info(logger_cpu, "PID: %d - Ejecutando: SUB %s %s", PCB->PID,(char*) parametro1,(char*) parametro2);
 			ejecutar_sub((char*) parametro1,(char*) parametro2);
 			break;
 		case JNZ: 
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
-			log_info(logger_cpu, "PID: %d - Ejecutando JNZ %s %s", PCB->PID, (char*)parametro1,(char*) parametro2);
+			log_info(logger_cpu, "PID: %d - Ejecutando: JNZ %s %s", PCB->PID, (char*)parametro1,(char*) parametro2);
 			ejecutar_jnz((char*)parametro1, (char*)parametro2);
 			break;
 		case RESIZE: 
 			parametro1 =  list_get(parametros,0);
-			log_info(logger_cpu, "PID: %d - Ejecutando RESIZE %s", PCB->PID, (char*)parametro1);
+			log_info(logger_cpu, "PID: %d - Ejecutando: RESIZE %s", PCB->PID, (char*)parametro1);
 			ejecutar_resize((char*)parametro1);
 			break;
 		case COPY_STRING: 
 			parametro1 =  list_get(parametros,0);
-			log_info(logger_cpu, "PID: %d - Ejecutando COPY_STRING %s", PCB->PID, (char*)parametro1);
+			log_info(logger_cpu, "PID: %d - Ejecutando: COPY_STRING %s", PCB->PID, (char*)parametro1);
 			ejecutar_copy_string((char*)parametro1);
 			break;
 		case WAIT: 
 			parametro1 =  list_get(parametros,0);
-			log_info(logger_cpu, "PID: %d - Ejecutando WAIT %s", PCB->PID, (char*)parametro1);
+			log_info(logger_cpu, "PID: %d - Ejecutando: WAIT - [%s]", PCB->PID, (char*) parametro1);
 			ejecutar_wait((char*) parametro1);
 			break;
 		case SIGNAL:
 			parametro1 =  list_get(parametros,0);
-			log_info(logger_cpu, "PID: %d - Ejecutando SIGNAL %s", PCB->PID,(char*) parametro1);
+			log_info(logger_cpu, "PID: %d - Ejecutando: SIGNAL- [%s]", PCB->PID, (char*)parametro1);
 			ejecutar_signal((char*)parametro1);
 			break;
 		case IO_GEN_SLEEP: 
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
-			log_info(logger_cpu, "PID: %d - Ejecutando IO_GEN_SLEEP %s %s", PCB->PID, (char*)parametro1,(char*) parametro2);
+			log_info(logger_cpu, "PID: %d - Ejecutando: IO_GEN_SLEEP %s %s", PCB->PID, (char*)parametro1,(char*) parametro2);
 			ejecutar_io_gen_sleep( "IO_GEN_SLEEP", (char*)parametro1,(char*) parametro2);
 			break;
 		case IO_STDIN_READ:
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
 			parametro3 =  list_get(parametros,2);
-			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDIN_READ %s %s %s", PCB->PID, (char*)parametro1, (char*)parametro2, (char*)parametro3);
+			log_info(logger_cpu, "PID: %d - Ejecutando: IO_STDIN_READ %s %s %s", PCB->PID, (char*)parametro1, (char*)parametro2, (char*)parametro3);
 			ejecutar_io_stdin_read((char*)parametro1,(char*)parametro2,(char*)parametro3);
 			break;
 		case IO_STDOUT_WRITE:
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
 			parametro3 =  list_get(parametros,2);
-			log_info(logger_cpu, "PID: %d - Ejecutando IO_STDOUT_WRITE %s %s %s", PCB->PID,(char*) parametro1, (char*)parametro2, (char*)parametro3);
+			log_info(logger_cpu, "PID: %d - Ejecutando: IO_STDOUT_WRITE %s %s %s", PCB->PID,(char*) parametro1, (char*)parametro2, (char*)parametro3);
 			ejecutar_io_stdout_write((char*)parametro1,(char*)parametro2,(char*)parametro3);
 			break;
 		case IO_FS_CREATE:
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
+			log_info(logger_cpu, "PID: %d - Ejecutando: IO_FS_CREATE %s %s", PCB->PID,(char*) parametro1, (char*)parametro2);
 			ejecutar_io_fs_create((char*)parametro1,(char*)parametro2);
 			break;
 		case IO_FS_DELETE:
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
+			log_info(logger_cpu, "PID: %d - Ejecutando: IO_FS_DELETE %s %s", PCB->PID,(char*) parametro1, (char*)parametro2);
 			ejecutar_io_fs_delete((char*)parametro1,(char*)parametro2);
 			break;
 		case IO_FS_TRUNCATE:
 			parametro1 =  list_get(parametros,0);
 			parametro2 =  list_get(parametros,1);
 			parametro3 =  list_get(parametros,2);
+			log_info(logger_cpu, "PID: %d - Ejecutando: IO_FS_TRUNCATE %s %s %s", PCB->PID,(char*) parametro1, (char*)parametro2, (char*)parametro3);
 			ejecutar_io_fs_truncate((char*)parametro1,(char*)parametro2,(char*)parametro3);
 			break;
 		case IO_FS_WRITE:
@@ -253,6 +251,7 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			parametro3 =  list_get(parametros,2);
 			parametro4 =  list_get(parametros,3);
 			parametro5 =  list_get(parametros,4);
+			log_info(logger_cpu, "PID: %d - Ejecutando: IO_FS_WRITE %s %s %s %s %s", PCB->PID,(char*) parametro1, (char*)parametro2, (char*)parametro3,(char*)parametro4, (char*)parametro5);
 			ejecutar_io_fs_write((char*)parametro1,(char*)parametro2,(char*)parametro3,(char*)parametro4,(char*)parametro5);
 			break;
 		case IO_FS_READ:
@@ -261,6 +260,7 @@ void decode (t_linea_instruccion* instruccion, pcb* PCB){
 			parametro3 =  list_get(parametros,2);
 			parametro4 =  list_get(parametros,3);
 			parametro5 =  list_get(parametros,4);
+			log_info(logger_cpu, "PID: %d - Ejecutando: IO_FS_READ %s %s %s %s %s", PCB->PID,(char*) parametro1, (char*)parametro2, (char*)parametro3,(char*)parametro4, (char*)parametro5);
 			ejecutar_io_fs_read((char*)parametro1,(char*)parametro2,(char*)parametro3,(char*)parametro4,(char*)parametro5);
 			break;
 		case EXIT://falta
@@ -289,13 +289,13 @@ void ejecutar_set( char* registro, char* valor){
 	case sizeof(uint8_t):
 		uint8_t * pp8 = (uint8_t*) p_registro;
 		uint8_t p8 = *pp8;
-		log_debug(logger_cpu,"Registro: %s, Valor: %s, Valor actual del registro: %u",registro,valor,p8);
+		log_debug(logger_cpu,"Registro: %s, Valor nuevo: %s, Valor reemplazado: %u",registro,valor,p8);
 		memcpy(p_registro,&valor8,tam_registro);
 		break;
 	case sizeof(uint32_t):
 		uint32_t * pp32 = (uint32_t*) p_registro;
 		uint32_t p32 = *pp32;
-		log_debug(logger_cpu,"Registro: %s, Valor: %s, Valor actual del registro: %u",registro,valor,p32);
+		log_debug(logger_cpu,"Registro: %s, Valor nuevo: %s,Valor reemplazado: %u",registro,valor,p32);
 	 	memcpy(p_registro,&valor32,tam_registro);
 		break;
 	}
@@ -481,10 +481,6 @@ void ejecutar_io_fs_delete(char * nombre_interfaz,char * nombre_archivo){
 	
 	recv(fd_escucha_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
 	eliminar_paquete(paquete);
-	//es_exit=false;  //siempre modificar
-	//es_bloqueante=true; //modificar siempre que es_exit = false
-	//es_wait = false;  //modificar si se pone a bloqueante = true
-	//es_resize = false; //modificar si se pone bloqueante = true
 
 	hubo_desalojo=true;
 	wait_o_signal =false;
@@ -824,7 +820,6 @@ void ejecutar_copy_string( char* tamanio){
 }
 
 void ejecutar_wait( char* nombre_recurso){
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "WAIT", nombre_recurso);
 	char* recurso = malloc(strlen(nombre_recurso) + 1);
 	strcpy(recurso, nombre_recurso);
 	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_WAIT,recurso,NULL,NULL,NULL,NULL);
@@ -840,7 +835,6 @@ void ejecutar_wait( char* nombre_recurso){
 }
 
 void ejecutar_signal(char* nombre_recurso){
-	log_info(logger_cpu, "PID: %d - Ejecutando: %s - [%s]", PCB->PID, "SIGNAL", nombre_recurso);
 	char* recurso = malloc(strlen(nombre_recurso) + 1);
 	strcpy(recurso, nombre_recurso);
 	enviar_pcb(PCB, fd_escucha_dispatch, RECURSO, SOLICITAR_SIGNAL,recurso,NULL,NULL,NULL,NULL);
@@ -848,19 +842,13 @@ void ejecutar_signal(char* nombre_recurso){
 	free(recurso);
 	wait_o_signal =true;
 	es_exit=false;
-	//es_exit = false;  //siempre modificar
-	//es_bloqueante=false; //modificar siempre que es_exit = false
+	
 }
 
 void ejecutar_io_gen_sleep( char* instruccion, char* interfaz, char* unidad_de_tiempo){
 	int buffersito;
 	enviar_pcb(PCB, fd_escucha_dispatch, INTERFAZ, SOLICITAR_INTERFAZ_GENERICA, instruccion, interfaz, unidad_de_tiempo,NULL,NULL);
 	recv(fd_escucha_dispatch,&buffersito,sizeof(int),MSG_WAITALL);
-	//sem_post(&sem_recibir_pcb);
-	//es_exit=false;  //siempre modificar
-	//es_bloqueante=true; //modificar siempre que es_exit = false
-	//es_wait = false;  //modificar si se pone a bloqueante = true
-	//es_resize = false; //modificar si se pone bloqueante = true
 
 	hubo_desalojo=true;
 	wait_o_signal=false;
@@ -1004,7 +992,6 @@ enum_reg_cpu registro_to_enum(char * registro){
 
 }
 void * capturar_registro(enum_reg_cpu registro){
-	
 	switch(registro){
 		case PC:
 		return &(PCB->PC);
@@ -1041,16 +1028,18 @@ t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_le
 	int pagina_inicial = (int) direccion_logica_i /  TAM_PAGINA;
 	int pagina_final = (int) direccion_logica_f /  TAM_PAGINA;
 
-	// int numero_de_paginas_a_traducir = pagina_final - pagina_inicial + 1;
+	log_debug(logger_cpu,"OBTENIENDO TRADUCCIONES - DLI: %u - DLF: %u - SIZE: %u - PI: %d - PF: %d",direccion_logica_i,direccion_logica_f,tamanio_a_leer,pagina_inicial,pagina_final);
     t_list * lista_traducciones = list_create();
 	//MMU (direccion logica) -> devuelve direccion fisica
 	if (pagina_final != pagina_inicial){
+		log_debug(logger_cpu,"PI != PF - %d traducciones",(pagina_final-pagina_inicial+1));
 		for (int i = pagina_inicial; i<=pagina_final;i++){
 			if(i == pagina_inicial){
 				nodo_lectura_escritura * traduccion_inicial = malloc(sizeof(nodo_lectura_escritura));
 				uint32_t offset = direccion_logica_i % ((uint32_t) TAM_PAGINA); 
 				traduccion_inicial->direccion_fisica = MMU(direccion_logica_i);
 				traduccion_inicial->bytes = (uint32_t)TAM_PAGINA - offset;
+				log_debug(logger_cpu,  "TRADUCCION INICIAL AGREGADA: DF: %u - BYTES: %u",traduccion_inicial->direccion_fisica,traduccion_inicial->bytes);
 				list_add(lista_traducciones,traduccion_inicial);
 				// free(traduccion_inicial); si me liberas este espacio en memoria, pierdo el dato, sería al pedo agregarlo en memoria
 			}else{
@@ -1059,22 +1048,26 @@ t_list * obtener_traducciones(uint32_t direccion_logica_i, uint32_t tamanio_a_le
 					uint32_t offset = direccion_logica_f % ((uint32_t)TAM_PAGINA); //ultimo byte que se escribe en ese marco
 					traduccion_final->direccion_fisica = MMU( (uint32_t)(pagina_final*TAM_PAGINA)); //se empieza a escribir desde la direccion logica que da inicio a esa pagina
 					traduccion_final->bytes = offset+1; //por cuanto se escribe?
+					log_debug(logger_cpu,  "TRADUCCION FINAL AGREGADA: DF: %u - BYTES: %u",traduccion_final->direccion_fisica,traduccion_final->bytes);
 					list_add(lista_traducciones,traduccion_final);
 					//free(traduccion_final); si me liberas este espacio en memoria, pierdo el dato, sería al pedo agregarlo en memoria
 				}else{
 					nodo_lectura_escritura * traduccion_intermedia = malloc(sizeof(nodo_lectura_escritura));
 					traduccion_intermedia->direccion_fisica = MMU((uint32_t)(i*TAM_PAGINA));
 					traduccion_intermedia->bytes = (uint32_t) TAM_PAGINA;
+					log_debug(logger_cpu,  "TRADUCCION INTERMEDIA AGREGADA: DF: %u - BYTES: %u",traduccion_intermedia->direccion_fisica,traduccion_intermedia->bytes);
 					list_add(lista_traducciones,traduccion_intermedia);
 					//free(traduccion_intermedia); si me liberas este espacio en memoria, pierdo el dato, sería al pedo agregarlo en memoria
 				}
 			}
 		}
 	}else{
+		log_debug(logger_cpu,"PI = PF - SOLO UNA TRADUCCION");
 		nodo_lectura_escritura * traduccion_inicial = malloc(sizeof(nodo_lectura_escritura));
 		uint32_t offset = direccion_logica_i % ((uint32_t) TAM_PAGINA); 
 		traduccion_inicial->direccion_fisica = MMU(direccion_logica_i);
 		traduccion_inicial->bytes = ((uint32_t)TAM_PAGINA) - offset;
+		log_debug(logger_cpu,"UNICA TRADUCCION AGREGADA: DF: %u - BYTES: %u",traduccion_inicial->direccion_fisica,traduccion_inicial->bytes);
 		list_add(lista_traducciones,traduccion_inicial);
 		//free(traduccion_inicial); si me liberas este espacio en memoria, pierdo el dato, sería al pedo agregarlo en memoria
 	}
@@ -1092,7 +1085,7 @@ uint32_t MMU(uint32_t direccion_logica){
 	int marco;
 	int numero_pagina = floor((int)direccion_logica / TAM_PAGINA); //ya de por si redondea para abajo, posiblemente floor sea innecesario
 	uint32_t desplazamiento =  direccion_logica % (uint32_t)TAM_PAGINA;
-
+	
 	switch (MAX_TLB_ENTRY)
 	{
 	case 0:
@@ -1105,7 +1098,11 @@ uint32_t MMU(uint32_t direccion_logica){
 
 	log_info(logger_cpu,  "PID: %d - OBTENER MARCO - Página: %d - Marco: %d", PCB->PID, numero_pagina, marco); //log ob
 
-	return ((uint32_t) marco) *((uint32_t)TAM_PAGINA) + desplazamiento; //devuelve ya la direccion fisica
+	uint32_t df =((uint32_t) marco) *((uint32_t)TAM_PAGINA) + desplazamiento;
+
+	log_debug(logger_cpu,  "DF: %d (frame) * %d (TAM_PAG) + %d (OFFSET) = %u (DF)", marco, TAM_PAGINA, desplazamiento,df);
+	return df; //devuelve ya la direccion fisica
+
 }
 
 void inicializar_tlb(){
@@ -1211,7 +1208,7 @@ void interrupcion() {
 	while (1) {
 		switch (recibir_operacion(fd_escucha_interrupt, logger_cpu, "Kernel (interrupt)")) {
 		case INTERR:
-			log_debug(logger_cpu,"Acabo de recibir una interrupcion");
+			//log_debug(logger_cpu,"Acabo de recibir una interrupcion");
 			element_interrupcion* nueva_interrupcion = recibir_motiv_desalojo();
 			push_con_mutex(lista_interrupciones,nueva_interrupcion,&mutex_lista_interrupciones);
 			break;
@@ -1230,53 +1227,53 @@ void interrupcion() {
 
 
 void check_interrupt (){
-	log_debug(logger_cpu,"Es exit: %d", es_exit);
-	log_debug(logger_cpu,"hubo desalojo: %d", hubo_desalojo);
-	log_debug(logger_cpu,"wait o signal: %d", wait_o_signal);
+	log_debug(logger_cpu,"C.I: ES_EXIT: %d", es_exit);
+	log_debug(logger_cpu,"C.I: HUBO_DESALOJO: %d", hubo_desalojo);
+	log_debug(logger_cpu,"C.I: WAIT_O_SIGNAL: %d", wait_o_signal);
 	
 	pthread_mutex_lock(&mutex_lista_interrupciones);//posta que aca esta bien
 	//la idea es decirle al kernel si hubo interrupcion por fin de consola
 	if(!es_exit){//si es exit entonces no me importa ninguna interrupcion
-		
 		element_interrupcion * interrupcion_actual = seleccionar_interrupcion();
 		if(interrupcion_actual!=NULL){
-			log_debug(logger_cpu," hubo interrupcion");
+			log_debug(logger_cpu,"C.I: HUBO INTERRUPCION");
 			if(hubo_desalojo){ //ojo con wait, wait apenas desaloja, se debe esperar una respuesta del kernel, que diga si ese pcb se bloqueo o no, si se bloqueo->hubo_desalojo=true y si no se bloqueo, hubo_desalojo=false
 				//aca entra con cualquier syscall, y los casos en los que wait y signal desalojarian al proceso
-				log_debug(logger_cpu," Hubo interrupcion pero se desalojo el proceso");
+				log_debug(logger_cpu,"C.I: INSTRUCCION DESALOJO AL PROCESO - INTERRUPCION - TIPO: %d - PID: %d - WAIT O SIGNAL = %d",interrupcion_actual->motivo,interrupcion_actual->pid,wait_o_signal);
 				send(fd_escucha_dispatch,&(interrupcion_actual->motivo),sizeof(motivo_desalojo),NULL); //avisamos que tipo de interrupcion hubo al kernel
 				sem_post(&sem_recibir_pcb);//nos ponemos a escuchar otro pcb
 			}else{ //no hubo desalojo-> habra que atender la interrupcion
-				log_debug(logger_cpu," Hubo interrupcion y no se desalojo el proceso");
+				//log_debug(logger_cpu,"NO SE DESALOJO AL PROCESO - INTERRUPCION - TIPO: %d - PID: %d",interrupcion_actual->motivo,interrupcion_actual->pid );
 				if(wait_o_signal){ //tiene logica distinta porque debe esperar a que el kernel maneje los casos de wait y signal, antes solo habíamos hecho la simulacion de que pasaria
 					//aca entra en los casos en los que wait y signal no bloquean al proceso
-					log_debug(logger_cpu," Hubo interrupcion y es de wait o signal");
+					log_debug(logger_cpu,"C.I: WAIT O SIGNAL: NO HUBO DESALOJO - INTERRUPCION - TIPO: %d - PID: %d",interrupcion_actual->motivo,interrupcion_actual->pid );
 					send(fd_escucha_dispatch,&(interrupcion_actual->motivo),sizeof(motivo_desalojo),NULL); //avisamos que tipo de interrupcion hubo al kernel, que ya tenia el pcb.
 					sem_post(&sem_recibir_pcb);//nos ponemos a escuchar otro pcb
 				}else{ 
 					//aca entra si hubo cualquier instruccion no desalojante
-					log_debug(logger_cpu," Hubo interrupcion y no es wait o signal"); 
+					log_debug(logger_cpu,"C.I: NO HUBO DESALOJO - INTERRUPCION - TIPO: %d - PID: %d",interrupcion_actual->motivo,interrupcion_actual->pid );
 					enviar_pcb(PCB,fd_escucha_dispatch,PCB_ACTUALIZADO,interrupcion_actual->motivo,NULL,NULL,NULL,NULL,NULL);
 					sem_post(&sem_recibir_pcb);
 				}
 			}
 		}else{
-			log_debug(logger_cpu,"NO Hubo interrupcion");
+			log_debug(logger_cpu,"C.I: NO HUBO INTERRUPCION");
 			if(hubo_desalojo){ // cualquier syscall- wait y signal en casos bloqueantes
-				log_debug(logger_cpu,"NO Hubo interrupcion pero se desalojo y no son wait o signal");
+				log_debug(logger_cpu,"C.I: HUBO DESALOJO (WAIT, SIGNAL O SYSCALL)");
 				motivo_desalojo a = VACIO;
 				send(fd_escucha_dispatch,&a,sizeof(motivo_desalojo),NULL); //avisamos al kernel que no hubo interrupcion de fin de consola
 				sem_post(&sem_recibir_pcb);
 			}else{
 				if(wait_o_signal){ // cualquier funcion no syscall y wait y signal en casos no bloqueantes
-					log_debug(logger_cpu,"NO Hubo interrupcion pero se desalojo por wait o signal");
+					log_debug(logger_cpu,"C.I: WAIT O SIGNAL: NO HUBO DESALOJO - ENVIO UNA RESPUESTA PARA DESTRABAR ATENDEDOR DE DISPATCH");
 					int a = 777; //solo mando esto para que wait o signal se pueda destrabar
 					send(fd_escucha_dispatch,&a,sizeof(int),NULL);
 				}
-				sem_post(&sem_execute);
+				sem_post(&sem_fetch);
 			}
 		}
 	}else{
+		log_debug(logger_cpu,"C.I: ES EXIT - IGNORO TODAS LAS INTERRUPCIONES");
 		sem_post(&sem_recibir_pcb);
 	}
 	
@@ -1284,11 +1281,12 @@ void check_interrupt (){
 		list_destroy_and_destroy_elements(lista_interrupciones,(void*)free);
 		bool seVacio = lista_interrupciones == NULL;
 		if(seVacio){
-			log_debug(logger_cpu,"Lista interrupciones vaciada");
+			log_debug(logger_cpu,"C.I: LISTA DE INTERRUPCIONES VACIADA");
 		}else{
-			log_debug(logger_cpu,"La lista interrupciones NO se vacio");
+			log_debug(logger_cpu,"C.I: NO SE VACIO LA LISTA DE INTERRUPCIONES");
 		}
 		lista_interrupciones = list_create();
+		log_debug(logger_cpu,"C.I: RECREADA LA LISTA DE INTERRUPCIONES");
 	}
 	pthread_mutex_unlock(&mutex_lista_interrupciones);
 }
@@ -1307,7 +1305,7 @@ element_interrupcion * recibir_motiv_desalojo(){
 	element_interrupcion * nueva_interrupcion = malloc(sizeof(element_interrupcion));
 	nueva_interrupcion->motivo= *motivo;
 	nueva_interrupcion->pid = * el_pid_int;
-	log_info(logger_cpu,"Interrupcion recibida al PID: %d, por motivo: %d",nueva_interrupcion->pid,nueva_interrupcion->motivo);
+	log_debug(logger_cpu,"Interrupcion recibida al PID: %d, por motivo: %d",nueva_interrupcion->pid,nueva_interrupcion->motivo);
 	free(motivo);
 	free(el_pid);
 	list_destroy(paquete);

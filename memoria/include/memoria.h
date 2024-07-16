@@ -62,7 +62,7 @@ char * user_space;
 t_bitarray * frames_array;
 char * bitmap;
 */
-
+static void procesar_clientes(void* void_args);
 //2do checkpoint
 int puerto_escucha;
 int tam_memoria;
